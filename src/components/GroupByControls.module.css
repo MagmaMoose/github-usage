@@ -1,0 +1,6 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--stack-gap-condensed, 8px);
+}

@@ -1,0 +1,280 @@
+.sidebarPane {
+  background-color: var(--bgColor-default, #ffffff);
+}
+
+.sidebarContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap-normal, 16px);
+  padding-block: var(--stack-padding-normal, 16px);
+}
+
+.sidebarItemDisabled {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.sidebarStatusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  min-height: 20px;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+  border-radius: 999px;
+  background-color: var(--bgColor-muted, #f6f8fa);
+  color: var(--fgColor-muted, #656d76);
+  font-size: 11px;
+  font-weight: var(--base-text-weight-semibold, 600);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebarHeading {
+  margin: 0;
+  font-size: var(--text-body-size-medium, 14px);
+}
+
+.pageContent {
+  background-color: var(--bgColor-default, #ffffff);
+}
+
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap-spacious, 24px);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--stack-padding-spacious, 24px);
+}
+
+.pageHeader {
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  padding-bottom: var(--stack-gap-normal, 16px);
+}
+
+.pageDescription {
+  color: var(--fgColor-muted, #656d76);
+}
+
+.heroCardsGrid {
+  display: grid;
+  gap: var(--stack-gap-normal, 16px);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.heroCard {
+  min-width: 0;
+}
+
+.heroCardInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap-condensed, 8px);
+  height: 100%;
+  padding: var(--stack-padding-normal, 16px);
+  background-color: var(--bgColor-default, #ffffff);
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+}
+
+.heroCardTitle {
+  margin: 0;
+  color: var(--fgColor-default, #1f2328);
+  font-size: var(--text-body-size-small, 12px);
+  font-weight: var(--base-text-weight-semibold, 600);
+  letter-spacing: 0;
+}
+
+.heroCardValue {
+  color: var(--fgColor-default, #1f2328);
+  font-size: clamp(1.75rem, 2vw, 2.25rem);
+  font-weight: var(--base-text-weight-normal, 400);
+  line-height: 1.2;
+}
+
+.heroCardDescription {
+  margin: 0;
+  color: var(--fgColor-muted, #656d76);
+  font-size: var(--text-body-size-small, 12px);
+  line-height: 1.5;
+}
+
+.reportTabs,
+.primaryTabs {
+  margin: 0;
+}
+
+.contentSurface,
+.emptyStateSurface {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bgColor-default, #ffffff);
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-large, 8px);
+  overflow: hidden;
+}
+
+.surfaceTabsRow {
+  padding-inline: var(--stack-padding-normal, 16px);
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+}
+
+.sectionToolbar,
+.emptyStateHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--stack-gap-normal, 16px);
+  padding: var(--stack-padding-normal, 16px);
+}
+
+.sectionToolbar {
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+  align-items: center;
+}
+
+.toolbarLeading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--stack-gap-condensed, 8px);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.toolbarSearch {
+  min-width: 0;
+  flex: 1;
+}
+
+.toolbarSearchArea {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--stack-gap-condensed, 8px);
+}
+
+.activeFilterTokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbarSearch :global(.prc-Autocomplete-Overlay-bwNcB) {
+  width: min(640px, calc(100vw - 80px));
+}
+
+.panelContent {
+  padding: var(--stack-padding-normal, 16px);
+}
+
+.chartStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap-normal, 16px);
+}
+
+.chartGrid {
+  display: grid;
+  gap: var(--stack-gap-normal, 16px);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.chartGridItem {
+  min-width: 0;
+}
+
+.chartSurface {
+  padding: var(--stack-padding-normal, 16px);
+  background-color: var(--bgColor-default, #ffffff);
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+  border-radius: var(--borderRadius-medium, 6px);
+  overflow: hidden;
+}
+
+.surfaceTitle {
+  margin: 0;
+  font-size: var(--text-title-size-medium, 1.25rem);
+}
+
+.surfaceDescription {
+  margin: 0;
+  color: var(--fgColor-muted, #656d76);
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: 1.5;
+}
+
+.emptyStateHeader {
+  flex-direction: column;
+  align-items: stretch;
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+}
+
+.emptyResultsState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--stack-gap-condensed, 8px);
+  padding: var(--stack-padding-spacious, 24px);
+  border: var(--borderWidth-thin, 1px) dashed var(--borderColor-muted, #d8dee4);
+  border-radius: var(--borderRadius-medium, 6px);
+  background: var(--bgColor-muted, #f6f8fa);
+}
+
+.emptyResultsTitle {
+  margin: 0;
+  font-size: var(--text-title-size-medium, 1.25rem);
+}
+
+@media (min-width: 768px) {
+  .heroCardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .heroCardsGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .pageStack {
+    padding: var(--stack-padding-normal, 16px);
+  }
+
+  .sectionToolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbarLeading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbarSearchArea {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .activeFilterTokens {
+    width: 100%;
+  }
+
+  .toolbarActions {
+    justify-content: flex-start;
+  }
+}

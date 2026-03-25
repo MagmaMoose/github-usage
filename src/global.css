@@ -1,0 +1,8 @@
+/* Apply theme background/color to the full page.
+ * BaseStyles in Primer v38 does NOT set background-color — it only sets color + font.
+ * On GitHub.com the body bg comes from global styles. For standalone apps we need this. */
+[data-color-mode] {
+  background-color: var(--bgColor-default);
+  color: var(--fgColor-default);
+  min-height: 100vh;
+}

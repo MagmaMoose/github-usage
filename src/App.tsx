@@ -1,0 +1,856 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type FunctionComponent,
+  type PropsWithChildren,
+} from 'react';
+import {
+  ActionList,
+  ActionMenu,
+  Autocomplete,
+  Button,
+  Heading,
+  IconButton,
+  NavList,
+  PageLayout,
+  Stack,
+  Text,
+  Token,
+  UnderlineNav,
+} from '@primer/react';
+import { PageHeader } from '@primer/react/experimental';
+import type { IconProps } from '@primer/octicons-react';
+import {
+  CopilotIcon,
+  DownloadIcon,
+  FilterIcon,
+  GraphIcon,
+  MeterIcon,
+  SearchIcon,
+  TableIcon,
+  UploadIcon,
+  ServerIcon,
+  WorkflowIcon,
+  XIcon,
+} from '@primer/octicons-react';
+import { ReportProvider } from './context/ReportContext';
+import { useReport } from './context/useReport';
+import { FileDropzone } from './components/FileDropzone';
+import { ReportTable } from './components/ReportTable';
+import { TimeSeriesChart } from './components/charts/TimeSeriesChart';
+import { ModelBreakdownChart } from './components/charts/ModelBreakdownChart';
+import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
+import { TokenBreakdownChart } from './components/charts/TokenBreakdownChart';
+import { useHighchartsInit } from './components/charts/useHighchartsInit';
+import { REPORT_TYPES } from './lib/types';
+import type { TokenUsageRow } from './lib/types';
+import { formatCurrency, formatCompact, formatDateRange, humanizeColumn } from './lib/formatters';
+import { computeSummary } from './lib/aggregation';
+import { parseCSV } from './lib/csv-parser';
+import styles from './App.module.css';
+
+type ViewTab = 'charts' | 'table';
+type FilterableField =
+  | 'username'
+  | 'model'
+  | 'organization'
+  | 'sku'
+  | 'costCenterName'
+  | 'product'
+  | 'repository';
+
+type AutocompleteSuggestion = {
+  id: string;
+  text?: string;
+  leadingVisual?: FunctionComponent<PropsWithChildren<IconProps>>;
+  metadata:
+    | { type: 'field'; field: FilterableField }
+    | { type: 'value'; field: FilterableField; value: string };
+};
+
+interface InsightNavItem {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  current?: boolean;
+  disabled?: boolean;
+}
+
+const INSIGHTS_NAV_ITEMS: InsightNavItem[] = [
+  { label: 'Copilot usage', icon: CopilotIcon, current: true },
+  { label: 'GitHub Actions usage', icon: MeterIcon, disabled: true },
+];
+
+const TIME_BUCKET_OPTIONS = [
+  { label: 'Daily', value: 'daily' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+] as const;
+
+const FILTERABLE_FIELDS: FilterableField[] = [
+  'username',
+  'model',
+  'organization',
+  'sku',
+  'costCenterName',
+  'product',
+  'repository',
+];
+
+const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<IconProps>>> = {
+  username: CopilotIcon,
+  model: GraphIcon,
+  organization: MeterIcon,
+  sku: ServerIcon,
+  costCenterName: TableIcon,
+  product: WorkflowIcon,
+  repository: WorkflowIcon,
+};
+
+function parseAdvancedFilter(value: string) {
+  const separatorIndex = value.indexOf(':');
+  if (separatorIndex === -1) return null;
+
+  const field = value.slice(0, separatorIndex).trim() as FilterableField;
+  const filterValue = value.slice(separatorIndex + 1).trim();
+
+  if (!FILTERABLE_FIELDS.includes(field) || !filterValue) return null;
+
+  return { field, value: filterValue };
+}
+
+function getMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split('-').map(Number);
+  if (!year || !month) return monthKey;
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
+const REPORT_TYPE_LABELS: Record<string, string> = {
+  [REPORT_TYPES.PREMIUM_REQUEST]: 'Premium Requests',
+  [REPORT_TYPES.TOKEN_USAGE]: 'Token Usage',
+  [REPORT_TYPES.USAGE_REPORT]: 'Usage Report',
+};
+
+const REPORT_TYPE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  [REPORT_TYPES.PREMIUM_REQUEST]: CopilotIcon,
+  [REPORT_TYPES.TOKEN_USAGE]: ServerIcon,
+  [REPORT_TYPES.USAGE_REPORT]: WorkflowIcon,
+};
+
+/** Hero card — mimics @github-ui/data-card DataCard */
+function HeroCard({
+  title,
+  value,
+  description,
+}: {
+  title: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className={styles.heroCard}>
+      <div className={styles.heroCardInner}>
+        <h3 className={styles.heroCardTitle}>{title}</h3>
+        <div className={styles.heroCardValue}>{value}</div>
+        <p className={styles.heroCardDescription}>{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function downloadReportAsCsv(report: NonNullable<ReturnType<typeof useReport>['activeReport']>) {
+  const rows = report.rows as unknown as Array<Record<string, unknown>>;
+  if (rows.length === 0) return;
+
+  const headers = Object.keys(rows[0]);
+  const escapeValue = (value: unknown) => {
+    const normalized = value == null ? '' : String(value);
+    if (normalized.includes(',') || normalized.includes('"') || normalized.includes('\n')) {
+      return `"${normalized.replaceAll('"', '""')}"`;
+    }
+
+    return normalized;
+  };
+
+  const csv = [
+    headers.join(','),
+    ...rows.map((row) => headers.map((header) => escapeValue(row[header])).join(',')),
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = objectUrl;
+  link.download = report.fileName || 'copilot-usage-report.csv';
+  link.click();
+
+  URL.revokeObjectURL(objectUrl);
+}
+
+function AppContent() {
+  useHighchartsInit();
+  const {
+    reports,
+    activeReportIndex,
+    setActiveReport,
+    removeReport,
+    activeReport,
+    addReport,
+    groupByColumn,
+    setGroupByColumn,
+    timeBucket,
+    setTimeBucket,
+    periodKey,
+    setPeriodKey,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+    clearFilters,
+    visibleRows,
+  } = useReport();
+  const [activeTab, setActiveTab] = useState<ViewTab>('charts');
+  const [filterInput, setFilterInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReset = useCallback(() => {
+    for (let i = reports.length - 1; i >= 0; i--) removeReport(i);
+  }, [reports.length, removeReport]);
+
+  const handleAddFile = useCallback(
+    async (files: FileList) => {
+      for (const file of Array.from(files)) {
+        if (!file.name.endsWith('.csv')) continue;
+        const text = await file.text();
+        addReport(parseCSV(text, file.name));
+      }
+    },
+    [addReport],
+  );
+
+  const summary = useMemo(() => {
+    if (!activeReport || visibleRows.length === 0) return null;
+    return computeSummary(visibleRows);
+  }, [activeReport, visibleRows]);
+
+  const totalTokens = useMemo(() => {
+    if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE) return 0;
+    return (visibleRows as TokenUsageRow[]).reduce(
+      (s, r) => s + r.totalInputTokens + r.totalOutputTokens + r.totalCacheCreationTokens + r.totalCacheReadTokens,
+      0,
+    );
+  }, [activeReport, visibleRows]);
+
+  const availablePeriods = useMemo(() => {
+    if (!activeReport) return [];
+
+    return [
+      ...new Set(
+        activeReport.rows.map((row) =>
+          String(((row as unknown as Record<string, unknown>).date ?? '')).slice(0, 7),
+        ),
+      ),
+    ]
+      .filter(Boolean)
+      .sort()
+      .reverse();
+  }, [activeReport]);
+
+  useEffect(() => {
+    if (availablePeriods.length === 1 && periodKey === 'all') {
+      setPeriodKey(availablePeriods[0]);
+      return;
+    }
+
+    if (availablePeriods.length > 1 && periodKey !== 'all' && !availablePeriods.includes(periodKey)) {
+      setPeriodKey('all');
+    }
+  }, [availablePeriods, periodKey, setPeriodKey]);
+
+  const selectedPeriodLabel = useMemo(() => {
+    if (!activeReport) return 'All data';
+    return periodKey === 'all' ? 'All data' : getMonthLabel(periodKey);
+  }, [activeReport, periodKey]);
+
+  const handleDownload = useCallback(() => {
+    if (!activeReport) return;
+    downloadReportAsCsv(activeReport);
+  }, [activeReport]);
+
+  const availableFilterFields = useMemo(() => {
+    if (!activeReport) return FILTERABLE_FIELDS;
+
+    const rowKeys = new Set(
+      activeReport.rows.flatMap((row) => Object.keys(row as unknown as Record<string, unknown>)),
+    );
+
+    return FILTERABLE_FIELDS.filter((field) => rowKeys.has(field));
+  }, [activeReport]);
+
+  const filterValuesByField = useMemo(() => {
+    const nextValues = new Map<FilterableField, string[]>();
+
+    if (!activeReport) return nextValues;
+
+    for (const field of availableFilterFields) {
+      const values = [
+        ...new Set(
+          activeReport.rows
+            .map((row) => String((row as unknown as Record<string, unknown>)[field] ?? '').trim())
+            .filter(Boolean),
+        ),
+      ]
+        .sort((left, right) => left.localeCompare(right))
+        .slice(0, 100);
+
+      nextValues.set(field, values);
+    }
+
+    return nextValues;
+  }, [activeReport, availableFilterFields]);
+
+  const activeAdvancedFilters = useMemo(
+    () =>
+      Object.entries(filters).flatMap(([field, values]) =>
+        values.map((value) => ({ field: field as FilterableField, value })),
+      ),
+    [filters],
+  );
+
+  const autocompleteSuggestions = useMemo<AutocompleteSuggestion[]>(() => {
+    const trimmedInput = filterInput.trim();
+
+    if (!trimmedInput) {
+      return availableFilterFields.slice(0, 8).map((field) => ({
+        id: `field:${field}`,
+        text: `${humanizeColumn(field)}…`,
+        leadingVisual: FIELD_ICONS[field],
+        metadata: { type: 'field' as const, field },
+      }));
+    }
+
+    const advancedFilter = parseAdvancedFilter(trimmedInput);
+
+    if (advancedFilter) {
+      return (filterValuesByField.get(advancedFilter.field) ?? [])
+        .filter((value) => value.toLowerCase().includes(advancedFilter.value.toLowerCase()))
+        .filter((value) => !(filters[advancedFilter.field] ?? []).includes(value))
+        .slice(0, 8)
+        .map((value) => ({
+          id: `${advancedFilter.field}:${value}`,
+          text: `${humanizeColumn(advancedFilter.field)}: ${value}`,
+          leadingVisual: FIELD_ICONS[advancedFilter.field],
+          metadata: { type: 'value' as const, field: advancedFilter.field, value },
+        }));
+    }
+
+    const normalizedInput = trimmedInput.toLowerCase();
+    const fieldMatches = availableFilterFields
+      .filter(
+        (field) =>
+          field.toLowerCase().includes(normalizedInput) ||
+          humanizeColumn(field).toLowerCase().includes(normalizedInput),
+      )
+      .slice(0, 5)
+      .map((field) => ({
+        id: `field:${field}`,
+        text: `${humanizeColumn(field)}…`,
+        leadingVisual: FIELD_ICONS[field],
+        metadata: { type: 'field' as const, field },
+      }));
+
+    const valueMatches = availableFilterFields.flatMap((field) =>
+      (filterValuesByField.get(field) ?? [])
+        .filter((value) => value.toLowerCase().includes(normalizedInput))
+        .filter((value) => !(filters[field] ?? []).includes(value))
+        .slice(0, 3)
+        .map((value) => ({
+          id: `${field}:${value}`,
+          text: `${humanizeColumn(field)}: ${value}`,
+          leadingVisual: FIELD_ICONS[field],
+          metadata: { type: 'value' as const, field, value },
+        })),
+    );
+
+    return [...fieldMatches, ...valueMatches].slice(0, 10);
+  }, [availableFilterFields, filterInput, filterValuesByField, filters]);
+
+  const applyAdvancedFilter = useCallback(
+    (field: FilterableField, value: string) => {
+      const nextValues = [...new Set([...(filters[field] ?? []), value])];
+      setFilter(field, nextValues);
+      setFilterInput('');
+      setSearchQuery('');
+    },
+    [filters, setFilter, setSearchQuery],
+  );
+
+  const removeAdvancedFilter = useCallback(
+    (field: FilterableField, value: string) => {
+      const nextValues = (filters[field] ?? []).filter((currentValue) => currentValue !== value);
+      setFilter(field, nextValues);
+    },
+    [filters, setFilter],
+  );
+
+  const clearAllToolbarFilters = useCallback(() => {
+    clearFilters();
+    setSearchQuery('');
+    setFilterInput('');
+  }, [clearFilters, setSearchQuery]);
+
+  const handleFilterInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextValue = event.target.value;
+      setFilterInput(nextValue);
+
+      if (nextValue.includes(':')) {
+        setSearchQuery('');
+        return;
+      }
+
+      setSearchQuery(nextValue);
+    },
+    [setSearchQuery],
+  );
+
+  const handleAutocompleteSelection = useCallback(
+    (selectedItem: AutocompleteSuggestion | AutocompleteSuggestion[]) => {
+      if (Array.isArray(selectedItem)) return;
+
+      if (selectedItem.metadata.type === 'field') {
+        setFilterInput(`${selectedItem.metadata.field}:`);
+        setSearchQuery('');
+        return;
+      }
+
+      applyAdvancedFilter(selectedItem.metadata.field, selectedItem.metadata.value);
+    },
+    [applyAdvancedFilter, setSearchQuery],
+  );
+
+  const handleFilterInputKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter') return;
+
+      const advancedFilter = parseAdvancedFilter(filterInput.trim());
+      if (advancedFilter) {
+        event.preventDefault();
+        applyAdvancedFilter(advancedFilter.field, advancedFilter.value);
+      }
+    },
+    [applyAdvancedFilter, filterInput],
+  );
+
+  const activeFilterCount = activeAdvancedFilters.length + (searchQuery.trim() ? 1 : 0);
+
+  const renderInsightsSidebar = () => (
+    <div className={styles.sidebarContent}>
+      <Heading as="h2" className={styles.sidebarHeading}>
+        Insights
+      </Heading>
+      <NavList aria-label="Insights navigation">
+        {INSIGHTS_NAV_ITEMS.map(({ label, icon: Icon, current, disabled }) => (
+          <NavList.Item
+            key={label}
+            href={disabled ? undefined : '#'}
+            aria-current={current ? 'page' : undefined}
+            aria-disabled={disabled ? 'true' : undefined}
+            className={disabled ? styles.sidebarItemDisabled : undefined}
+            onClick={(event) => event.preventDefault()}
+          >
+            <NavList.LeadingVisual>
+              <Icon />
+            </NavList.LeadingVisual>
+            {label}
+            {disabled ? (
+              <NavList.TrailingVisual>
+                <span className={styles.sidebarStatusPill}>Coming soon</span>
+              </NavList.TrailingVisual>
+            ) : null}
+          </NavList.Item>
+        ))}
+      </NavList>
+    </div>
+  );
+
+  const renderViewTabs = () => (
+    <UnderlineNav aria-label="Usage viewer tabs" variant="flush" className={styles.primaryTabs}>
+      <UnderlineNav.Item
+        href="#"
+        aria-current={activeTab === 'charts' ? 'page' : undefined}
+        leadingVisual={<GraphIcon size={16} />}
+        onSelect={(event) => {
+          event.preventDefault();
+          setActiveTab('charts');
+        }}
+      >
+        Charts
+      </UnderlineNav.Item>
+      <UnderlineNav.Item
+        href="#"
+        aria-current={activeTab === 'table' ? 'page' : undefined}
+        leadingVisual={<TableIcon size={16} />}
+        onSelect={(event) => {
+          event.preventDefault();
+          setActiveTab('table');
+        }}
+      >
+        Table
+      </UnderlineNav.Item>
+    </UnderlineNav>
+  );
+
+  const renderPeriodMenu = () => (
+    <ActionMenu>
+      <ActionMenu.Button size="small">Period: {selectedPeriodLabel}</ActionMenu.Button>
+      <ActionMenu.Overlay width="auto" align="end">
+        <ActionList selectionVariant="single">
+          <ActionList.Item selected={periodKey === 'all'} onSelect={() => setPeriodKey('all')}>
+            All data
+          </ActionList.Item>
+          {availablePeriods.map((value) => (
+            <ActionList.Item
+              key={value}
+              selected={periodKey === value}
+              onSelect={() => setPeriodKey(value)}
+            >
+              {getMonthLabel(value)}
+            </ActionList.Item>
+          ))}
+        </ActionList>
+      </ActionMenu.Overlay>
+    </ActionMenu>
+  );
+
+  // ── Empty state ──
+  if (reports.length === 0) {
+    return (
+      <PageLayout containerWidth="full" padding="none" rowGap="none" columnGap="none">
+        <PageLayout.Pane
+          position="start"
+          padding="normal"
+          divider="line"
+          aria-label="Insights sidebar"
+          className={styles.sidebarPane}
+          hidden={{ narrow: true, regular: false, wide: false }}
+        >
+          {renderInsightsSidebar()}
+        </PageLayout.Pane>
+        <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
+          <div className={styles.pageStack}>
+            <PageHeader className={styles.pageHeader}>
+              <PageHeader.TitleArea>
+                <PageHeader.LeadingVisual>
+                  <GraphIcon size={24} />
+                </PageHeader.LeadingVisual>
+                <PageHeader.Title as="h1">Copilot Usage Viewer</PageHeader.Title>
+              </PageHeader.TitleArea>
+              <PageHeader.Description>
+                <span className={styles.pageDescription}>Token-Based Billing Report Explorer</span>
+              </PageHeader.Description>
+            </PageHeader>
+
+            <section className={styles.emptyStateSurface} aria-labelledby="upload-report-heading">
+              <div className={styles.emptyStateHeader}>
+                <Heading as="h2" id="upload-report-heading" className={styles.surfaceTitle}>
+                  Upload usage data
+                </Heading>
+                <Text as="p" className={styles.surfaceDescription}>
+                  Drag in a billing export to inspect spend, requests, and token consumption with GitHub-native chrome.
+                </Text>
+              </div>
+              <FileDropzone />
+            </section>
+          </div>
+        </PageLayout.Content>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <PageLayout containerWidth="full" padding="none" rowGap="none" columnGap="none">
+      <PageLayout.Pane
+        position="start"
+        padding="normal"
+        divider="line"
+        aria-label="Insights sidebar"
+        className={styles.sidebarPane}
+        hidden={{ narrow: true, regular: false, wide: false }}
+      >
+        {renderInsightsSidebar()}
+      </PageLayout.Pane>
+      <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
+        <div className={styles.pageStack}>
+          <PageHeader className={styles.pageHeader}>
+            <PageHeader.TitleArea>
+              <PageHeader.LeadingVisual>
+                <CopilotIcon size={24} />
+              </PageHeader.LeadingVisual>
+              <PageHeader.Title as="h1">
+                {REPORT_TYPE_LABELS[activeReport?.type ?? ''] ?? 'Copilot Usage Viewer'}
+              </PageHeader.Title>
+            </PageHeader.TitleArea>
+            <PageHeader.Actions>
+              <Stack direction="horizontal" gap="condensed">
+                {renderPeriodMenu()}
+                <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
+                  Add file
+                </Button>
+                <Button size="small" variant="invisible" leadingVisual={XIcon} onClick={handleReset}>
+                  Clear
+                </Button>
+              </Stack>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files) handleAddFile(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+            </PageHeader.Actions>
+            <PageHeader.Description>
+              <span className={styles.pageDescription}>
+                Showing data from{' '}
+                {activeReport
+                  ? formatDateRange(activeReport.dateRange.start, activeReport.dateRange.end)
+                  : ''}
+              </span>
+            </PageHeader.Description>
+          </PageHeader>
+
+          {summary && (
+            <div className={styles.heroCardsGrid}>
+              <HeroCard
+                title="Gross amount"
+                value={formatCurrency(summary.totalGrossAmount)}
+                description={`Total gross spend for ${formatDateRange(summary.dateRange.start, summary.dateRange.end)}`}
+              />
+              <HeroCard
+                title="Net amount"
+                value={formatCurrency(summary.totalNetAmount)}
+                description={`Billed amount after ${formatCurrency(summary.totalDiscountAmount)} in discounts`}
+              />
+              <HeroCard
+                title="Total requests"
+                value={formatCompact(summary.totalQuantity)}
+                description={`Across ${summary.uniqueUsers} users and ${summary.uniqueModels} models`}
+              />
+              {activeReport?.type === REPORT_TYPES.TOKEN_USAGE && (
+                <HeroCard
+                  title="Total tokens"
+                  value={formatCompact(totalTokens)}
+                  description="Input, output, cache creation, and cache read tokens combined"
+                />
+              )}
+            </div>
+          )}
+
+          {reports.length > 1 && (
+            <UnderlineNav
+              aria-label="Uploaded reports"
+              variant="flush"
+              className={styles.reportTabs}
+            >
+              {reports.map((report, i) => {
+                const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
+
+                return (
+                  <UnderlineNav.Item
+                    key={report.fileName}
+                    href="#"
+                    aria-current={i === activeReportIndex ? 'page' : undefined}
+                    leadingVisual={<Icon />}
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      setActiveReport(i);
+                    }}
+                  >
+                    {REPORT_TYPE_LABELS[report.type] ?? report.type}
+                  </UnderlineNav.Item>
+                );
+              })}
+            </UnderlineNav>
+          )}
+
+          <section className={styles.contentSurface} aria-label="Usage viewer content">
+            <div className={styles.surfaceTabsRow}>{renderViewTabs()}</div>
+
+            <div className={styles.sectionToolbar}>
+              <div className={styles.toolbarLeading}>
+                <ActionMenu>
+                  <ActionMenu.Button size="small" leadingVisual={FilterIcon}>
+                    {activeFilterCount > 0 ? `Filter (${activeFilterCount})` : 'Filter'}
+                  </ActionMenu.Button>
+                  <ActionMenu.Overlay width="medium" align="start">
+                    <ActionList selectionVariant="single">
+                      <ActionList.Group title="Advanced filter">
+                        {availableFilterFields.map((field) => (
+                          <ActionList.Item
+                            key={`advanced-${field}`}
+                            onSelect={() => {
+                              setFilterInput(`${field}:`);
+                              setSearchQuery('');
+                            }}
+                          >
+                            {humanizeColumn(field)}
+                          </ActionList.Item>
+                        ))}
+                      </ActionList.Group>
+                      <ActionList.Divider />
+                      <ActionList.Group title="Group by">
+                        {availableFilterFields.map((key) => (
+                            <ActionList.Item
+                              key={key}
+                              selected={groupByColumn === key}
+                              onSelect={() => setGroupByColumn(key)}
+                            >
+                              {humanizeColumn(key)}
+                            </ActionList.Item>
+                          ))}
+                      </ActionList.Group>
+                      <ActionList.Divider />
+                      <ActionList.Group title="Time bucket">
+                        {TIME_BUCKET_OPTIONS.map((option) => (
+                          <ActionList.Item
+                            key={option.value}
+                            selected={timeBucket === option.value}
+                            onSelect={() => setTimeBucket(option.value)}
+                          >
+                            {option.label}
+                          </ActionList.Item>
+                        ))}
+                      </ActionList.Group>
+                      {(activeAdvancedFilters.length > 0 || searchQuery.trim()) && (
+                        <>
+                          <ActionList.Divider />
+                          <ActionList.Item variant="danger" onSelect={clearAllToolbarFilters}>
+                            Clear all filters
+                          </ActionList.Item>
+                        </>
+                      )}
+                    </ActionList>
+                  </ActionMenu.Overlay>
+                </ActionMenu>
+                <div className={styles.toolbarSearchArea}>
+                  {activeAdvancedFilters.length > 0 && (
+                    <div className={styles.activeFilterTokens}>
+                      {activeAdvancedFilters.map(({ field, value }) => (
+                        <Token
+                          key={`${field}:${value}`}
+                          text={`${humanizeColumn(field)}: ${value}`}
+                          size="medium"
+                          onRemove={() => removeAdvancedFilter(field, value)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className={styles.toolbarSearch}>
+                    <Autocomplete>
+                      <Autocomplete.Input
+                        id="usage-filter-input"
+                        aria-label="Search or filter report rows"
+                        value={filterInput}
+                        onChange={handleFilterInputChange}
+                        onKeyDown={handleFilterInputKeyDown}
+                        placeholder="Search or filter"
+                        leadingVisual={SearchIcon}
+                        block
+                      />
+                      <Autocomplete.Overlay>
+                        <Autocomplete.Menu
+                          aria-labelledby="usage-filter-input"
+                          items={autocompleteSuggestions as never}
+                          selectedItemIds={[]}
+                          onSelectedChange={handleAutocompleteSelection as never}
+                          emptyStateText={
+                            filterInput.includes(':')
+                              ? 'No matching values'
+                              : 'Type to search or add an advanced filter'
+                          }
+                        />
+                      </Autocomplete.Overlay>
+                    </Autocomplete>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.toolbarActions}>
+                <IconButton
+                  aria-label="Download current report CSV"
+                  icon={DownloadIcon}
+                  size="small"
+                  variant="invisible"
+                  onClick={handleDownload}
+                />
+              </div>
+            </div>
+
+            <div role="tabpanel" className={styles.panelContent}>
+              {visibleRows.length === 0 && (
+                <div className={styles.emptyResultsState}>
+                  <Heading as="h3" className={styles.emptyResultsTitle}>
+                    No matching usage rows
+                  </Heading>
+                  <Text as="p" className={styles.surfaceDescription}>
+                    Try a different search term or clear the current period filter.
+                  </Text>
+                </div>
+              )}
+
+              {activeTab === 'charts' && visibleRows.length > 0 && (
+                <div className={styles.chartStack}>
+                  <div className={styles.chartSurface}>
+                    <TimeSeriesChart />
+                  </div>
+
+                  <div className={styles.chartGrid}>
+                    <div className={styles.chartGridItem}>
+                      <div className={styles.chartSurface}>
+                        <ModelBreakdownChart />
+                      </div>
+                    </div>
+                    <div className={styles.chartGridItem}>
+                      <div className={styles.chartSurface}>
+                        <CostBreakdownChart />
+                      </div>
+                    </div>
+                  </div>
+
+                  {activeReport?.type === REPORT_TYPES.TOKEN_USAGE && (
+                    <div className={styles.chartSurface}>
+                      <TokenBreakdownChart />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'table' && visibleRows.length > 0 && <ReportTable />}
+            </div>
+          </section>
+        </div>
+      </PageLayout.Content>
+    </PageLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <ReportProvider>
+      <AppContent />
+    </ReportProvider>
+  );
+}
