@@ -4,6 +4,8 @@
 
 **[→ Live App](https://austenstone.github.io/tbb/)**
 
+https://github.com/user-attachments/assets/891585e5-6015-41d4-a12e-8a94f50e00c1
+
 ## What It Does
 
 TBB parses GitHub's billing CSV exports and turns them into interactive dashboards. No backend, no uploads to a server — everything stays in your browser.
