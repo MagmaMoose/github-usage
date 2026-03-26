@@ -4,6 +4,7 @@ import { Blankslate } from '@primer/react/experimental';
 import { UploadIcon } from '@primer/octicons-react';
 import { parseCSV } from '../lib/csv-parser';
 import { useReport } from '../context/useReport';
+import { getCachedCSVs, setCachedCSVs } from '../lib/local-storage';
 import styles from './FileDropzone.module.css';
 
 export function FileDropzone() {
@@ -24,6 +25,10 @@ export function FileDropzone() {
           const text = await file.text();
           const report = parseCSV(text, file.name);
           addReport(report);
+          // Cache the raw CSV to localStorage for restore-on-reload
+          const cached = getCachedCSVs();
+          cached.push({ fileName: file.name, content: text, cachedAt: new Date().toISOString() });
+          setCachedCSVs(cached);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to parse CSV');
         }

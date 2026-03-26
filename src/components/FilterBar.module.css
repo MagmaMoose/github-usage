@@ -1,0 +1,111 @@
+/* FilterBar — GitHub Actions metrics–style filter input */
+
+.filterBar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.filterBarInner {
+  display: flex;
+  align-items: center;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-default, #fff);
+  overflow: hidden;
+}
+
+.filterBarInner:focus-within {
+  border-color: var(--borderColor-accent-emphasis, #0969da);
+  box-shadow: inset 0 0 0 1px var(--borderColor-accent-emphasis, #0969da);
+}
+
+/* Filter button on the left */
+.filterButton {
+  flex-shrink: 0;
+  border: none !important;
+  border-right: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  height: 100%;
+  gap: var(--base-size-4, 4px);
+}
+
+.filterCount {
+  margin-left: var(--base-size-4, 4px);
+}
+
+/* Input area — flex container for tokens + input */
+.inputArea {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 8px;
+  cursor: text;
+  min-height: 32px;
+}
+
+/* Inline filter tokens */
+.inlineToken {
+  flex-shrink: 0;
+}
+
+/* Category prefix shown when a field is selected */
+.categoryPrefix {
+  flex-shrink: 0;
+  font-size: var(--text-body-size-medium, 14px);
+  color: var(--fgColor-default, #1f2328);
+  font-weight: var(--base-text-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+/* The raw text input */
+.filterInput {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--text-body-size-medium, 14px);
+  font-family: inherit;
+  color: var(--fgColor-default, #1f2328);
+  line-height: 24px;
+  padding: 0;
+}
+
+.filterInput::placeholder {
+  color: var(--fgColor-muted, #59636e);
+}
+
+/* Clear button inside input area */
+.clearButton {
+  flex-shrink: 0;
+}
+
+/* Search / submit button on the right */
+.searchButton {
+  flex-shrink: 0;
+  border: none !important;
+  border-left: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Suggestions dropdown */
+.suggestionsOverlay {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--zIndex-dropdown, 200);
+  background-color: var(--overlay-bgColor, #fff);
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  box-shadow: var(--shadow-floating-small, 0 1px 3px rgba(0,0,0,0.12));
+  max-height: 360px;
+  overflow-y: auto;
+  padding: var(--base-size-4, 4px) 0;
+}
