@@ -5,8 +5,8 @@ import { SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue } from '../../lib/formatters';
-import { buildColorMap } from '../../lib/chart-theme';
+import { humanizeColumn, formatCompact } from '../../lib/formatters';
+import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
 import styles from './Charts.module.css';
@@ -91,7 +91,25 @@ export function ModelBreakdownChart() {
     return {
       chart: { type: 'bar', height: Math.max(300, sorted.length * 40) },
       title: { text: `Top ${humanizeColumn(groupByColumn)} by Spend` },
-      xAxis: { categories, crosshair: false },
+      xAxis: {
+        categories,
+        crosshair: false,
+        labels: {
+          useHTML: true,
+          formatter: function () {
+            const name = typeof this.value === 'string' ? this.value : String(this.value);
+            const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
+            const isModel = groupByColumn === 'model';
+            if (isAvatar && name) {
+              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="https://github.com/${encodeURIComponent(name)}.png?size=40" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
+            }
+            if (isModel && name) {
+              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
+            }
+            return name || '(empty)';
+          },
+        },
+      },
       yAxis: {
         title: { text: 'Spend ($)' },
         labels: { format: '${value}' },
