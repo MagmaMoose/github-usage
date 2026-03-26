@@ -22,6 +22,7 @@ import { groupBy, sumBy } from '../lib/aggregation';
 import { formatCurrency, formatCompact, humanizeColumn } from '../lib/formatters';
 import type { AnyReportRow, TokenUsageRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
+import { getModelIconUrl } from '../lib/chart-theme';
 import styles from './ReportTable.module.css';
 
 // Extend TanStack's ColumnMeta to support our align property
@@ -213,10 +214,16 @@ export function ReportTable() {
   const { activeReport, groupByColumn, visibleRows } = useReport();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
+
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    return {
+      grossAmount: false,
+      discountAmount: false,
+      count: false,
+    };
+  });
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const tableData = useMemo(() => {
     if (!activeReport) return [];
@@ -249,8 +256,9 @@ export function ReportTable() {
 
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
     const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization';
+    const isModelGroup = groupByColumn === 'model';
 
-    const cols: ColumnDef<TableRow, unknown>[] = [
+    return [
       columnHelper.accessor('group', {
         header: humanizeColumn(groupByColumn),
         cell: (info) => {
@@ -259,6 +267,20 @@ export function ReportTable() {
             return (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
+                <span title={value}>{value}</span>
+              </span>
+            );
+          }
+          if (isModelGroup && value) {
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <img
+                  src={getModelIconUrl(value)}
+                  alt=""
+                  width={20}
+                  height={20}
+                  style={{ borderRadius: '50%', padding: 2, backgroundColor: 'var(--bgColor-muted, #f6f8fa)' }}
+                />
                 <span title={value}>{value}</span>
               </span>
             );
@@ -291,43 +313,33 @@ export function ReportTable() {
         cell: (info) => formatCurrency(info.getValue()),
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
-    ];
-
-    if (isTokenReport) {
-      cols.push(
-        columnHelper.accessor('totalInputTokens', {
-          header: 'Input tokens',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalOutputTokens', {
-          header: 'Output tokens',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalCacheCreationTokens', {
-          header: 'Cache create',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalCacheReadTokens', {
-          header: 'Cache read',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-      );
-    }
-
-    cols.push(
+      columnHelper.accessor('totalInputTokens', {
+        header: 'Input tokens',
+        cell: (info) => formatCompact(info.getValue()),
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>,
+      columnHelper.accessor('totalOutputTokens', {
+        header: 'Output tokens',
+        cell: (info) => formatCompact(info.getValue()),
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>,
+      columnHelper.accessor('totalCacheCreationTokens', {
+        header: 'Cache create',
+        cell: (info) => formatCompact(info.getValue()),
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>,
+      columnHelper.accessor('totalCacheReadTokens', {
+        header: 'Cache read',
+        cell: (info) => formatCompact(info.getValue()),
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>,
       columnHelper.accessor('count', {
         header: 'Rows',
         cell: (info) => formatCompact(info.getValue()),
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
-    );
-
-    return cols;
-  }, [groupByColumn, isTokenReport]);
+    ];
+  }, [groupByColumn]);
 
   const useVirtual = tableData.length > VIRTUAL_THRESHOLD;
 
