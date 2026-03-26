@@ -4,6 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
+import { formatDisplayValue } from '../../lib/formatters';
 import type { AnyReportRow } from '../../lib/types';
 
 export function CostBreakdownChart() {
@@ -34,7 +35,7 @@ export function CostBreakdownChart() {
 
       return {
         type: 'column' as const,
-        name: modelInfo.model || '(empty)',
+        name: formatDisplayValue(modelInfo.model, 'model') || '(empty)',
         data,
         color: colorMap.get(modelInfo.model) ?? '#808fa3',
       };

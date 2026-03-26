@@ -5,7 +5,7 @@ import { SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue } from '../../lib/formatters';
 import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
@@ -75,7 +75,7 @@ export function ModelBreakdownChart() {
 
       return {
         type: 'bar' as const,
-        name: modelInfo.model || '(empty)',
+        name: formatDisplayValue(modelInfo.model, groupByColumn) || '(empty)',
         data,
         color: colorMap.get(modelInfo.model) ?? '#808fa3',
         visible: !isHidden,
@@ -142,7 +142,7 @@ export function ModelBreakdownChart() {
       })
       .sort((a, b) => b.total - a.total);
 
-    const categories = enriched.map((item) => item.key || '(empty)');
+    const categories = enriched.map((item) => formatDisplayValue(item.key, groupByColumn) || '(empty)');
 
     return {
       chart: { type: 'bar', height: Math.max(350, enriched.length * 40) },
