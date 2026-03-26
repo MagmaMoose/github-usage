@@ -9,13 +9,10 @@
 .filterBarInner {
   display: flex;
   align-items: center;
-  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
-  border-radius: var(--borderRadius-medium, 6px);
-  background-color: var(--bgColor-default, #fff);
-  overflow: hidden;
+  gap: var(--base-size-8, 8px);
 }
 
-.filterBarInner:focus-within {
+.filterBarInner:focus-within .inputArea {
   border-color: var(--borderColor-accent-emphasis, #0969da);
   box-shadow: inset 0 0 0 1px var(--borderColor-accent-emphasis, #0969da);
 }
@@ -23,12 +20,6 @@
 /* Filter button on the left */
 .filterButton {
   flex-shrink: 0;
-  border: none !important;
-  border-right: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  height: 100%;
-  gap: var(--base-size-4, 4px);
 }
 
 .filterCount {
@@ -46,6 +37,15 @@
   padding: 4px 8px;
   cursor: text;
   min-height: 32px;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-default, #fff);
+}
+
+/* Search icon inside input area */
+.searchIcon {
+  flex-shrink: 0;
+  color: var(--fgColor-muted, #59636e);
 }
 
 /* Inline filter tokens */
@@ -88,10 +88,6 @@
 /* Search / submit button on the right */
 .searchButton {
   flex-shrink: 0;
-  border: none !important;
-  border-left: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
 }
 
 /* Suggestions dropdown */

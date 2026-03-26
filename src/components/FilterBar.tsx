@@ -301,6 +301,8 @@ export function FilterBar({
 
         {/* Input area with inline tokens */}
         <div className={styles.inputArea} onClick={() => inputRef.current?.focus()}>
+          <SearchIcon size={16} className={styles.searchIcon} />
+
           {/* Inline tokens for active filters */}
           {activeFilters.map(({ field, value }) => (
             <Token
@@ -350,16 +352,6 @@ export function FilterBar({
             />
           )}
         </div>
-
-        {/* Search submit button */}
-        <IconButton
-          aria-label="Search"
-          icon={SearchIcon}
-          variant="default"
-          size="medium"
-          className={styles.searchButton}
-          onClick={() => inputRef.current?.focus()}
-        />
       </div>
 
       {/* Suggestions overlay */}

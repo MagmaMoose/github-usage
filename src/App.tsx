@@ -11,7 +11,6 @@ import {
 import {
   ActionList,
   ActionMenu,
-  Autocomplete,
   Button,
   Heading,
   IconButton,
@@ -19,7 +18,6 @@ import {
   PageLayout,
   Stack,
   Text,
-  Token,
   UnderlineNav,
 } from '@primer/react';
 import { PageHeader } from '@primer/react/experimental';
@@ -27,10 +25,8 @@ import type { IconProps } from '@primer/octicons-react';
 import {
   CopilotIcon,
   DownloadIcon,
-  FilterIcon,
   GraphIcon,
   MeterIcon,
-  SearchIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
   TableIcon,
@@ -41,6 +37,7 @@ import {
 } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
+import { FilterBar } from './components/FilterBar';
 import { FileDropzone } from './components/FileDropzone';
 import { ReportTable } from './components/ReportTable';
 import { TimeSeriesChart } from './components/charts/TimeSeriesChart';
@@ -48,7 +45,7 @@ import { ModelBreakdownChart } from './components/charts/ModelBreakdownChart';
 import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
 import { useHighchartsInit } from './components/charts/useHighchartsInit';
 import { PeriodSelector } from './components/PeriodSelector';
-import { REPORT_TYPES } from './lib/types';
+import { REPORT_TYPES, GROUPABLE_COLUMNS } from './lib/types';
 import type { TokenUsageRow } from './lib/types';
 import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact, humanizeColumn } from './lib/formatters';
 import { computeSummary, topN } from './lib/aggregation';
@@ -66,15 +63,6 @@ type FilterableField =
   | 'product'
   | 'repository';
 
-type AutocompleteSuggestion = {
-  id: string;
-  text?: string;
-  leadingVisual?: FunctionComponent<PropsWithChildren<IconProps>>;
-  metadata:
-    | { type: 'field'; field: FilterableField }
-    | { type: 'value'; field: FilterableField; value: string };
-};
-
 interface InsightNavItem {
   label: string;
   icon: ComponentType<{ className?: string }>;
@@ -86,12 +74,6 @@ const INSIGHTS_NAV_ITEMS: InsightNavItem[] = [
   { label: 'Copilot usage', icon: CopilotIcon, current: true },
   { label: 'GitHub Actions usage', icon: MeterIcon, disabled: true },
 ];
-
-const TIME_BUCKET_OPTIONS = [
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
-] as const;
 
 const FILTERABLE_FIELDS: FilterableField[] = [
   'username',
@@ -123,6 +105,17 @@ function parseAdvancedFilter(value: string) {
   if (!FILTERABLE_FIELDS.includes(field) || !filterValue) return null;
 
   return { field, value: filterValue };
+}
+
+function getMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split('-').map(Number);
+  if (!year || !month) return monthKey;
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
@@ -202,8 +195,6 @@ function AppContent() {
     addReport,
     groupByColumn,
     setGroupByColumn,
-    timeBucket,
-    setTimeBucket,
     periodKey,
     setPeriodKey,
     searchQuery,
@@ -227,7 +218,6 @@ function AppContent() {
     setSidebarCollapsedRaw(collapsed);
     setStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, collapsed);
   }, []);
-  const [filterInput, setFilterInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleReset = useCallback(() => {
@@ -353,77 +343,10 @@ function AppContent() {
     return nextValues;
   }, [activeReport, availableFilterFields]);
 
-  const activeAdvancedFilters = useMemo(
-    () =>
-      Object.entries(filters).flatMap(([field, values]) =>
-        values.map((value) => ({ field: field as FilterableField, value })),
-      ),
-    [filters],
-  );
-
-  const autocompleteSuggestions = useMemo<AutocompleteSuggestion[]>(() => {
-    const trimmedInput = filterInput.trim();
-
-    if (!trimmedInput) {
-      return availableFilterFields.slice(0, 8).map((field) => ({
-        id: `field:${field}`,
-        text: `${humanizeColumn(field)}…`,
-        leadingVisual: FIELD_ICONS[field],
-        metadata: { type: 'field' as const, field },
-      }));
-    }
-
-    const advancedFilter = parseAdvancedFilter(trimmedInput);
-
-    if (advancedFilter) {
-      return (filterValuesByField.get(advancedFilter.field) ?? [])
-        .filter((value) => value.toLowerCase().includes(advancedFilter.value.toLowerCase()))
-        .filter((value) => !(filters[advancedFilter.field] ?? []).includes(value))
-        .slice(0, 8)
-        .map((value) => ({
-          id: `${advancedFilter.field}:${value}`,
-          text: `${humanizeColumn(advancedFilter.field)}: ${value}`,
-          leadingVisual: FIELD_ICONS[advancedFilter.field],
-          metadata: { type: 'value' as const, field: advancedFilter.field, value },
-        }));
-    }
-
-    const normalizedInput = trimmedInput.toLowerCase();
-    const fieldMatches = availableFilterFields
-      .filter(
-        (field) =>
-          field.toLowerCase().includes(normalizedInput) ||
-          humanizeColumn(field).toLowerCase().includes(normalizedInput),
-      )
-      .slice(0, 5)
-      .map((field) => ({
-        id: `field:${field}`,
-        text: `${humanizeColumn(field)}…`,
-        leadingVisual: FIELD_ICONS[field],
-        metadata: { type: 'field' as const, field },
-      }));
-
-    const valueMatches = availableFilterFields.flatMap((field) =>
-      (filterValuesByField.get(field) ?? [])
-        .filter((value) => value.toLowerCase().includes(normalizedInput))
-        .filter((value) => !(filters[field] ?? []).includes(value))
-        .slice(0, 3)
-        .map((value) => ({
-          id: `${field}:${value}`,
-          text: `${humanizeColumn(field)}: ${value}`,
-          leadingVisual: FIELD_ICONS[field],
-          metadata: { type: 'value' as const, field, value },
-        })),
-    );
-
-    return [...fieldMatches, ...valueMatches].slice(0, 10);
-  }, [availableFilterFields, filterInput, filterValuesByField, filters]);
-
   const applyAdvancedFilter = useCallback(
     (field: FilterableField, value: string) => {
       const nextValues = [...new Set([...(filters[field] ?? []), value])];
       setFilter(field, nextValues);
-      setFilterInput('');
       setSearchQuery('');
     },
     [filters, setFilter, setSearchQuery],
@@ -440,53 +363,12 @@ function AppContent() {
   const clearAllToolbarFilters = useCallback(() => {
     clearFilters();
     setSearchQuery('');
-    setFilterInput('');
   }, [clearFilters, setSearchQuery]);
 
-  const handleFilterInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const nextValue = event.target.value;
-      setFilterInput(nextValue);
-
-      if (nextValue.includes(':')) {
-        setSearchQuery('');
-        return;
-      }
-
-      setSearchQuery(nextValue);
-    },
-    [setSearchQuery],
-  );
-
-  const handleAutocompleteSelection = useCallback(
-    (selectedItem: AutocompleteSuggestion | AutocompleteSuggestion[]) => {
-      if (Array.isArray(selectedItem)) return;
-
-      if (selectedItem.metadata.type === 'field') {
-        setFilterInput(`${selectedItem.metadata.field}:`);
-        setSearchQuery('');
-        return;
-      }
-
-      applyAdvancedFilter(selectedItem.metadata.field, selectedItem.metadata.value);
-    },
-    [applyAdvancedFilter, setSearchQuery],
-  );
-
-  const handleFilterInputKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key !== 'Enter') return;
-
-      const advancedFilter = parseAdvancedFilter(filterInput.trim());
-      if (advancedFilter) {
-        event.preventDefault();
-        applyAdvancedFilter(advancedFilter.field, advancedFilter.value);
-      }
-    },
-    [applyAdvancedFilter, filterInput],
-  );
-
-  const activeFilterCount = activeAdvancedFilters.length + (searchQuery.trim() ? 1 : 0);
+  const groupableColumns = useMemo(() => {
+    if (!activeReport) return FILTERABLE_FIELDS;
+    return [...(GROUPABLE_COLUMNS[activeReport.type] ?? FILTERABLE_FIELDS)];
+  }, [activeReport]);
 
   const renderInsightsSidebar = () => (
     <div className={styles.sidebarContent}>
@@ -678,14 +560,7 @@ function AppContent() {
                 {activeReport
                   ? formatDateRange(activeReport.dateRange.start, activeReport.dateRange.end)
                   : ''}
-                {uniqueOrgs.length > 0 && (
-                  <>
-                    {' · '}
-                    {uniqueOrgs.length <= 3
-                      ? uniqueOrgs.join(', ')
-                      : `${uniqueOrgs.slice(0, 3).join(', ')} +${uniqueOrgs.length - 3} more`}
-                  </>
-                )}
+                
               </span>
             </PageHeader.Description>
           </PageHeader>
@@ -777,102 +652,20 @@ function AppContent() {
 
             <div className={styles.sectionToolbar}>
               <div className={styles.toolbarLeading}>
-                <ActionMenu>
-                  <ActionMenu.Button size="small" leadingVisual={FilterIcon}>
-                    {activeFilterCount > 0 ? `Filter (${activeFilterCount})` : 'Filter'}
-                  </ActionMenu.Button>
-                  <ActionMenu.Overlay width="medium" align="start">
-                    <ActionList selectionVariant="single">
-                      <ActionList.Group title="Advanced filter">
-                        {availableFilterFields.map((field) => (
-                          <ActionList.Item
-                            key={`advanced-${field}`}
-                            onSelect={() => {
-                              setFilterInput(`${field}:`);
-                              setSearchQuery('');
-                            }}
-                          >
-                            {humanizeColumn(field)}
-                          </ActionList.Item>
-                        ))}
-                      </ActionList.Group>
-                      <ActionList.Divider />
-                      <ActionList.Group title="Group by">
-                        {availableFilterFields.map((key) => (
-                            <ActionList.Item
-                              key={key}
-                              selected={groupByColumn === key}
-                              onSelect={() => setGroupByColumn(key)}
-                            >
-                              {humanizeColumn(key)}
-                            </ActionList.Item>
-                          ))}
-                      </ActionList.Group>
-                      <ActionList.Divider />
-                      <ActionList.Group title="Time bucket">
-                        {TIME_BUCKET_OPTIONS.map((option) => (
-                          <ActionList.Item
-                            key={option.value}
-                            selected={timeBucket === option.value}
-                            onSelect={() => setTimeBucket(option.value)}
-                          >
-                            {option.label}
-                          </ActionList.Item>
-                        ))}
-                      </ActionList.Group>
-                      {(activeAdvancedFilters.length > 0 || searchQuery.trim()) && (
-                        <>
-                          <ActionList.Divider />
-                          <ActionList.Item variant="danger" onSelect={clearAllToolbarFilters}>
-                            Clear all filters
-                          </ActionList.Item>
-                        </>
-                      )}
-                    </ActionList>
-                  </ActionMenu.Overlay>
-                </ActionMenu>
-                <div className={styles.toolbarSearchArea}>
-                  {activeAdvancedFilters.length > 0 && (
-                    <div className={styles.activeFilterTokens}>
-                      {activeAdvancedFilters.map(({ field, value }) => (
-                        <Token
-                          key={`${field}:${value}`}
-                          text={`${humanizeColumn(field)}: ${value}`}
-                          size="medium"
-                          onRemove={() => removeAdvancedFilter(field, value)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <div className={styles.toolbarSearch}>
-                    <Autocomplete>
-                      <Autocomplete.Input
-                        id="usage-filter-input"
-                        aria-label="Search or filter report rows"
-                        value={filterInput}
-                        onChange={handleFilterInputChange}
-                        onKeyDown={handleFilterInputKeyDown}
-                        placeholder="Search or filter"
-                        leadingVisual={SearchIcon}
-                        block
-                      />
-                      <Autocomplete.Overlay>
-                        <Autocomplete.Menu
-                          aria-labelledby="usage-filter-input"
-                          items={autocompleteSuggestions as never}
-                          selectedItemIds={[]}
-                          onSelectedChange={handleAutocompleteSelection as never}
-                          emptyStateText={
-                            filterInput.includes(':')
-                              ? 'No matching values'
-                              : 'Type to search or add an advanced filter'
-                          }
-                        />
-                      </Autocomplete.Overlay>
-                    </Autocomplete>
-                  </div>
-                </div>
+                <FilterBar
+                  availableFields={availableFilterFields}
+                  valuesByField={filterValuesByField}
+                  filters={filters}
+                  searchQuery={searchQuery}
+                  fieldIcons={FIELD_ICONS}
+                  groupByColumn={groupByColumn}
+                  groupableColumns={groupableColumns}
+                  onAddFilter={applyAdvancedFilter}
+                  onRemoveFilter={removeAdvancedFilter}
+                  onClearAll={clearAllToolbarFilters}
+                  onSearchChange={setSearchQuery}
+                  onGroupByChange={setGroupByColumn}
+                />
               </div>
               <div className={styles.toolbarActions}>
                 <IconButton
