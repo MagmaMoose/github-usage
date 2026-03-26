@@ -3,7 +3,7 @@ import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { getModelColor, resetModelColors } from '../../lib/chart-theme';
+import { buildColorMap } from '../../lib/chart-theme';
 import type { AnyReportRow } from '../../lib/types';
 
 export function CostBreakdownChart() {
@@ -23,9 +23,9 @@ export function CostBreakdownChart() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    resetModelColors();
+    const colorMap = buildColorMap(rankedModels.map((m) => m.model));
 
-    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo, i) => {
+    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo) => {
       const data = categories.map((bucketKey) => {
         const bucketRowList = buckets.get(bucketKey) ?? [];
         const modelRows = bucketRowList.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
@@ -36,7 +36,7 @@ export function CostBreakdownChart() {
         type: 'column' as const,
         name: modelInfo.model || '(empty)',
         data,
-        color: getModelColor(modelInfo.model, i),
+        color: colorMap.get(modelInfo.model) ?? '#808fa3',
       };
     });
 

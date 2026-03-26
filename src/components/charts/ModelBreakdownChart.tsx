@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
 import { humanizeColumn, formatCompact } from '../../lib/formatters';
-import { getModelColor, resetModelColors } from '../../lib/chart-theme';
+import { buildColorMap } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
 
@@ -42,8 +42,8 @@ export function ModelBreakdownChart() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    // Reset shade counters so each render gets consistent shading
-    resetModelColors();
+    // Build deterministic color map from ranked model names
+    const colorMap = buildColorMap(rankedModels.map((m) => m.model));
 
     // Only count spend from models that actually have a bar (in rankedModels AND not hidden)
     const visibleModelNames = new Set(
@@ -74,7 +74,7 @@ export function ModelBreakdownChart() {
         type: 'bar' as const,
         name: modelInfo.model || '(empty)',
         data,
-        color: getModelColor(modelInfo.model, i),
+        color: colorMap.get(modelInfo.model) ?? '#808fa3',
         visible: !isHidden,
         events: {
           legendItemClick: function () {

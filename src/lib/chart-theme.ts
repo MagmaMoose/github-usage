@@ -17,7 +17,8 @@ export const GITHUB_COLORS_RESOLVED = [
 
 /**
  * Brand base colors for AI model families used in GitHub Copilot.
- * Each brand gets a base hue, then individual models are shaded via Highcharts.color().
+ * Each brand gets a base hue, then individual models within a ranked list
+ * are shaded via Highcharts.color() based on their position among siblings.
  */
 const MODEL_BRAND_BASES: Array<{ match: string; base: string }> = [
   // Anthropic Claude — terracotta
@@ -36,14 +37,55 @@ const MODEL_BRAND_BASES: Array<{ match: string; base: string }> = [
   { match: 'copilot',       base: '#8250df' },
 ];
 
+/**
+ * Get the brand base color for a model name, or null if no brand matches.
+ */
+function getBrandBase(modelName: string): { match: string; base: string } | null {
+  const lower = modelName.toLowerCase();
+  for (const brand of MODEL_BRAND_BASES) {
+    if (lower.includes(brand.match)) return brand;
+  }
+  return null;
+}
+
+/**
+ * Assign branded, deterministic colors for an ordered list of model/group names.
+ * Models in the same brand family get the same base hue, shaded by their
+ * position among siblings in the list. Non-matching names fall back to the
+ * GitHub data-viz palette. Returns a Map<name, color>.
+ *
+ * Call this ONCE per chart with the full list of series names, then look up
+ * colors by name. This replaces the old mutable-counter approach.
+ */
+export function buildColorMap(names: string[]): Map<string, string> {
+  const colorMap = new Map<string, string>();
+  // Count how many siblings each brand key has seen so far
+  const brandCounters = new Map<string, number>();
+  let fallbackIndex = 0;
+
+  for (const name of names) {
+    const brand = getBrandBase(name);
+    if (brand) {
+      const count = brandCounters.get(brand.match) ?? 0;
+      brandCounters.set(brand.match, count + 1);
+      const brightenAmount = -0.15 + count * 0.10;
+      colorMap.set(name, Highcharts.color(brand.base).brighten(brightenAmount).get() as string);
+    } else {
+      colorMap.set(name, GITHUB_COLORS_RESOLVED[fallbackIndex % GITHUB_COLORS_RESOLVED.length]);
+      fallbackIndex++;
+    }
+  }
+
+  return colorMap;
+}
+
+/**
+ * @deprecated Use `buildColorMap` instead for deterministic, stateless coloring.
+ * Kept temporarily for any callers that haven't migrated yet.
+ */
 // Track how many models we've seen per brand family so we can shade each one differently
 const brandCounters = new Map<string, number>();
 
-/**
- * Get a branded, uniquely-shaded color for a model name.
- * Models in the same family (e.g. all Claude variants) get the same base hue
- * but are brightened/darkened so each variant is visually distinct.
- */
 export function getModelColor(modelName: string, index: number): string {
   const lower = modelName.toLowerCase();
 
@@ -51,8 +93,6 @@ export function getModelColor(modelName: string, index: number): string {
     if (lower.includes(match)) {
       const count = brandCounters.get(match) ?? 0;
       brandCounters.set(match, count + 1);
-
-      // Spread shades from -0.15 (darker) to +0.25 (lighter) across variants
       const brightenAmount = -0.15 + count * 0.10;
       return Highcharts.color(base).brighten(brightenAmount).get() as string;
     }

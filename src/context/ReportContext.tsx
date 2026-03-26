@@ -3,11 +3,13 @@ import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
 import type { DateRange } from './report-context';
 import { parseCSV } from '../lib/csv-parser';
-import { getCachedCSVs, setCachedCSVs, clearCachedCSVs, type CachedCSV } from '../lib/local-storage';
+import { getCachedCSVs, setCachedCSVs, clearCachedCSVs } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 
 interface ReportState {
   reports: ParsedReport[];
+  /** Raw CSV content parallel to reports[], used for localStorage caching */
+  rawCsvs: string[];
   activeReportIndex: number;
   groupByColumn: string;
   timeBucket: TimeBucket;
@@ -21,6 +23,7 @@ function buildInitialState(): ReportState {
   const urlState = readURLFilterState();
   return {
     reports: [],
+    rawCsvs: [],
     activeReportIndex: 0,
     groupByColumn: urlState.groupBy ?? 'username',
     timeBucket: (urlState.timeBucket as TimeBucket) ?? 'daily',
@@ -56,6 +59,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         reports: restoredReports,
+        rawCsvs: cached.map((c) => c.content),
         activeReportIndex: 0,
       }));
     }
@@ -82,27 +86,67 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     state.reports.length,
   ]);
 
-  const addReport = useCallback((report: ParsedReport) => {
-    setState((prev) => ({
-      ...prev,
-      reports: [...prev.reports, report],
-      activeReportIndex: prev.reports.length,
-      periodKey: 'all',
-      dateRange: null,
-      searchQuery: '',
-    }));
+  const addReport = useCallback((report: ParsedReport, rawCsv: string) => {
+    setState((prev) => {
+      const nextReports = [...prev.reports, report];
+      const nextRawCsvs = [...prev.rawCsvs, rawCsv];
+
+      // Persist all CSVs to localStorage
+      setCachedCSVs(
+        nextRawCsvs.map((content, i) => ({
+          fileName: nextReports[i].fileName,
+          content,
+          cachedAt: new Date().toISOString(),
+        })),
+      );
+
+      return {
+        ...prev,
+        reports: nextReports,
+        rawCsvs: nextRawCsvs,
+        activeReportIndex: prev.reports.length,
+        periodKey: 'all',
+        dateRange: null,
+        searchQuery: '',
+      };
+    });
   }, []);
 
   const removeReport = useCallback((index: number) => {
     setState((prev) => {
       const reports = prev.reports.filter((_, i) => i !== index);
-      if (reports.length === 0) clearCachedCSVs();
+      const rawCsvs = prev.rawCsvs.filter((_, i) => i !== index);
+
+      // Sync localStorage with remaining CSVs
+      if (reports.length === 0) {
+        clearCachedCSVs();
+      } else {
+        setCachedCSVs(
+          rawCsvs.map((content, i) => ({
+            fileName: reports[i].fileName,
+            content,
+            cachedAt: new Date().toISOString(),
+          })),
+        );
+      }
+
       return {
         ...prev,
         reports,
+        rawCsvs,
         activeReportIndex: Math.min(prev.activeReportIndex, Math.max(0, reports.length - 1)),
       };
     });
+  }, []);
+
+  const clearAllReports = useCallback(() => {
+    clearCachedCSVs();
+    setState((prev) => ({
+      ...prev,
+      reports: [],
+      rawCsvs: [],
+      activeReportIndex: 0,
+    }));
   }, []);
 
   const setActiveReport = useCallback((index: number) => {
@@ -192,6 +236,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         ...state,
         addReport,
         removeReport,
+        clearAllReports,
         setActiveReport,
         setGroupByColumn,
         setTimeBucket,

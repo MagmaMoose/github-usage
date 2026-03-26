@@ -5,7 +5,7 @@ import { ToggleSwitch } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { humanizeColumn } from '../../lib/formatters';
-import { GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
+import { buildColorMap } from '../../lib/chart-theme';
 import type { AnyReportRow } from '../../lib/types';
 
 /** Compute a moving average — uses expanding window for early points so there's no gap */
@@ -44,11 +44,13 @@ export function TimeSeriesChart() {
     const buckets = bucketRows(rows, timeBucket);
     const categories = [...buckets.keys()];
 
+    // Build a deterministic color map from the ranked group names
+    const colorMap = buildColorMap(topGroups.map((g) => g.key));
     const series: Highcharts.SeriesOptionsType[] = [];
 
     for (let i = 0; i < topGroups.length; i++) {
       const group = topGroups[i];
-      const color = GITHUB_COLORS_RESOLVED[i % GITHUB_COLORS_RESOLVED.length];
+      const color = colorMap.get(group.key) ?? '#808fa3';
 
       const data = categories.map((bucketKey) => {
         const bucketRowsForKey = buckets.get(bucketKey) ?? [];

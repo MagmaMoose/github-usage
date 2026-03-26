@@ -53,15 +53,17 @@ When rendering model names, charts, badges, or avatars in TBB, use these officia
 
 ## Chart Theme Rules
 
-1. Match model names case-insensitively via `includes()` on these keys:
+1. Use `buildColorMap(names)` to assign colors — pass the full list of series names once, get a `Map<string, string>` back. This is stateless, deterministic, and shared across ALL chart types.
+2. Match model names case-insensitively via `includes()` on these keys:
    - `claude` → Anthropic terracotta
    - `gpt` → OpenAI green
    - `o1`, `o3`, `o4` → OpenAI reasoning teal
    - `gemini` → Google blue
    - `grok` → xAI dark
    - `copilot`, `code review`, `coding agent` → GitHub purple
-2. Within a family, shade variants using `Highcharts.color(base).brighten(offset)`
-3. Fall back to `GITHUB_COLORS_RESOLVED` data-viz palette for unknown models
+3. Within a family, siblings are auto-shaded using `Highcharts.color(base).brighten(offset)`
+4. Non-matching names fall back to `GITHUB_COLORS_RESOLVED` data-viz palette
+5. **Do NOT** use `getModelColor`/`resetModelColors` (deprecated mutable API) — use `buildColorMap` instead
 
 ## SVG Icon URLs (Simple Icons CDN)
 

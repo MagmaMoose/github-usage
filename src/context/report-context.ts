@@ -18,8 +18,9 @@ interface ReportState {
 }
 
 export interface ReportContextValue extends ReportState {
-  addReport: (report: ParsedReport) => void;
+  addReport: (report: ParsedReport, rawCsv: string) => void;
   removeReport: (index: number) => void;
+  clearAllReports: () => void;
   setActiveReport: (index: number) => void;
   setGroupByColumn: (column: string) => void;
   setTimeBucket: (bucket: TimeBucket) => void;
