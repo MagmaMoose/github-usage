@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
-import { sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
+import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
+import { getModelColor, resetModelColors } from '../../lib/chart-theme';
 import type { AnyReportRow } from '../../lib/types';
 
 export function CostBreakdownChart() {
@@ -15,56 +16,46 @@ export function CostBreakdownChart() {
     const buckets = bucketRows(rows, timeBucket);
     const categories = [...buckets.keys()];
 
-    const grossData: number[] = [];
-    const discountData: number[] = [];
-    const netData: number[] = [];
+    // Find top models by total spend across all buckets
+    const modelGroups = groupBy(rows, 'model' as keyof AnyReportRow & string);
+    const rankedModels = [...modelGroups.entries()]
+      .map(([model, modelRows]) => ({ model, total: sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
 
-    for (const [, bucketRowList] of buckets) {
-      grossData.push(
-        Math.round(sumBy(bucketRowList, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100,
-      );
-      discountData.push(
-        Math.round(
-          sumBy(bucketRowList, 'discountAmount' as keyof AnyReportRow & string) * 100,
-        ) / 100,
-      );
-      netData.push(
-        Math.round(sumBy(bucketRowList, 'netAmount' as keyof AnyReportRow & string) * 100) / 100,
-      );
-    }
+    resetModelColors();
+
+    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo, i) => {
+      const data = categories.map((bucketKey) => {
+        const bucketRowList = buckets.get(bucketKey) ?? [];
+        const modelRows = bucketRowList.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
+        return Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+      });
+
+      return {
+        type: 'column' as const,
+        name: modelInfo.model || '(empty)',
+        data,
+        color: getModelColor(modelInfo.model, i),
+      };
+    });
 
     return {
       chart: { type: 'column', height: 350 },
-      title: { text: 'Cost Breakdown over Time' },
+      title: { text: 'Cost over Time' },
       xAxis: { categories, crosshair: true },
       yAxis: {
         title: { text: 'Amount ($)' },
         labels: { format: '${value}' },
       },
       tooltip: {
-        pointFormat:
-          '<span style="color:{point.color}">●</span> {series.name}: <b>${point.y:.2f}</b><br/>',
+        shared: false,
+        headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
+        pointFormat: '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>',
+        footerFormat: '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>',
       },
-      series: [
-        {
-          type: 'column' as const,
-          name: 'Gross',
-          data: grossData,
-          color: 'var(--data-blue-color-emphasis, #006edb)',
-        },
-        {
-          type: 'column' as const,
-          name: 'Discount',
-          data: discountData,
-          color: 'var(--data-green-color-emphasis, #30a147)',
-        },
-        {
-          type: 'column' as const,
-          name: 'Net',
-          data: netData,
-          color: 'var(--data-orange-color-emphasis, #eb670f)',
-        },
-      ],
+      plotOptions: { column: { stacking: 'normal' } },
+      series,
     };
   }, [activeReport, timeBucket, visibleRows]);
 

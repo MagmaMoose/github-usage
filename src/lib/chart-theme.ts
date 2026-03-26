@@ -1,4 +1,4 @@
-import type Highcharts from 'highcharts';
+import Highcharts from 'highcharts';
 
 /**
  * GitHub's internal Highcharts theme — adapted from github/github-ui chart-card.
@@ -14,6 +14,57 @@ export const GITHUB_COLORS_RESOLVED = [
   '#d43511', '#527a29', '#a830e8', '#167e53', '#866e04',
   '#64762d', '#856d4c',
 ];
+
+/**
+ * Brand base colors for AI model families used in GitHub Copilot.
+ * Each brand gets a base hue, then individual models are shaded via Highcharts.color().
+ */
+const MODEL_BRAND_BASES: Array<{ match: string; base: string }> = [
+  // Anthropic Claude — terracotta
+  { match: 'claude',        base: '#D97757' },
+  // OpenAI GPT — green
+  { match: 'gpt',           base: '#10A37F' },
+  // Google Gemini — blue
+  { match: 'gemini',        base: '#4285F4' },
+  // OpenAI o-series reasoning
+  { match: 'o1',            base: '#0D8C6D' },
+  { match: 'o3',            base: '#0D8C6D' },
+  { match: 'o4',            base: '#0D8C6D' },
+  // GitHub internal
+  { match: 'code review',   base: '#8250df' },
+  { match: 'coding agent',  base: '#6639ba' },
+  { match: 'copilot',       base: '#8250df' },
+];
+
+// Track how many models we've seen per brand family so we can shade each one differently
+const brandCounters = new Map<string, number>();
+
+/**
+ * Get a branded, uniquely-shaded color for a model name.
+ * Models in the same family (e.g. all Claude variants) get the same base hue
+ * but are brightened/darkened so each variant is visually distinct.
+ */
+export function getModelColor(modelName: string, index: number): string {
+  const lower = modelName.toLowerCase();
+
+  for (const { match, base } of MODEL_BRAND_BASES) {
+    if (lower.includes(match)) {
+      const count = brandCounters.get(match) ?? 0;
+      brandCounters.set(match, count + 1);
+
+      // Spread shades from -0.15 (darker) to +0.25 (lighter) across variants
+      const brightenAmount = -0.15 + count * 0.10;
+      return Highcharts.color(base).brighten(brightenAmount).get() as string;
+    }
+  }
+
+  return GITHUB_COLORS_RESOLVED[index % GITHUB_COLORS_RESOLVED.length];
+}
+
+/** Reset brand shade counters (call before building a new chart) */
+export function resetModelColors(): void {
+  brandCounters.clear();
+}
 
 /** Read a CSS custom property value from the Primer theme root, with fallback */
 function getCSSVar(name: string, fallback: string): string {

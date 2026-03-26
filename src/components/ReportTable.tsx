@@ -3,7 +3,8 @@ import { DataTable, Table } from '@primer/react/experimental';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
 import { formatCurrency, formatCompact, humanizeColumn } from '../lib/formatters';
-import type { AnyReportRow } from '../lib/types';
+import type { AnyReportRow, TokenUsageRow } from '../lib/types';
+import { REPORT_TYPES } from '../lib/types';
 
 interface TableRow {
   id: string;
@@ -13,10 +14,16 @@ interface TableRow {
   discountAmount: number;
   netAmount: number;
   quantity: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheCreationTokens: number;
+  totalCacheReadTokens: number;
 }
 
 export function ReportTable() {
   const { activeReport, groupByColumn, visibleRows } = useReport();
+
+  const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
 
   const tableData = useMemo(() => {
     if (!activeReport) return [];
@@ -29,8 +36,12 @@ export function ReportTable() {
       discountAmount: sumBy(rows, 'discountAmount' as keyof AnyReportRow & string),
       netAmount: sumBy(rows, 'netAmount' as keyof AnyReportRow & string),
       quantity: sumBy(rows, 'quantity' as keyof AnyReportRow & string),
+      totalInputTokens: isTokenReport ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalInputTokens ?? 0), 0) : 0,
+      totalOutputTokens: isTokenReport ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalOutputTokens ?? 0), 0) : 0,
+      totalCacheCreationTokens: isTokenReport ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalCacheCreationTokens ?? 0), 0) : 0,
+      totalCacheReadTokens: isTokenReport ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalCacheReadTokens ?? 0), 0) : 0,
     }));
-  }, [activeReport, groupByColumn, visibleRows]);
+  }, [activeReport, groupByColumn, visibleRows, isTokenReport]);
 
   if (!activeReport || tableData.length === 0) return null;
 
@@ -51,13 +62,6 @@ export function ReportTable() {
             field: 'group',
             sortBy: 'alphanumeric',
             renderCell: (row: TableRow) => <span title={row.group}>{row.group || '(empty)'}</span>,
-          },
-          {
-            header: 'Rows',
-            field: 'count',
-            sortBy: 'basic',
-            align: 'end',
-            renderCell: (row: TableRow) => formatCompact(row.count),
           },
           {
             header: 'Quantity',
@@ -87,7 +91,44 @@ export function ReportTable() {
             align: 'end',
             renderCell: (row: TableRow) => formatCurrency(row.netAmount),
           },
-        ]}
+          ...(isTokenReport ? [
+            {
+              header: 'Input tokens',
+              field: 'totalInputTokens' as const,
+              sortBy: 'basic' as const,
+              align: 'end' as const,
+              renderCell: (row: TableRow) => formatCompact(row.totalInputTokens),
+            },
+            {
+              header: 'Output tokens',
+              field: 'totalOutputTokens' as const,
+              sortBy: 'basic' as const,
+              align: 'end' as const,
+              renderCell: (row: TableRow) => formatCompact(row.totalOutputTokens),
+            },
+            {
+              header: 'Cache create',
+              field: 'totalCacheCreationTokens' as const,
+              sortBy: 'basic' as const,
+              align: 'end' as const,
+              renderCell: (row: TableRow) => formatCompact(row.totalCacheCreationTokens),
+            },
+            {
+              header: 'Cache read',
+              field: 'totalCacheReadTokens' as const,
+              sortBy: 'basic' as const,
+              align: 'end' as const,
+              renderCell: (row: TableRow) => formatCompact(row.totalCacheReadTokens),
+            },
+          ] : []),
+          {
+            header: 'Rows',
+            field: 'count',
+            sortBy: 'basic',
+            align: 'end',
+            renderCell: (row: TableRow) => formatCompact(row.count),
+          },
+        ] as unknown as Parameters<typeof DataTable>[0]['columns']}
       />
     </Table.Container>
   );

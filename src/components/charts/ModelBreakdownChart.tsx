@@ -1,54 +1,208 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
-import { topN } from '../../lib/aggregation';
-import { humanizeColumn } from '../../lib/formatters';
-import { GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
-import type { AnyReportRow } from '../../lib/types';
+import { groupBy, sumBy, topN } from '../../lib/aggregation';
+import { humanizeColumn, formatCompact } from '../../lib/formatters';
+import { getModelColor, resetModelColors } from '../../lib/chart-theme';
+import { REPORT_TYPES } from '../../lib/types';
+import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
+
+type ViewMode = 'spend' | 'tokens';
 
 export function ModelBreakdownChart() {
   const { activeReport, groupByColumn, visibleRows } = useReport();
+  const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
+  const [viewMode, setViewMode] = useState<ViewMode>('spend');
+  const [hiddenModels, setHiddenModels] = useState<Set<string>>(new Set());
 
-  const options = useMemo((): Highcharts.Options | null => {
+  const toggleModel = useCallback((modelName: string) => {
+    setHiddenModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(modelName)) next.delete(modelName);
+      else next.add(modelName);
+      return next;
+    });
+  }, []);
+
+  const spendOptions = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const top = topN(
-      visibleRows as AnyReportRow[],
-      groupByColumn as keyof AnyReportRow & string,
-      'grossAmount' as keyof AnyReportRow & string,
-      15,
-    );
+    const rows = visibleRows as AnyReportRow[];
 
+    // Get top users/groups by total gross spend
+    const top = topN(rows, groupByColumn as keyof AnyReportRow & string, 'grossAmount' as keyof AnyReportRow & string, 15);
     if (top.length === 0) return null;
 
-    const categories = top.map((item) => item.key || '(empty)');
-    const data = top.map((item, i) => ({
-      y: Math.round(item.value * 100) / 100,
-      color: GITHUB_COLORS_RESOLVED[i % GITHUB_COLORS_RESOLVED.length],
-    }));
+    // Collect all models across those top groups, ranked by total spend
+    const allTopRows = top.flatMap((item) => item.rows);
+    const modelGroups = groupBy(allTopRows, 'model' as keyof AnyReportRow & string);
+    const rankedModels = [...modelGroups.entries()]
+      .map(([model, modelRows]) => ({ model, total: sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    // Reset shade counters so each render gets consistent shading
+    resetModelColors();
+
+    // Only count spend from models that actually have a bar (in rankedModels AND not hidden)
+    const visibleModelNames = new Set(
+      rankedModels.map((m) => m.model).filter((m) => !hiddenModels.has(m)),
+    );
+
+    // Re-sort groups by visible bar spend only
+    const sorted = [...top]
+      .map((item) => {
+        const chartRows = item.rows
+          .filter((r) => visibleModelNames.has(String(r['model' as keyof AnyReportRow])));
+        const visibleSpend = Math.round(sumBy(chartRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+        return { ...item, visibleSpend };
+      })
+      .sort((a, b) => b.visibleSpend - a.visibleSpend);
+
+    const categories = sorted.map((item) => item.key || '(empty)');
+
+    // Build a stacked series per model
+    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo, i) => {
+      const isHidden = hiddenModels.has(modelInfo.model);
+      const data = sorted.map((item) => {
+        const modelRows = item.rows.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
+        return Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+      });
+
+      return {
+        type: 'bar' as const,
+        name: modelInfo.model || '(empty)',
+        data,
+        color: getModelColor(modelInfo.model, i),
+        visible: !isHidden,
+        events: {
+          legendItemClick: function () {
+            toggleModel(modelInfo.model);
+            return false; // prevent default Highcharts toggle — we handle it via state
+          },
+        },
+      };
+    });
 
     return {
-      chart: { type: 'bar', height: Math.max(300, top.length * 35) },
+      chart: { type: 'bar', height: Math.max(300, sorted.length * 40) },
       title: { text: `Top ${humanizeColumn(groupByColumn)} by Spend` },
       xAxis: { categories, crosshair: false },
       yAxis: {
         title: { text: 'Spend ($)' },
         labels: { format: '${value}' },
       },
-      legend: { enabled: false },
-      series: [
-        {
-          type: 'bar' as const,
-          name: 'Spend',
-          data,
-          tooltip: { pointFormat: '<b>${point.y:.2f}</b>' },
+      tooltip: {
+        shared: false,
+        headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
+        pointFormat: '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>',
+        footerFormat: '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>',
+      },
+      plotOptions: { bar: { stacking: 'normal' } },
+      series,
+    };
+  }, [activeReport, groupByColumn, visibleRows, hiddenModels, toggleModel]);
+
+  const tokenOptions = useMemo((): Highcharts.Options | null => {
+    if (!activeReport || !isTokenReport) return null;
+
+    const rows = visibleRows as TokenUsageRow[];
+    const top = topN(rows, groupByColumn as keyof TokenUsageRow, 'totalInputTokens', 10);
+    if (top.length === 0) return null;
+
+    const enriched = top
+      .map((item) => {
+        const input = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalInputTokens, 0);
+        const output = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalOutputTokens, 0);
+        const cacheCreate = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheCreationTokens, 0);
+        const cacheRead = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheReadTokens, 0);
+        return { key: item.key, input, output, cacheCreate, cacheRead, total: input + output + cacheCreate + cacheRead };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    const categories = enriched.map((item) => item.key || '(empty)');
+
+    return {
+      chart: { type: 'bar', height: Math.max(350, enriched.length * 40) },
+      title: { text: `Token Usage by ${humanizeColumn(groupByColumn)} (Top 10)` },
+      xAxis: { categories },
+      yAxis: {
+        title: { text: 'Tokens' },
+        labels: {
+          formatter: function () {
+            return formatCompact(this.value as number);
+          },
         },
+      },
+      tooltip: {
+        shared: false,
+        headerFormat: '<table><tr><td colspan="2"><b>{point.key}</b></td></tr>',
+        pointFormatter: function () {
+          return `<tr><td><span style="color:${this.color}">●</span> ${this.series.name}:&nbsp;</td><td style="text-align: right;"><b>${formatCompact(this.y ?? 0)}</b></td></tr>`;
+        },
+        footerFormat: '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
+        useHTML: true,
+      },
+      plotOptions: { bar: { stacking: 'normal' } },
+      series: [
+        { type: 'bar' as const, name: 'Input Tokens', data: enriched.map((d) => d.input), color: 'var(--data-blue-color-emphasis, #006edb)' },
+        { type: 'bar' as const, name: 'Output Tokens', data: enriched.map((d) => d.output), color: 'var(--data-green-color-emphasis, #30a147)' },
+        { type: 'bar' as const, name: 'Cache Creation', data: enriched.map((d) => d.cacheCreate), color: 'var(--data-orange-color-emphasis, #eb670f)' },
+        { type: 'bar' as const, name: 'Cache Reads', data: enriched.map((d) => d.cacheRead), color: 'var(--data-teal-color-emphasis, #179b9b)' },
       ],
     };
-  }, [activeReport, groupByColumn, visibleRows]);
+  }, [activeReport, isTokenReport, visibleRows]);
 
-  if (!options) return null;
+  const activeOptions = viewMode === 'tokens' ? tokenOptions : spendOptions;
+  if (!activeOptions) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} />;
+  return (
+    <div>
+      {isTokenReport && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              borderRadius: 6,
+              border: '1px solid var(--borderColor-default, #d1d9e0)',
+              overflow: 'hidden',
+              fontSize: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode('spend')}
+              style={{
+                padding: '4px 12px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: viewMode === 'spend' ? 600 : 400,
+                backgroundColor: viewMode === 'spend' ? 'var(--bgColor-accent-emphasis, #0969da)' : 'var(--bgColor-default, #fff)',
+                color: viewMode === 'spend' ? '#fff' : 'var(--fgColor-default, #1f2328)',
+              }}
+            >
+              Spend
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('tokens')}
+              style={{
+                padding: '4px 12px',
+                border: 'none',
+                borderLeft: '1px solid var(--borderColor-default, #d1d9e0)',
+                cursor: 'pointer',
+                fontWeight: viewMode === 'tokens' ? 600 : 400,
+                backgroundColor: viewMode === 'tokens' ? 'var(--bgColor-accent-emphasis, #0969da)' : 'var(--bgColor-default, #fff)',
+                color: viewMode === 'tokens' ? '#fff' : 'var(--fgColor-default, #1f2328)',
+              }}
+            >
+              Tokens
+            </button>
+          </div>
+        </div>
+      )}
+      <HighchartsReact key={`${viewMode}-${[...hiddenModels].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} />
+    </div>
+  );
 }

@@ -31,6 +31,8 @@ import {
   GraphIcon,
   MeterIcon,
   SearchIcon,
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
   TableIcon,
   UploadIcon,
   ServerIcon,
@@ -44,12 +46,11 @@ import { ReportTable } from './components/ReportTable';
 import { TimeSeriesChart } from './components/charts/TimeSeriesChart';
 import { ModelBreakdownChart } from './components/charts/ModelBreakdownChart';
 import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
-import { TokenBreakdownChart } from './components/charts/TokenBreakdownChart';
 import { useHighchartsInit } from './components/charts/useHighchartsInit';
 import { REPORT_TYPES } from './lib/types';
 import type { TokenUsageRow } from './lib/types';
 import { formatCurrency, formatCompact, formatDateRange, humanizeColumn } from './lib/formatters';
-import { computeSummary } from './lib/aggregation';
+import { computeSummary, topN } from './lib/aggregation';
 import { parseCSV } from './lib/csv-parser';
 import styles from './App.module.css';
 
@@ -150,17 +151,20 @@ function HeroCard({
   title,
   value,
   description,
+  children,
 }: {
   title: string;
   value: string;
-  description: string;
+  description?: string;
+  children?: React.ReactNode;
 }) {
   return (
     <div className={styles.heroCard}>
       <div className={styles.heroCardInner}>
         <h3 className={styles.heroCardTitle}>{title}</h3>
         <div className={styles.heroCardValue}>{value}</div>
-        <p className={styles.heroCardDescription}>{description}</p>
+        {description && <p className={styles.heroCardDescription}>{description}</p>}
+        {children}
       </div>
     </div>
   );
@@ -219,6 +223,7 @@ function AppContent() {
     visibleRows,
   } = useReport();
   const [activeTab, setActiveTab] = useState<ViewTab>('charts');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filterInput, setFilterInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -242,13 +247,17 @@ function AppContent() {
     return computeSummary(visibleRows);
   }, [activeReport, visibleRows]);
 
-  const totalTokens = useMemo(() => {
-    if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE) return 0;
-    return (visibleRows as TokenUsageRow[]).reduce(
-      (s, r) => s + r.totalInputTokens + r.totalOutputTokens + r.totalCacheCreationTokens + r.totalCacheReadTokens,
-      0,
-    );
+  const tokenBreakdown = useMemo(() => {
+    if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE)
+      return { input: 0, output: 0, cacheCreate: 0, cacheRead: 0, total: 0 };
+    const rows = visibleRows as TokenUsageRow[];
+    const input = rows.reduce((s, r) => s + r.totalInputTokens, 0);
+    const output = rows.reduce((s, r) => s + r.totalOutputTokens, 0);
+    const cacheCreate = rows.reduce((s, r) => s + r.totalCacheCreationTokens, 0);
+    const cacheRead = rows.reduce((s, r) => s + r.totalCacheReadTokens, 0);
+    return { input, output, cacheCreate, cacheRead, total: input + output + cacheCreate + cacheRead };
   }, [activeReport, visibleRows]);
+  const totalTokens = tokenBreakdown.total;
 
   const availablePeriods = useMemo(() => {
     if (!activeReport) return [];
@@ -455,9 +464,18 @@ function AppContent() {
 
   const renderInsightsSidebar = () => (
     <div className={styles.sidebarContent}>
-      <Heading as="h2" className={styles.sidebarHeading}>
-        Insights
-      </Heading>
+      <div className={styles.sidebarHeader}>
+        <Heading as="h2" className={styles.sidebarHeading}>
+          Insights
+        </Heading>
+        <IconButton
+          aria-label="Collapse sidebar"
+          icon={SidebarCollapseIcon}
+          variant="invisible"
+          size="small"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      </div>
       <NavList aria-label="Insights navigation">
         {INSIGHTS_NAV_ITEMS.map(({ label, icon: Icon, current, disabled }) => (
           <NavList.Item
@@ -536,20 +554,33 @@ function AppContent() {
   if (reports.length === 0) {
     return (
       <PageLayout containerWidth="full" padding="none" rowGap="none" columnGap="none">
-        <PageLayout.Pane
-          position="start"
-          padding="normal"
-          divider="line"
-          aria-label="Insights sidebar"
-          className={styles.sidebarPane}
-          hidden={{ narrow: true, regular: false, wide: false }}
-        >
-          {renderInsightsSidebar()}
-        </PageLayout.Pane>
+        {!sidebarCollapsed && (
+          <PageLayout.Pane
+            position="start"
+            padding="normal"
+            divider="line"
+            aria-label="Insights sidebar"
+            className={styles.sidebarPane}
+            hidden={{ narrow: true, regular: false, wide: false }}
+          >
+            {renderInsightsSidebar()}
+          </PageLayout.Pane>
+        )}
         <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
           <div className={styles.pageStack}>
             <PageHeader className={styles.pageHeader}>
               <PageHeader.TitleArea>
+                {sidebarCollapsed && (
+                  <PageHeader.LeadingAction>
+                    <IconButton
+                      aria-label="Expand sidebar"
+                      icon={SidebarExpandIcon}
+                      variant="invisible"
+                      size="small"
+                      onClick={() => setSidebarCollapsed(false)}
+                    />
+                  </PageHeader.LeadingAction>
+                )}
                 <PageHeader.LeadingVisual>
                   <GraphIcon size={24} />
                 </PageHeader.LeadingVisual>
@@ -579,20 +610,33 @@ function AppContent() {
 
   return (
     <PageLayout containerWidth="full" padding="none" rowGap="none" columnGap="none">
-      <PageLayout.Pane
-        position="start"
-        padding="normal"
-        divider="line"
-        aria-label="Insights sidebar"
-        className={styles.sidebarPane}
-        hidden={{ narrow: true, regular: false, wide: false }}
-      >
-        {renderInsightsSidebar()}
-      </PageLayout.Pane>
+      {!sidebarCollapsed && (
+        <PageLayout.Pane
+          position="start"
+          padding="normal"
+          divider="line"
+          aria-label="Insights sidebar"
+          className={styles.sidebarPane}
+          hidden={{ narrow: true, regular: false, wide: false }}
+        >
+          {renderInsightsSidebar()}
+        </PageLayout.Pane>
+      )}
       <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
         <div className={styles.pageStack}>
           <PageHeader className={styles.pageHeader}>
             <PageHeader.TitleArea>
+              {sidebarCollapsed && (
+                <PageHeader.LeadingAction>
+                  <IconButton
+                    aria-label="Expand sidebar"
+                    icon={SidebarExpandIcon}
+                    variant="invisible"
+                    size="small"
+                    onClick={() => setSidebarCollapsed(false)}
+                  />
+                </PageHeader.LeadingAction>
+              )}
               <PageHeader.LeadingVisual>
                 <CopilotIcon size={24} />
               </PageHeader.LeadingVisual>
@@ -637,24 +681,51 @@ function AppContent() {
               <HeroCard
                 title="Gross amount"
                 value={formatCurrency(summary.totalGrossAmount)}
-                description={`Total gross spend for ${formatDateRange(summary.dateRange.start, summary.dateRange.end)}`}
-              />
+              >
+                <div className={styles.heroCardBreakdown}>
+                  {(() => {
+                    const top3 = topN(visibleRows as never[], 'model' as never, 'grossAmount' as never, 3) as { key: string; value: number }[];
+                    return top3.map((m) => (
+                      <span key={m.key}><span>{m.key}</span><span>{formatCurrency(m.value)}</span></span>
+                    ));
+                  })()}
+                </div>
+              </HeroCard>
               <HeroCard
                 title="Net amount"
                 value={formatCurrency(summary.totalNetAmount)}
-                description={`Billed amount after ${formatCurrency(summary.totalDiscountAmount)} in discounts`}
-              />
+              >
+                <div className={styles.heroCardBreakdown}>
+                  <span><span>Discount</span><span>−{formatCurrency(summary.totalDiscountAmount)}</span></span>
+                </div>
+              </HeroCard>
               <HeroCard
                 title="Total requests"
                 value={formatCompact(summary.totalQuantity)}
-                description={`Across ${summary.uniqueUsers} users and ${summary.uniqueModels} models`}
-              />
+              >
+                <div className={styles.heroCardBreakdown}>
+                  {(() => {
+                    const topUser = topN(visibleRows, 'username', 'quantity', 1)[0];
+                    return <>
+                      <span><span>Users</span><span>{summary.uniqueUsers}</span></span>
+                      <span><span>Models</span><span>{summary.uniqueModels}</span></span>
+                      {topUser && <span><span>Top user</span><span>{topUser.key}</span></span>}
+                    </>;
+                  })()}
+                </div>
+              </HeroCard>
               {activeReport?.type === REPORT_TYPES.TOKEN_USAGE && (
                 <HeroCard
                   title="Total tokens"
                   value={formatCompact(totalTokens)}
-                  description="Input, output, cache creation, and cache read tokens combined"
-                />
+                >
+                  <div className={styles.heroCardBreakdown}>
+                    <span><span>Input</span><span>{formatCompact(tokenBreakdown.input)}</span></span>
+                    <span><span>Output</span><span>{formatCompact(tokenBreakdown.output)}</span></span>
+                    <span><span>Cache create</span><span>{formatCompact(tokenBreakdown.cacheCreate)}</span></span>
+                    <span><span>Cache read</span><span>{formatCompact(tokenBreakdown.cacheRead)}</span></span>
+                  </div>
+                </HeroCard>
               )}
             </div>
           )}
@@ -817,24 +888,13 @@ function AppContent() {
                     <TimeSeriesChart />
                   </div>
 
-                  <div className={styles.chartGrid}>
-                    <div className={styles.chartGridItem}>
-                      <div className={styles.chartSurface}>
-                        <ModelBreakdownChart />
-                      </div>
-                    </div>
-                    <div className={styles.chartGridItem}>
-                      <div className={styles.chartSurface}>
-                        <CostBreakdownChart />
-                      </div>
-                    </div>
+                  <div className={styles.chartSurface}>
+                    <ModelBreakdownChart />
                   </div>
 
-                  {activeReport?.type === REPORT_TYPES.TOKEN_USAGE && (
-                    <div className={styles.chartSurface}>
-                      <TokenBreakdownChart />
-                    </div>
-                  )}
+                  <div className={styles.chartSurface}>
+                    <CostBreakdownChart />
+                  </div>
                 </div>
               )}
 

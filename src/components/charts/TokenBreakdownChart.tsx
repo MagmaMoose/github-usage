@@ -17,20 +17,20 @@ export function TokenBreakdownChart() {
     const top = topN(rows, 'username', 'totalInputTokens', 10);
     if (top.length === 0) return null;
 
-    const categories = top.map((item) => item.key || '(empty)');
+    // Compute all token totals per user, then sort by combined total (descending)
+    const enriched = top.map((item) => {
+      const input = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalInputTokens, 0);
+      const output = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalOutputTokens, 0);
+      const cacheCreate = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheCreationTokens, 0);
+      const cacheRead = item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheReadTokens, 0);
+      return { key: item.key, input, output, cacheCreate, cacheRead, total: input + output + cacheCreate + cacheRead };
+    }).sort((a, b) => b.total - a.total);
 
-    const inputData = top.map((item) =>
-      item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalInputTokens, 0),
-    );
-    const outputData = top.map((item) =>
-      item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalOutputTokens, 0),
-    );
-    const cacheCreateData = top.map((item) =>
-      item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheCreationTokens, 0),
-    );
-    const cacheReadData = top.map((item) =>
-      item.rows.reduce((s: number, r: TokenUsageRow) => s + r.totalCacheReadTokens, 0),
-    );
+    const categories = enriched.map((item) => item.key || '(empty)');
+    const inputData = enriched.map((item) => item.input);
+    const outputData = enriched.map((item) => item.output);
+    const cacheCreateData = enriched.map((item) => item.cacheCreate);
+    const cacheReadData = enriched.map((item) => item.cacheRead);
 
     return {
       chart: { type: 'bar', height: Math.max(350, top.length * 40) },

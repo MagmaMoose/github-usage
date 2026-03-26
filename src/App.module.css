@@ -9,6 +9,12 @@
   padding-block: var(--stack-padding-normal, 16px);
 }
 
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .sidebarItemDisabled {
   opacity: 0.72;
   pointer-events: none;
@@ -97,6 +103,22 @@
   color: var(--fgColor-muted, #656d76);
   font-size: var(--text-body-size-small, 12px);
   line-height: 1.5;
+}
+
+.heroCardBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 4px;
+  color: var(--fgColor-muted, #656d76);
+  font-size: var(--text-body-size-small, 12px);
+  line-height: 1.5;
+}
+
+.heroCardBreakdown span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .reportTabs,
