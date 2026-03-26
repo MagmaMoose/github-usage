@@ -1,0 +1,243 @@
+/* Primer DataTable visual replica — powered by TanStack Table */
+
+.tableContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tableTitle {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--fgColor-default, #1f2328);
+  margin: 0;
+}
+
+.tableSubtitle {
+  font-size: 12px;
+  color: var(--fgColor-muted, #59636e);
+  line-height: 18px;
+}
+
+.scrollWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fgColor-default, #1f2328);
+}
+
+/* Header */
+.thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.th {
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--fgColor-default, #1f2328);
+  background: var(--bgColor-default, #ffffff);
+  border-bottom: 1px solid var(--borderColor-default, #d1d9e0);
+  user-select: none;
+}
+
+.th[data-align="end"] {
+  text-align: right;
+}
+
+/* Sort button inside header */
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sortButton:hover {
+  color: var(--fgColor-accent, #0969da);
+}
+
+.sortIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--fgColor-muted, #59636e);
+  flex-shrink: 0;
+}
+
+.sortIconHidden {
+  width: 16px;
+  height: 16px;
+  color: var(--fgColor-muted, #59636e);
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
+/* Rows */
+.tr {
+  transition: background-color 0.1s;
+}
+
+.tr:hover {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.td {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  white-space: nowrap;
+}
+
+.td[data-align="end"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Last row has no bottom border */
+.tbody .tr:last-child .td {
+  border-bottom: none;
+}
+
+/* Global filter */
+.filterInput {
+  width: 100%;
+  max-width: 320px;
+  padding: 5px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--bgColor-default, #ffffff);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filterInput:focus {
+  border-color: var(--focus-outlineColor, #0969da);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.3);
+}
+
+.filterInput::placeholder {
+  color: var(--fgColor-muted, #59636e);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 12px;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.paginationButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--bgColor-default, #ffffff);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.pageButton:disabled {
+  color: var(--fgColor-disabled, #818b98);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pageButton[data-active="true"] {
+  background-color: var(--bgColor-accent-emphasis, #0969da);
+  color: var(--fgColor-onEmphasis, #ffffff);
+  border-color: var(--bgColor-accent-emphasis, #0969da);
+}
+
+/* Virtual scroll container */
+.virtualContainer {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Row count badge */
+.rowCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.headerBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageSizeSelect {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--bgColor-default, #ffffff);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}

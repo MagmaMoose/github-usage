@@ -18,6 +18,8 @@
   "dependencies": {
     "@primer/octicons-react": "^19.23.1",
     "@primer/react": "^38.16.0",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.23",
     "clsx": "^2.1.1",
     "highcharts": "^12.5.0",
     "highcharts-react-official": "^3.2.3",
