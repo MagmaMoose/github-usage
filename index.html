@@ -2,12 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Copilot Usage Viewer — TBB</title>
+
+    <!-- Primary Meta Tags -->
+    <title>TBB — GitHub Copilot Billing & Token Usage Dashboard</title>
+    <meta name="title" content="TBB — GitHub Copilot Billing & Token Usage Dashboard" />
+    <meta name="description" content="Drag-and-drop GitHub billing CSVs to instantly visualize Copilot spend, premium request usage, token consumption, and model breakdowns. 100% client-side — no data leaves your browser." />
+    <meta name="keywords" content="GitHub Copilot, billing dashboard, token usage, premium requests, CSV viewer, Copilot spend, AI coding costs, GitHub billing, developer tools" />
+    <meta name="author" content="Austen Stone" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://austenstone.github.io/tbb/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://austenstone.github.io/tbb/" />
+    <meta property="og:title" content="TBB — GitHub Copilot Billing & Token Usage Dashboard" />
+    <meta property="og:description" content="Drag-and-drop GitHub billing CSVs to instantly visualize Copilot spend, premium request usage, token consumption, and model breakdowns. 100% client-side." />
+    <meta property="og:image" content="https://austenstone.github.io/tbb/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="TBB" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://austenstone.github.io/tbb/" />
+    <meta name="twitter:title" content="TBB — GitHub Copilot Billing & Token Usage Dashboard" />
+    <meta name="twitter:description" content="Drag-and-drop GitHub billing CSVs to instantly visualize Copilot spend, premium request usage, token consumption, and model breakdowns. 100% client-side." />
+    <meta name="twitter:image" content="https://austenstone.github.io/tbb/og-image.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tbb/favicon.svg" />
+    <link rel="apple-touch-icon" href="/tbb/apple-touch-icon.png" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/tbb/site.webmanifest" />
+    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "TBB",
+        "alternateName": "Token-Based Billing Report Explorer",
+        "url": "https://austenstone.github.io/tbb/",
+        "description": "Drag-and-drop GitHub billing CSVs to instantly visualize Copilot spend, premium request usage, token consumption, and model breakdowns. 100% client-side.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires a modern browser with JavaScript enabled",
+        "author": {
+          "@type": "Person",
+          "name": "Austen Stone",
+          "url": "https://github.com/austenstone"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Interactive charts for spend over time and model breakdowns",
+          "Grouped data table with sorting and pagination",
+          "GitHub-style autocomplete filtering",
+          "Period selector for monthly or all-time views",
+          "AI model branding with color-coded icons",
+          "Light and dark mode with system-aware toggle",
+          "100% client-side — zero data leaves your browser",
+          "Multi-file support with tab switching",
+          "Duplicate file detection via FNV-1a hashing"
+        ],
+        "screenshot": "https://austenstone.github.io/tbb/og-image.png",
+        "softwareVersion": "1.0.0"
+      }
+    </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; }
       html, body { height: 100%; }
@@ -24,6 +99,13 @@
     </style>
   </head>
   <body>
+    <noscript>
+      <div style="padding: 2rem; text-align: center; font-family: system-ui, sans-serif;">
+        <h1>TBB — GitHub Copilot Billing Dashboard</h1>
+        <p>This application requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+        <p>TBB lets you drag-and-drop GitHub billing CSVs to visualize Copilot spend, premium request usage, token consumption, and model breakdowns — all client-side with zero data leaving your browser.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

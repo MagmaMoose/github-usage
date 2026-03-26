@@ -232,11 +232,11 @@ function AppContent() {
     [],
   );
 
-  // Sync browser tab title with active report
+  // Sync browser tab title with active report for SEO + UX
   useEffect(() => {
     document.title = activeReport
-      ? `${getReportTabLabel(activeReport)} — TBB`
-      : 'Copilot Usage Viewer — TBB';
+      ? `${getReportTabLabel(activeReport)} — TBB | GitHub Copilot Billing Dashboard`
+      : 'TBB — GitHub Copilot Billing & Token Usage Dashboard';
   }, [activeReport, getReportTabLabel]);
 
   const tokenBreakdown = useMemo(() => {
