@@ -213,7 +213,7 @@ function StandardBody({
 
 export function ReportTable() {
   const { activeReport, groupByColumn, visibleRows } = useReport();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'quantity', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
 
