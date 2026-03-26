@@ -83,5 +83,5 @@ export function TokenBreakdownChart() {
 
   if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} />;
+  return <HighchartsReact highcharts={Highcharts} options={options} immutable />;
 }

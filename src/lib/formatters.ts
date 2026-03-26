@@ -42,6 +42,22 @@ export function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} — ${formatDate(end)}`;
 }
 
+/** Compact date range for tab labels — e.g. "Mar 2026" or "Feb–Mar 2026" */
+export function formatDateRangeCompact(start: string, end: string): string {
+  if (!start || !end) return '';
+  const [sY, sM] = start.split('-').map(Number);
+  const [eY, eM] = end.split('-').map(Number);
+  const fmt = (y: number, m: number) =>
+    new Date(y, m - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+  if (sY === eY && sM === eM) return fmt(sY, sM);
+  if (sY === eY) {
+    const sMonth = new Date(sY, sM - 1).toLocaleDateString('en-US', { month: 'short' });
+    return `${sMonth}–${fmt(eY, eM)}`;
+  }
+  return `${fmt(sY, sM)}–${fmt(eY, eM)}`;
+}
+
 /** Humanize a column name (camelCase → Title Case) */
 export function humanizeColumn(column: string): string {
   const MAP: Record<string, string> = {

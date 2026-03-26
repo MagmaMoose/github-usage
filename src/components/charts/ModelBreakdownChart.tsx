@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
+import { SegmentedControl } from '@primer/react';
+import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
 import { humanizeColumn, formatCompact } from '../../lib/formatters';
@@ -161,48 +163,23 @@ export function ModelBreakdownChart() {
     <div>
       {isTokenReport && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              borderRadius: 6,
-              border: '1px solid var(--borderColor-default, #d1d9e0)',
-              overflow: 'hidden',
-              fontSize: 12,
-            }}
-          >
-            <button
-              type="button"
+          <SegmentedControl aria-label="View mode" size="small">
+            <SegmentedControl.IconButton
+              aria-label="Spend"
+              icon={CreditCardIcon}
+              selected={viewMode === 'spend'}
               onClick={() => setViewMode('spend')}
-              style={{
-                padding: '4px 12px',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: viewMode === 'spend' ? 600 : 400,
-                backgroundColor: viewMode === 'spend' ? 'var(--bgColor-accent-emphasis, #0969da)' : 'var(--bgColor-default, #fff)',
-                color: viewMode === 'spend' ? '#fff' : 'var(--fgColor-default, #1f2328)',
-              }}
-            >
-              Spend
-            </button>
-            <button
-              type="button"
+            />
+            <SegmentedControl.IconButton
+              aria-label="Tokens"
+              icon={CopilotIcon}
+              selected={viewMode === 'tokens'}
               onClick={() => setViewMode('tokens')}
-              style={{
-                padding: '4px 12px',
-                border: 'none',
-                borderLeft: '1px solid var(--borderColor-default, #d1d9e0)',
-                cursor: 'pointer',
-                fontWeight: viewMode === 'tokens' ? 600 : 400,
-                backgroundColor: viewMode === 'tokens' ? 'var(--bgColor-accent-emphasis, #0969da)' : 'var(--bgColor-default, #fff)',
-                color: viewMode === 'tokens' ? '#fff' : 'var(--fgColor-default, #1f2328)',
-              }}
-            >
-              Tokens
-            </button>
-          </div>
+            />
+          </SegmentedControl>
         </div>
       )}
-      <HighchartsReact key={`${viewMode}-${[...hiddenModels].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} />
+      <HighchartsReact key={`${viewMode}-${[...hiddenModels].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
     </div>
   );
 }

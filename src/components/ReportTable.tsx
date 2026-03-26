@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,6 +23,7 @@ import { formatCurrency, formatCompact, humanizeColumn } from '../lib/formatters
 import type { AnyReportRow, TokenUsageRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
+import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
 import styles from './ReportTable.module.css';
 
 // Extend TanStack's ColumnMeta to support our align property
@@ -216,13 +217,21 @@ export function ReportTable() {
   const [globalFilter, setGlobalFilter] = useState('');
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
 
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
-    return {
-      grossAmount: false,
-      discountAmount: false,
-      count: false,
-    };
-  });
+  const defaultVisibility: VisibilityState = {
+    grossAmount: false,
+    discountAmount: false,
+    count: false,
+  };
+  const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(() =>
+    getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
+  );
+  const setColumnVisibility = useCallback((updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
+    setColumnVisibilityRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, next);
+      return next;
+    });
+  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const tableData = useMemo(() => {

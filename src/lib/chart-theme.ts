@@ -180,6 +180,7 @@ export function buildGitHubChartTheme(): Highcharts.Options {
   return {
     colors,
     credits: { enabled: false },
+    accessibility: { enabled: false },
     chart: {
       animation: false,
       spacing: [8, 0, 8, 0],

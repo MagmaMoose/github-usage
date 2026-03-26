@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
 import { ToggleSwitch } from '@primer/react';
@@ -6,6 +6,7 @@ import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { humanizeColumn } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
+import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { AnyReportRow } from '../../lib/types';
 
 /** Compute a moving average — uses expanding window for early points so there's no gap */
@@ -20,7 +21,13 @@ function rollingAverage(data: number[], window: number): number[] {
 
 export function TimeSeriesChart() {
   const { activeReport, groupByColumn, timeBucket, visibleRows } = useReport();
-  const [showRollingAvg, setShowRollingAvg] = useState(false);
+  const [showRollingAvg, setShowRollingAvgRaw] = useState(() =>
+    getStoredValue(STORAGE_KEYS.ROLLING_AVG, false),
+  );
+  const setShowRollingAvg = useCallback((value: boolean) => {
+    setShowRollingAvgRaw(value);
+    setStoredValue(STORAGE_KEYS.ROLLING_AVG, value);
+  }, []);
 
   // Window size adapts to the bucket granularity
   const rollingWindow = timeBucket === 'daily' ? 7 : timeBucket === 'weekly' ? 4 : 3;
@@ -120,7 +127,7 @@ export function TimeSeriesChart() {
           aria-labelledby="rolling-avg-label"
         />
       </div>
-      <HighchartsReact key={showRollingAvg ? 'avg' : 'raw'} highcharts={Highcharts} options={options} />
+      <HighchartsReact key={showRollingAvg ? 'avg' : 'raw'} highcharts={Highcharts} options={options} immutable />
     </div>
   );
 }

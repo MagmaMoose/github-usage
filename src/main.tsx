@@ -8,7 +8,7 @@ import './global.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider colorMode="day" dayScheme="light">
+    <ThemeProvider colorMode="auto" dayScheme="light" nightScheme="dark">
       <BaseStyles>
         <App />
       </BaseStyles>

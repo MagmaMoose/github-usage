@@ -17,13 +17,6 @@ function applyTheme() {
  *  Also watches for color scheme changes and re-applies the theme. */
 export function useHighchartsInit() {
   useEffect(() => {
-    // Load accessibility module
-    import('highcharts/modules/accessibility').then((mod) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const init = (mod as any).default ?? mod;
-      if (typeof init === 'function') init(Highcharts);
-    });
-
     // Apply theme initially
     applyTheme();
 

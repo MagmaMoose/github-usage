@@ -31,6 +31,9 @@ export function removeStoredValue(key: string): void {
 export const STORAGE_KEYS = {
   SIDEBAR_COLLAPSED: 'sidebar-collapsed',
   CACHED_CSVS: 'cached-csvs',
+  ACTIVE_TAB: 'active-tab',
+  ROLLING_AVG: 'rolling-avg',
+  COLUMN_VISIBILITY: 'column-visibility',
 } as const;
 
 /** Cached CSV entry stored in localStorage */

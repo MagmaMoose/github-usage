@@ -61,5 +61,5 @@ export function CostBreakdownChart() {
 
   if (!options) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} />;
+  return <HighchartsReact highcharts={Highcharts} options={options} immutable />;
 }

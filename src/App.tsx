@@ -49,9 +49,10 @@ import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
 import { useHighchartsInit } from './components/charts/useHighchartsInit';
 import { REPORT_TYPES } from './lib/types';
 import type { TokenUsageRow } from './lib/types';
-import { formatCurrency, formatCompact, formatDateRange, humanizeColumn } from './lib/formatters';
+import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact, humanizeColumn } from './lib/formatters';
 import { computeSummary, topN } from './lib/aggregation';
 import { parseCSV } from './lib/csv-parser';
+import { getStoredValue, setStoredValue, STORAGE_KEYS } from './lib/local-storage';
 import styles from './App.module.css';
 
 type ViewTab = 'charts' | 'table';
@@ -222,8 +223,20 @@ function AppContent() {
     clearFilters,
     visibleRows,
   } = useReport();
-  const [activeTab, setActiveTab] = useState<ViewTab>('charts');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTabRaw] = useState<ViewTab>(() =>
+    getStoredValue(STORAGE_KEYS.ACTIVE_TAB, 'charts') as ViewTab,
+  );
+  const setActiveTab = useCallback((tab: ViewTab) => {
+    setActiveTabRaw(tab);
+    setStoredValue(STORAGE_KEYS.ACTIVE_TAB, tab);
+  }, []);
+  const [sidebarCollapsed, setSidebarCollapsedRaw] = useState(() =>
+    getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, false),
+  );
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
+    setSidebarCollapsedRaw(collapsed);
+    setStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, collapsed);
+  }, []);
   const [filterInput, setFilterInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -246,6 +259,34 @@ function AppContent() {
     if (!activeReport || visibleRows.length === 0) return null;
     return computeSummary(visibleRows);
   }, [activeReport, visibleRows]);
+
+  /** Unique organization names from the active report */
+  const uniqueOrgs = useMemo(() => {
+    if (!activeReport) return [];
+    const orgs = new Set<string>();
+    for (const row of activeReport.rows) {
+      const org = (row as unknown as Record<string, unknown>).organization;
+      if (org && typeof org === 'string' && org.trim()) orgs.add(org);
+    }
+    return Array.from(orgs).sort();
+  }, [activeReport]);
+
+  /** Build a nice tab label like "Premium Requests (Mar 2026)" */
+  const getReportTabLabel = useCallback(
+    (report: NonNullable<typeof activeReport>) => {
+      const typeLabel = REPORT_TYPE_LABELS[report.type] ?? report.type;
+      const dateLabel = formatDateRangeCompact(report.dateRange.start, report.dateRange.end);
+      return dateLabel ? `${typeLabel} (${dateLabel})` : typeLabel;
+    },
+    [],
+  );
+
+  // Sync browser tab title with active report
+  useEffect(() => {
+    document.title = activeReport
+      ? `${getReportTabLabel(activeReport)} — TBB`
+      : 'Copilot Usage Viewer — TBB';
+  }, [activeReport, getReportTabLabel]);
 
   const tokenBreakdown = useMemo(() => {
     if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE)
@@ -672,6 +713,14 @@ function AppContent() {
                 {activeReport
                   ? formatDateRange(activeReport.dateRange.start, activeReport.dateRange.end)
                   : ''}
+                {uniqueOrgs.length > 0 && (
+                  <>
+                    {' · '}
+                    {uniqueOrgs.length <= 3
+                      ? uniqueOrgs.join(', ')
+                      : `${uniqueOrgs.slice(0, 3).join(', ')} +${uniqueOrgs.length - 3} more`}
+                  </>
+                )}
               </span>
             </PageHeader.Description>
           </PageHeader>
@@ -732,6 +781,7 @@ function AppContent() {
 
           {reports.length > 1 && (
             <UnderlineNav
+              key={reports.length}
               aria-label="Uploaded reports"
               variant="flush"
               className={styles.reportTabs}
@@ -750,7 +800,7 @@ function AppContent() {
                       setActiveReport(i);
                     }}
                   >
-                    {REPORT_TYPE_LABELS[report.type] ?? report.type}
+                    {getReportTabLabel(report)}
                   </UnderlineNav.Item>
                 );
               })}
@@ -883,7 +933,7 @@ function AppContent() {
               )}
 
               {activeTab === 'charts' && visibleRows.length > 0 && (
-                <div className={styles.chartStack}>
+                <div className={styles.chartStack} key={activeReportIndex}>
                   <div className={styles.chartSurface}>
                     <TimeSeriesChart />
                   </div>
