@@ -308,7 +308,7 @@ function AppContent() {
   }, [activeReport, availableFilterFields]);
 
   const applyAdvancedFilter = useCallback(
-    (field: FilterableField, value: string) => {
+    (field: string, value: string) => {
       const nextValues = [...new Set([...(filters[field] ?? []), value])];
       setFilter(field, nextValues);
       setSearchQuery('');
@@ -317,7 +317,7 @@ function AppContent() {
   );
 
   const removeAdvancedFilter = useCallback(
-    (field: FilterableField, value: string) => {
+    (field: string, value: string) => {
       const nextValues = (filters[field] ?? []).filter((currentValue) => currentValue !== value);
       setFilter(field, nextValues);
     },
