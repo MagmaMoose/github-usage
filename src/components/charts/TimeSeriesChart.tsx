@@ -24,9 +24,12 @@ export function TimeSeriesChart() {
   const [showRollingAvg, setShowRollingAvgRaw] = useState(() =>
     getStoredValue(STORAGE_KEYS.ROLLING_AVG, false),
   );
-  const setShowRollingAvg = useCallback((value: boolean) => {
-    setShowRollingAvgRaw(value);
-    setStoredValue(STORAGE_KEYS.ROLLING_AVG, value);
+  const toggleRollingAvg = useCallback(() => {
+    setShowRollingAvgRaw((prev) => {
+      const next = !prev;
+      setStoredValue(STORAGE_KEYS.ROLLING_AVG, next);
+      return next;
+    });
   }, []);
 
   // Window size adapts to the bucket granularity
@@ -123,7 +126,7 @@ export function TimeSeriesChart() {
         <ToggleSwitch
           size="small"
           checked={showRollingAvg}
-          onClick={() => setShowRollingAvg((v) => !v)}
+          onClick={toggleRollingAvg}
           aria-labelledby="rolling-avg-label"
         />
       </div>

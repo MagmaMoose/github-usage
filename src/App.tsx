@@ -47,6 +47,7 @@ import { TimeSeriesChart } from './components/charts/TimeSeriesChart';
 import { ModelBreakdownChart } from './components/charts/ModelBreakdownChart';
 import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
 import { useHighchartsInit } from './components/charts/useHighchartsInit';
+import { PeriodSelector } from './components/PeriodSelector';
 import { REPORT_TYPES } from './lib/types';
 import type { TokenUsageRow } from './lib/types';
 import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact, humanizeColumn } from './lib/formatters';
@@ -122,17 +123,6 @@ function parseAdvancedFilter(value: string) {
   if (!FILTERABLE_FIELDS.includes(field) || !filterValue) return null;
 
   return { field, value: filterValue };
-}
-
-function getMonthLabel(monthKey: string) {
-  const [year, month] = monthKey.split('-').map(Number);
-  if (!year || !month) return monthKey;
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
@@ -325,11 +315,6 @@ function AppContent() {
       setPeriodKey('all');
     }
   }, [availablePeriods, periodKey, setPeriodKey]);
-
-  const selectedPeriodLabel = useMemo(() => {
-    if (!activeReport) return 'All data';
-    return periodKey === 'all' ? 'All data' : getMonthLabel(periodKey);
-  }, [activeReport, periodKey]);
 
   const handleDownload = useCallback(() => {
     if (!activeReport) return;
@@ -569,27 +554,7 @@ function AppContent() {
     </UnderlineNav>
   );
 
-  const renderPeriodMenu = () => (
-    <ActionMenu>
-      <ActionMenu.Button size="small">Period: {selectedPeriodLabel}</ActionMenu.Button>
-      <ActionMenu.Overlay width="auto" align="end">
-        <ActionList selectionVariant="single">
-          <ActionList.Item selected={periodKey === 'all'} onSelect={() => setPeriodKey('all')}>
-            All data
-          </ActionList.Item>
-          {availablePeriods.map((value) => (
-            <ActionList.Item
-              key={value}
-              selected={periodKey === value}
-              onSelect={() => setPeriodKey(value)}
-            >
-              {getMonthLabel(value)}
-            </ActionList.Item>
-          ))}
-        </ActionList>
-      </ActionMenu.Overlay>
-    </ActionMenu>
-  );
+
 
   // ── Empty state ──
   if (reports.length === 0) {
@@ -687,7 +652,7 @@ function AppContent() {
             </PageHeader.TitleArea>
             <PageHeader.Actions>
               <Stack direction="horizontal" gap="condensed">
-                {renderPeriodMenu()}
+                <PeriodSelector />
                 <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
                   Add file
                 </Button>
