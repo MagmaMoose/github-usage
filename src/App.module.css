@@ -18,6 +18,9 @@
   margin-top: auto;
   padding-top: var(--stack-padding-normal, 16px);
   border-top: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d1d9e0b3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sidebarHeader {
