@@ -18,7 +18,8 @@ interface ReportState {
 }
 
 export interface ReportContextValue extends ReportState {
-  addReport: (report: ParsedReport, rawCsv: string) => void;
+  /** Returns -1 if the report was added, or the index of the existing duplicate */
+  addReport: (report: ParsedReport, rawCsv: string) => number;
   removeReport: (index: number) => void;
   clearAllReports: () => void;
   setActiveReport: (index: number) => void;

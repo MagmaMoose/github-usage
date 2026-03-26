@@ -23,7 +23,10 @@ export function FileDropzone() {
         try {
           const text = await file.text();
           const report = parseCSV(text, file.name);
-          addReport(report, text);
+          const dupeIndex = addReport(report, text);
+          if (dupeIndex >= 0) {
+            setError(`"${file.name}" is already loaded — switched to that report.`);
+          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to parse CSV');
         }

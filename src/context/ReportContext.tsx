@@ -6,10 +6,22 @@ import { parseCSV } from '../lib/csv-parser';
 import { getCachedCSVs, setCachedCSVs, clearCachedCSVs } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 
+/** Fast FNV-1a hash for dedup — not crypto-grade, just collision-resistant enough for CSV content */
+function simpleHash(str: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 interface ReportState {
   reports: ParsedReport[];
   /** Raw CSV content parallel to reports[], used for localStorage caching */
   rawCsvs: string[];
+  /** SHA-256 hashes of raw CSV content for dedup */
+  fileHashes: Set<string>;
   activeReportIndex: number;
   groupByColumn: string;
   timeBucket: TimeBucket;
@@ -24,6 +36,7 @@ function buildInitialState(): ReportState {
   return {
     reports: [],
     rawCsvs: [],
+    fileHashes: new Set(),
     activeReportIndex: 0,
     groupByColumn: urlState.groupBy ?? 'username',
     timeBucket: (urlState.timeBucket as TimeBucket) ?? 'daily',
@@ -79,6 +92,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         ...initial,
         reports: restoredReports,
         rawCsvs: cached.map((c) => c.content),
+        fileHashes: new Set(cached.map((c) => simpleHash(c.content))),
         activeReportIndex: 0,
         periodKey: validPeriodKey,
         filters: validFilters,
@@ -109,10 +123,27 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     state.reports.length,
   ]);
 
-  const addReport = useCallback((report: ParsedReport, rawCsv: string) => {
+  const addReport = useCallback((report: ParsedReport, rawCsv: string): number => {
+    let dupeIndex = -1;
     setState((prev) => {
+      const hash = simpleHash(rawCsv);
+      if (prev.fileHashes.has(hash)) {
+        // Find the matching report index
+        dupeIndex = prev.rawCsvs.findIndex((csv) => simpleHash(csv) === hash);
+        // Navigate to the existing report and reset filters so data loads clean
+        return {
+          ...prev,
+          activeReportIndex: dupeIndex,
+          periodKey: 'all',
+          dateRange: null,
+          searchQuery: '',
+          filters: {},
+        };
+      }
       const nextReports = [...prev.reports, report];
       const nextRawCsvs = [...prev.rawCsvs, rawCsv];
+      const nextHashes = new Set(prev.fileHashes);
+      nextHashes.add(hash);
 
       // Persist all CSVs to localStorage
       setCachedCSVs(
@@ -127,12 +158,14 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         ...prev,
         reports: nextReports,
         rawCsvs: nextRawCsvs,
+        fileHashes: nextHashes,
         activeReportIndex: prev.reports.length,
         periodKey: 'all',
         dateRange: null,
         searchQuery: '',
       };
     });
+    return dupeIndex;
   }, []);
 
   const removeReport = useCallback((index: number) => {
@@ -157,6 +190,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         ...prev,
         reports,
         rawCsvs,
+        fileHashes: new Set(rawCsvs.map(simpleHash)),
         activeReportIndex: Math.min(prev.activeReportIndex, Math.max(0, reports.length - 1)),
       };
     });
@@ -168,6 +202,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       ...prev,
       reports: [],
       rawCsvs: [],
+      fileHashes: new Set<string>(),
       activeReportIndex: 0,
     }));
   }, []);

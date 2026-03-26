@@ -26,6 +26,7 @@ import {
   CopilotIcon,
   DownloadIcon,
   GraphIcon,
+  MarkGithubIcon,
   MeterIcon,
   MoonIcon,
   SidebarCollapseIcon,
@@ -401,6 +402,16 @@ function AppContent() {
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
+        <IconButton
+          as="a"
+          href="https://github.com/austenstone/tbb"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View source on GitHub"
+          icon={MarkGithubIcon}
+          variant="invisible"
+          size="small"
+        />
       </div>
     </div>
   );
