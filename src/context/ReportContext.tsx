@@ -1,6 +1,10 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
+import type { DateRange } from './report-context';
+import { parseCSV } from '../lib/csv-parser';
+import { getCachedCSVs, setCachedCSVs, clearCachedCSVs, type CachedCSV } from '../lib/local-storage';
+import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 
 interface ReportState {
   reports: ParsedReport[];
@@ -8,20 +12,75 @@ interface ReportState {
   groupByColumn: string;
   timeBucket: TimeBucket;
   periodKey: string;
+  dateRange: DateRange | null;
   searchQuery: string;
   filters: Record<string, string[]>;
 }
 
-export function ReportProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ReportState>({
+function buildInitialState(): ReportState {
+  const urlState = readURLFilterState();
+  return {
     reports: [],
     activeReportIndex: 0,
-    groupByColumn: 'username',
-    timeBucket: 'daily',
-    periodKey: 'all',
-    searchQuery: '',
-    filters: {},
-  });
+    groupByColumn: urlState.groupBy ?? 'username',
+    timeBucket: (urlState.timeBucket as TimeBucket) ?? 'daily',
+    periodKey: urlState.period ?? 'all',
+    dateRange: null,
+    searchQuery: urlState.search ?? '',
+    filters: urlState.filters ?? {},
+  };
+}
+
+export function ReportProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<ReportState>(buildInitialState);
+  const didRestoreCSVs = useRef(false);
+
+  // Restore cached CSVs from localStorage on mount
+  useEffect(() => {
+    if (didRestoreCSVs.current) return;
+    didRestoreCSVs.current = true;
+
+    const cached = getCachedCSVs();
+    if (cached.length === 0) return;
+
+    const restoredReports: ParsedReport[] = [];
+    for (const entry of cached) {
+      try {
+        restoredReports.push(parseCSV(entry.content, entry.fileName));
+      } catch {
+        // Skip corrupted cache entries
+      }
+    }
+
+    if (restoredReports.length > 0) {
+      setState((prev) => ({
+        ...prev,
+        reports: restoredReports,
+        activeReportIndex: 0,
+      }));
+    }
+  }, []);
+
+  // Sync filter state to URL params whenever it changes
+  useEffect(() => {
+    // Only sync URL params when we have reports loaded (avoid clearing URL on initial empty state)
+    if (state.reports.length === 0) return;
+
+    writeURLFilterState({
+      groupBy: state.groupByColumn,
+      timeBucket: state.timeBucket,
+      period: state.periodKey,
+      search: state.searchQuery,
+      filters: state.filters,
+    });
+  }, [
+    state.groupByColumn,
+    state.timeBucket,
+    state.periodKey,
+    state.searchQuery,
+    state.filters,
+    state.reports.length,
+  ]);
 
   const addReport = useCallback((report: ParsedReport) => {
     setState((prev) => ({
@@ -29,6 +88,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       reports: [...prev.reports, report],
       activeReportIndex: prev.reports.length,
       periodKey: 'all',
+      dateRange: null,
       searchQuery: '',
     }));
   }, []);
@@ -36,6 +96,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const removeReport = useCallback((index: number) => {
     setState((prev) => {
       const reports = prev.reports.filter((_, i) => i !== index);
+      if (reports.length === 0) clearCachedCSVs();
       return {
         ...prev,
         reports,
@@ -49,6 +110,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       ...prev,
       activeReportIndex: index,
       periodKey: 'all',
+      dateRange: null,
       searchQuery: '',
     }));
   }, []);
@@ -62,7 +124,11 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setPeriodKey = useCallback((periodKey: string) => {
-    setState((prev) => ({ ...prev, periodKey }));
+    setState((prev) => ({ ...prev, periodKey, dateRange: null }));
+  }, []);
+
+  const setDateRange = useCallback((dateRange: DateRange | null) => {
+    setState((prev) => ({ ...prev, dateRange, periodKey: dateRange ? 'custom' : 'all' }));
   }, []);
 
   const setSearchQuery = useCallback((searchQuery: string) => {
@@ -98,7 +164,10 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     const rowRecord = row as unknown as Record<string, unknown>;
     const matchesPeriod =
       state.periodKey === 'all' ||
-      String(rowRecord.date ?? '').startsWith(state.periodKey);
+      (state.dateRange
+        ? String(rowRecord.date ?? '') >= state.dateRange.start &&
+          String(rowRecord.date ?? '') <= state.dateRange.end
+        : String(rowRecord.date ?? '').startsWith(state.periodKey));
 
     const matchesAdvancedFilters = Object.entries(state.filters).every(([field, values]) => {
       if (values.length === 0) return true;
@@ -127,6 +196,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         setGroupByColumn,
         setTimeBucket,
         setPeriodKey,
+        setDateRange,
         setSearchQuery,
         setFilter,
         clearFilters,
