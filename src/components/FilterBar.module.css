@@ -2,6 +2,12 @@
 
 .filterBar {
   position: relative;
+  min-width: 0;
+  flex: 1;
+}
+
+.inputWrapper {
+  position: relative;
   flex: 1;
   min-width: 0;
 }

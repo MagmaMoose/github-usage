@@ -5,7 +5,7 @@ import { SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
@@ -63,7 +63,7 @@ export function ModelBreakdownChart() {
       })
       .sort((a, b) => b.visibleSpend - a.visibleSpend);
 
-    const categories = sorted.map((item) => item.key || '(empty)');
+    const categories = sorted.map((item) => formatDisplayValue(item.key, groupByColumn) || '(empty)');
 
     // Build a stacked series per model
     const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo) => {

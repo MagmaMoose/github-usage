@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ToggleSwitch } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { AnyReportRow } from '../../lib/types';
@@ -75,7 +75,7 @@ export function TimeSeriesChart() {
         // Rolling average as the primary line
         series.push({
           type: 'line' as const,
-          name: `${group.key || '(empty)'}`,
+          name: `${formatDisplayValue(group.key, groupByColumn) || '(empty)'}`,
           data: rollingAverage(data, rollingWindow),
           color,
           lineWidth: 2.5,
@@ -88,7 +88,7 @@ export function TimeSeriesChart() {
       } else {
         series.push({
           type: 'line' as const,
-          name: group.key || '(empty)',
+          name: formatDisplayValue(group.key, groupByColumn) || '(empty)',
           data,
           color,
         });

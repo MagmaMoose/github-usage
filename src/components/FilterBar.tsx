@@ -18,7 +18,7 @@ import {
   SearchIcon,
   XCircleIcon,
 } from '@primer/octicons-react';
-import { humanizeColumn } from '../lib/formatters';
+import { humanizeColumn, formatDisplayValue } from '../lib/formatters';
 import styles from './FilterBar.module.css';
 
 type FilterableField = string;
@@ -110,14 +110,14 @@ export function FilterBar({
 
       return fieldValues
         .filter((v) => !appliedValues.has(v))
-        .filter((v) => !query || v.toLowerCase().includes(query))
+        .filter((v) => !query || v.toLowerCase().includes(query) || formatDisplayValue(v, selectedCategory).toLowerCase().includes(query))
         .slice(0, 20)
         .map((value) => ({
           id: `${selectedCategory}:${value}`,
           type: 'value' as const,
           field: selectedCategory,
           value,
-          text: value,
+          text: formatDisplayValue(value, selectedCategory),
           icon: fieldIcons[selectedCategory],
         }));
     }
@@ -156,14 +156,14 @@ export function FilterBar({
       const appliedValues = new Set(filters[field] ?? []);
       return (valuesByField.get(field) ?? [])
         .filter((v) => !appliedValues.has(v))
-        .filter((v) => v.toLowerCase().includes(query))
+        .filter((v) => v.toLowerCase().includes(query) || formatDisplayValue(v, field).toLowerCase().includes(query))
         .slice(0, 3)
         .map((value) => ({
           id: `${field}:${value}`,
           type: 'value' as const,
           field,
           value,
-          text: `${humanizeColumn(field)}: ${value}`,
+          text: `${humanizeColumn(field)}: ${formatDisplayValue(value, field)}`,
           icon: fieldIcons[field],
         }));
     });
@@ -300,6 +300,7 @@ export function FilterBar({
         )}
 
         {/* Input area with inline tokens */}
+        <div className={styles.inputWrapper}>
         <div className={styles.inputArea} onClick={() => inputRef.current?.focus()}>
           <SearchIcon size={16} className={styles.searchIcon} />
 
@@ -307,7 +308,7 @@ export function FilterBar({
           {activeFilters.map(({ field, value }) => (
             <Token
               key={`${field}:${value}`}
-              text={`${humanizeColumn(field)}:${value}`}
+              text={`${humanizeColumn(field)}:${formatDisplayValue(value, field)}`}
               size="medium"
               onRemove={() => onRemoveFilter(field, value)}
               className={styles.inlineToken}
@@ -352,39 +353,40 @@ export function FilterBar({
             />
           )}
         </div>
-      </div>
 
-      {/* Suggestions overlay */}
-      {overlayOpen && suggestions.length > 0 && (
-        <div className={styles.suggestionsOverlay} ref={overlayRef} id="filter-suggestions">
-          <ActionList role="listbox" aria-label="Suggestions">
-            {suggestions.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <ActionList.Item
-                  key={item.id}
-                  role="option"
-                  active={index === highlightIndex}
-                  onSelect={() => {
-                    if (item.type === 'field') {
-                      handleSelectField(item.field);
-                    } else {
-                      handleSelectValue(item.field, item.value);
-                    }
-                  }}
-                >
-                  {Icon && (
-                    <ActionList.LeadingVisual>
-                      <Icon />
-                    </ActionList.LeadingVisual>
-                  )}
-                  {item.text}
-                </ActionList.Item>
-              );
-            })}
-          </ActionList>
+        {/* Suggestions overlay */}
+        {overlayOpen && suggestions.length > 0 && (
+          <div className={styles.suggestionsOverlay} ref={overlayRef} id="filter-suggestions">
+            <ActionList role="listbox" aria-label="Suggestions">
+              {suggestions.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <ActionList.Item
+                    key={item.id}
+                    role="option"
+                    active={index === highlightIndex}
+                    onSelect={() => {
+                      if (item.type === 'field') {
+                        handleSelectField(item.field);
+                      } else {
+                        handleSelectValue(item.field, item.value);
+                      }
+                    }}
+                  >
+                    {Icon && (
+                      <ActionList.LeadingVisual>
+                        <Icon />
+                      </ActionList.LeadingVisual>
+                    )}
+                    {item.text}
+                  </ActionList.Item>
+                );
+              })}
+            </ActionList>
+          </div>
+        )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

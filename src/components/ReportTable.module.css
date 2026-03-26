@@ -18,6 +18,24 @@
   gap: var(--base-size-8, 8px);
 }
 
+.cellLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  color: var(--fgColor-default, #1f2328);
+  text-decoration: none;
+}
+
+.cellLink:hover {
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: underline;
+}
+
+.columnIcon {
+  flex-shrink: 0;
+  color: var(--fgColor-muted, #59636e);
+}
+
 .modelIconBadge {
   border-radius: 50%;
   padding: var(--base-size-2, 2px);

@@ -58,6 +58,57 @@ export function formatDateRangeCompact(start: string, end: string): string {
   return `${fmt(sY, sM)}–${fmt(eY, eM)}`;
 }
 
+/** Human-readable display names for raw SKU codes */
+const SKU_DISPLAY_NAMES: Record<string, string> = {
+  copilot_premium_request: 'Copilot PRUs',
+  coding_agent_premium_request: 'Coding Agent PRUs',
+  spark_premium_request: 'Spark PRUs',
+  copilot_ai_unit: 'Copilot AI Credits',
+  coding_agent_ai_unit: 'Coding Agent AI Credits',
+  spark_ai_unit: 'Spark AI Credits',
+  copilot_enterprise: 'Copilot Enterprise',
+  copilot_for_business: 'Copilot Business',
+  actions_linux: 'Actions Linux',
+  actions_linux_4_core: 'Actions Linux 4-core',
+  actions_linux_8_core: 'Actions Linux 8-core',
+  actions_linux_16_core: 'Actions Linux 16-core',
+  actions_linux_32_core: 'Actions Linux 32-core',
+  actions_linux_64_core: 'Actions Linux 64-core',
+  actions_linux_arm: 'Actions Linux ARM',
+  actions_linux_slim: 'Actions Linux Slim',
+  actions_windows: 'Actions Windows',
+  actions_macos: 'Actions macOS',
+  actions_self_hosted_linux: 'Actions Self-Hosted Linux',
+  actions_self_hosted_windows: 'Actions Self-Hosted Windows',
+  actions_custom_image_storage: 'Actions Custom Image Storage',
+  actions_storage: 'Actions Storage',
+  git_lfs_bandwidth: 'Git LFS Bandwidth',
+  git_lfs_storage: 'Git LFS Storage',
+  packages_bandwidth: 'Packages Bandwidth',
+  packages_storage: 'Packages Storage',
+};
+
+/** Human-readable display names for raw product codes */
+const PRODUCT_DISPLAY_NAMES: Record<string, string> = {
+  copilot: 'GitHub Copilot',
+  spark: 'GitHub Spark',
+  actions: 'GitHub Actions',
+  git_lfs: 'Git LFS',
+  packages: 'GitHub Packages',
+};
+
+/**
+ * Format a raw grouping value (sku, product, etc.) into a human-readable label.
+ * Falls through to the raw value when no mapping exists (e.g. usernames, model names).
+ */
+export function formatDisplayValue(value: string, column?: string): string {
+  if (!value) return value;
+  if (column === 'sku') return SKU_DISPLAY_NAMES[value] ?? value;
+  if (column === 'product') return PRODUCT_DISPLAY_NAMES[value] ?? value;
+  // For unknown columns, check both maps as a best-effort fallback
+  return SKU_DISPLAY_NAMES[value] ?? PRODUCT_DISPLAY_NAMES[value] ?? value;
+}
+
 /** Humanize a column name (camelCase → Title Case) */
 export function humanizeColumn(column: string): string {
   const MAP: Record<string, string> = {

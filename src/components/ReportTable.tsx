@@ -15,16 +15,25 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Avatar, Button, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
-import { ColumnsIcon } from '@primer/octicons-react';
+import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
-import { formatCurrency, formatCompact, humanizeColumn } from '../lib/formatters';
+import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue } from '../lib/formatters';
 import type { AnyReportRow, TokenUsageRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
 import styles from './ReportTable.module.css';
+
+/** Icon to show next to non-avatar, non-model group values */
+const COLUMN_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  sku: PackageIcon,
+  product: PackageIcon,
+  costCenterName: CreditCardIcon,
+  repository: RepoIcon,
+  workflowPath: WorkflowIcon,
+};
 
 // Extend TanStack's ColumnMeta to support our align property
 declare module '@tanstack/react-table' {
@@ -274,10 +283,16 @@ export function ReportTable() {
           const value = info.getValue();
           if (isAvatarGroup && value) {
             return (
-              <span className={styles.cellWithIcon}>
+              <a
+                href={`https://github.com/${value}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.cellLink}
+                title={value}
+              >
                 <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
-                <span title={value}>{value}</span>
-              </span>
+                <span>{value}</span>
+              </a>
             );
           }
           if (isModelGroup && value) {
@@ -294,9 +309,26 @@ export function ReportTable() {
               </span>
             );
           }
+          const displayValue = formatDisplayValue(value, groupByColumn);
+          if (groupByColumn === 'repository' && value) {
+            return (
+              <a
+                href={`https://github.com/${value}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.cellLink}
+                title={value}
+              >
+                <RepoIcon size={16} className={styles.columnIcon} />
+                {value}
+              </a>
+            );
+          }
+          const ColumnIcon = COLUMN_ICONS[groupByColumn];
           return (
-            <span title={value}>
-              {value || '(empty)'}
+            <span className={ColumnIcon ? styles.cellWithIcon : undefined} title={value}>
+              {ColumnIcon && <ColumnIcon size={16} className={styles.columnIcon} />}
+              {displayValue || '(empty)'}
             </span>
           );
         },

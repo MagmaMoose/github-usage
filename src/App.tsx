@@ -10,6 +10,8 @@ import {
 } from 'react';
 import {
   Button,
+  ActionMenu,
+  ActionList,
   Heading,
   IconButton,
   NavList,
@@ -25,8 +27,10 @@ import {
   DownloadIcon,
   GraphIcon,
   MeterIcon,
+  MoonIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
+  SunIcon,
   TableIcon,
   UploadIcon,
   ServerIcon,
@@ -35,6 +39,7 @@ import {
 } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
+import { useColorMode } from './context/theme-context';
 import { FilterBar } from './components/FilterBar';
 import { FileDropzone } from './components/FileDropzone';
 import { ReportTable } from './components/ReportTable';
@@ -161,6 +166,7 @@ function downloadReportAsCsv(report: NonNullable<ReturnType<typeof useReport>['a
 
 function AppContent() {
   useHighchartsInit();
+  const { colorMode, setColorMode } = useColorMode();
   const {
     reports,
     activeReportIndex,
@@ -187,7 +193,7 @@ function AppContent() {
     setStoredValue(STORAGE_KEYS.ACTIVE_TAB, tab);
   }, []);
   const [sidebarCollapsed, setSidebarCollapsedRaw] = useState(() =>
-    getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, false),
+    getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, true),
   );
   const setSidebarCollapsed = useCallback((collapsed: boolean) => {
     setSidebarCollapsedRaw(collapsed);
@@ -370,6 +376,32 @@ function AppContent() {
           </NavList.Item>
         ))}
       </NavList>
+      <div className={styles.sidebarFooter}>
+        <ActionMenu>
+          <ActionMenu.Button
+            size="small"
+            variant="invisible"
+            leadingVisual={colorMode === 'night' ? MoonIcon : colorMode === 'day' ? SunIcon : SunIcon}
+          >
+            {colorMode === 'night' ? 'Dark' : colorMode === 'day' ? 'Light' : 'System'}
+          </ActionMenu.Button>
+          <ActionMenu.Overlay width="auto">
+            <ActionList selectionVariant="single">
+              <ActionList.Item selected={colorMode === 'auto'} onSelect={() => setColorMode('auto')}>
+                System
+              </ActionList.Item>
+              <ActionList.Item selected={colorMode === 'day'} onSelect={() => setColorMode('day')}>
+                <ActionList.LeadingVisual><SunIcon /></ActionList.LeadingVisual>
+                Light
+              </ActionList.Item>
+              <ActionList.Item selected={colorMode === 'night'} onSelect={() => setColorMode('night')}>
+                <ActionList.LeadingVisual><MoonIcon /></ActionList.LeadingVisual>
+                Dark
+              </ActionList.Item>
+            </ActionList>
+          </ActionMenu.Overlay>
+        </ActionMenu>
+      </div>
     </div>
   );
 
