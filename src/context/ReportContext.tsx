@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
 import type { DateRange } from './report-context';
@@ -35,16 +35,12 @@ function buildInitialState(): ReportState {
 }
 
 export function ReportProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ReportState>(buildInitialState);
-  const didRestoreCSVs = useRef(false);
+  const [state, setState] = useState<ReportState>(() => {
+    const initial = buildInitialState();
 
-  // Restore cached CSVs from localStorage on mount
-  useEffect(() => {
-    if (didRestoreCSVs.current) return;
-    didRestoreCSVs.current = true;
-
+    // Restore cached CSVs from localStorage on mount
     const cached = getCachedCSVs();
-    if (cached.length === 0) return;
+    if (cached.length === 0) return initial;
 
     const restoredReports: ParsedReport[] = [];
     for (const entry of cached) {
@@ -56,14 +52,16 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     }
 
     if (restoredReports.length > 0) {
-      setState((prev) => ({
-        ...prev,
+      return {
+        ...initial,
         reports: restoredReports,
         rawCsvs: cached.map((c) => c.content),
         activeReportIndex: 0,
-      }));
+      };
     }
-  }, []);
+
+    return initial;
+  });
 
   // Sync filter state to URL params whenever it changes
   useEffect(() => {

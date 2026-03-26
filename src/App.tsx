@@ -9,8 +9,6 @@ import {
   type PropsWithChildren,
 } from 'react';
 import {
-  ActionList,
-  ActionMenu,
   Button,
   Heading,
   IconButton,
@@ -47,7 +45,7 @@ import { useHighchartsInit } from './components/charts/useHighchartsInit';
 import { PeriodSelector } from './components/PeriodSelector';
 import { REPORT_TYPES, GROUPABLE_COLUMNS } from './lib/types';
 import type { TokenUsageRow } from './lib/types';
-import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact, humanizeColumn } from './lib/formatters';
+import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact } from './lib/formatters';
 import { computeSummary, topN } from './lib/aggregation';
 import { parseCSV } from './lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from './lib/local-storage';
@@ -94,29 +92,6 @@ const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<I
   product: WorkflowIcon,
   repository: WorkflowIcon,
 };
-
-function parseAdvancedFilter(value: string) {
-  const separatorIndex = value.indexOf(':');
-  if (separatorIndex === -1) return null;
-
-  const field = value.slice(0, separatorIndex).trim() as FilterableField;
-  const filterValue = value.slice(separatorIndex + 1).trim();
-
-  if (!FILTERABLE_FIELDS.includes(field) || !filterValue) return null;
-
-  return { field, value: filterValue };
-}
-
-function getMonthLabel(monthKey: string) {
-  const [year, month] = monthKey.split('-').map(Number);
-  if (!year || !month) return monthKey;
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
-}
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   [REPORT_TYPES.PREMIUM_REQUEST]: 'Premium Requests',
@@ -239,17 +214,6 @@ function AppContent() {
     if (!activeReport || visibleRows.length === 0) return null;
     return computeSummary(visibleRows);
   }, [activeReport, visibleRows]);
-
-  /** Unique organization names from the active report */
-  const uniqueOrgs = useMemo(() => {
-    if (!activeReport) return [];
-    const orgs = new Set<string>();
-    for (const row of activeReport.rows) {
-      const org = (row as unknown as Record<string, unknown>).organization;
-      if (org && typeof org === 'string' && org.trim()) orgs.add(org);
-    }
-    return Array.from(orgs).sort();
-  }, [activeReport]);
 
   /** Build a nice tab label like "Premium Requests (Mar 2026)" */
   const getReportTabLabel = useCallback(

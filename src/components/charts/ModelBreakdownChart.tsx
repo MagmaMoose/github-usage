@@ -65,7 +65,7 @@ export function ModelBreakdownChart() {
     const categories = sorted.map((item) => item.key || '(empty)');
 
     // Build a stacked series per model
-    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo, i) => {
+    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo) => {
       const isHidden = hiddenModels.has(modelInfo.model);
       const data = sorted.map((item) => {
         const modelRows = item.rows.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
@@ -154,7 +154,7 @@ export function ModelBreakdownChart() {
         { type: 'bar' as const, name: 'Cache Reads', data: enriched.map((d) => d.cacheRead), color: 'var(--data-teal-color-emphasis, #179b9b)' },
       ],
     };
-  }, [activeReport, isTokenReport, visibleRows]);
+  }, [activeReport, groupByColumn, isTokenReport, visibleRows]);
 
   const activeOptions = viewMode === 'tokens' ? tokenOptions : spendOptions;
   if (!activeOptions) return null;
