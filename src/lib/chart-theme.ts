@@ -194,7 +194,6 @@ export function buildGitHubChartTheme(): Highcharts.Options {
     title: {
       align: 'left',
       style: { color: fgDefault, fontSize: '16px', fontWeight: '600' },
-      text: undefined,
     },
     caption: {
       align: 'left',

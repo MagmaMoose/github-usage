@@ -4,11 +4,15 @@ import { buildGitHubChartTheme } from '../../lib/chart-theme';
 
 /** Apply the GitHub Highcharts theme using live CSS variable values */
 function applyTheme() {
-  Highcharts.setOptions(buildGitHubChartTheme());
-  // Re-render all active charts so they pick up the new theme colors
+  const theme = buildGitHubChartTheme();
+  Highcharts.setOptions(theme);
+
+  // Re-apply visual styles (colors, backgrounds) to existing charts
+  // without clobbering per-chart options like title, series, etc.
+  const { title: _t, subtitle: _s, series: _sr, ...safeTheme } = theme;
   Highcharts.charts.forEach((chart) => {
     if (chart) {
-      chart.update(buildGitHubChartTheme(), true, true);
+      chart.update(safeTheme, true, true);
     }
   });
 }
