@@ -10,10 +10,11 @@ import {
   type SortingState,
   type ColumnDef,
   type VisibilityState,
-  type Table,
+  type Table as TanstackTable,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Avatar, Button, SelectPanel } from '@primer/react';
+import { Table as PrimerTable } from '@primer/react/experimental';
 import { ColumnsIcon } from '@primer/octicons-react';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
@@ -50,7 +51,7 @@ const VIRTUAL_THRESHOLD = 200;
 
 const columnHelper = createColumnHelper<TableRow>();
 
-function ColumnVisibilityPanel({ table }: { table: Table<TableRow> }) {
+function ColumnVisibilityPanel({ table }: { table: TanstackTable<TableRow> }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const savedRef = useRef<ActionListItemInput[]>([]);
@@ -247,14 +248,14 @@ export function ReportTable() {
   }, [activeReport, groupByColumn, visibleRows, isTokenReport]);
 
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
-    const isUserGroup = groupByColumn === 'username';
+    const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization';
 
     const cols: ColumnDef<TableRow, unknown>[] = [
       columnHelper.accessor('group', {
         header: humanizeColumn(groupByColumn),
         cell: (info) => {
           const value = info.getValue();
-          if (isUserGroup && value) {
+          if (isAvatarGroup && value) {
             return (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
@@ -355,23 +356,16 @@ export function ReportTable() {
     <div className={styles.tableContainer}>
       <div className={styles.headerBar}>
         <div className={styles.titleGroup}>
-          <h2 className={styles.tableTitle}>
+          <h2 className={styles.tableTitle} id="report-table">
             Usage by {humanizeColumn(groupByColumn)}
             <span className={styles.rowCount}>{totalRows.toLocaleString()}</span>
           </h2>
-          <div className={styles.tableSubtitle}>
+          <div className={styles.tableSubtitle} id="report-table-subtitle">
             {visibleRows.length.toLocaleString()} filtered rows across{' '}
             {tableData.length.toLocaleString()} groups
           </div>
         </div>
         <div className={styles.controlsRow}>
-          <input
-            className={styles.filterInput}
-            type="text"
-            placeholder="Filter groups…"
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-          />
           <ColumnVisibilityPanel table={table} />
         </div>
       </div>
@@ -381,7 +375,7 @@ export function ReportTable() {
         className={styles.scrollWrapper}
         style={useVirtual ? { maxHeight: 600, overflowY: 'auto' } : undefined}
       >
-        <table className={styles.table} role="table">
+        <table className={styles.table} role="table" aria-labelledby="report-table">
           <thead className={styles.thead}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className={styles.tr}>
@@ -410,60 +404,15 @@ export function ReportTable() {
         </table>
       </div>
 
-      {/* Pagination — only when not virtualizing */}
-      {!useVirtual && table.getPageCount() > 1 && (
-        <div className={styles.pagination}>
-          <span>
-            Page {table.getState().pagination.pageIndex + 1} of{' '}
-            {table.getPageCount().toLocaleString()}
-            {' · '}
-            <select
-              className={styles.pageSizeSelect}
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-            >
-              {[10, 25, 50, 100, 250].map((size) => (
-                <option key={size} value={size}>
-                  {size} per page
-                </option>
-              ))}
-            </select>
-          </span>
-          <div className={styles.paginationButtons}>
-            <button
-              type="button"
-              className={styles.pageButton}
-              onClick={() => table.firstPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              ««
-            </button>
-            <button
-              type="button"
-              className={styles.pageButton}
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              «
-            </button>
-            <button
-              type="button"
-              className={styles.pageButton}
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              »
-            </button>
-            <button
-              type="button"
-              className={styles.pageButton}
-              onClick={() => table.lastPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              »»
-            </button>
-          </div>
-        </div>
+      {!useVirtual && totalRows > 0 && (
+        <PrimerTable.Pagination
+          aria-label="Pagination for report table"
+          pageSize={table.getState().pagination.pageSize}
+          totalCount={totalRows}
+          onChange={({ pageIndex: newPage }: { pageIndex: number }) => {
+            table.setPageIndex(newPage);
+          }}
+        />
       )}
     </div>
   );

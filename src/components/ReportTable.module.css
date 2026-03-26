@@ -1,9 +1,8 @@
-/* Primer DataTable visual replica — powered by TanStack Table */
+/* TanStack Table with Primer styling */
 
 .tableContainer {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .tableTitle {
@@ -23,7 +22,7 @@
 .scrollWrapper {
   overflow-x: auto;
   border: 1px solid var(--borderColor-default, #d1d9e0);
-  border-radius: 6px;
+  border-radius: 6px 6px 0 0;
 }
 
 .table {
@@ -143,6 +142,46 @@
   color: var(--fgColor-muted, #59636e);
 }
 
+/* Virtual scroll container */
+.virtualContainer {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Row count badge */
+.rowCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--fgColor-default, #1f2328);
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Pagination */
 .pagination {
   display: flex;
@@ -189,46 +228,6 @@
   background-color: var(--bgColor-accent-emphasis, #0969da);
   color: var(--fgColor-onEmphasis, #ffffff);
   border-color: var(--bgColor-accent-emphasis, #0969da);
-}
-
-/* Virtual scroll container */
-.virtualContainer {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-/* Row count badge */
-.rowCount {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 20px;
-  color: var(--fgColor-default, #1f2328);
-  background-color: var(--bgColor-neutral-muted, #818b981f);
-  border-radius: 10px;
-  margin-left: 8px;
-}
-
-.headerBar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.titleGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.controlsRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .pageSizeSelect {
