@@ -13,7 +13,7 @@ import {
   type Table,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Button, SelectPanel } from '@primer/react';
+import { Avatar, Button, SelectPanel } from '@primer/react';
 import { ColumnsIcon } from '@primer/octicons-react';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
@@ -247,14 +247,27 @@ export function ReportTable() {
   }, [activeReport, groupByColumn, visibleRows, isTokenReport]);
 
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
+    const isUserGroup = groupByColumn === 'username';
+
     const cols: ColumnDef<TableRow, unknown>[] = [
       columnHelper.accessor('group', {
         header: humanizeColumn(groupByColumn),
-        cell: (info) => (
-          <span title={info.getValue()}>
-            {info.getValue() || '(empty)'}
-          </span>
-        ),
+        cell: (info) => {
+          const value = info.getValue();
+          if (isUserGroup && value) {
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
+                <span title={value}>{value}</span>
+              </span>
+            );
+          }
+          return (
+            <span title={value}>
+              {value || '(empty)'}
+            </span>
+          );
+        },
         sortingFn: 'alphanumeric',
       }) as ColumnDef<TableRow, unknown>,
       columnHelper.accessor('quantity', {
