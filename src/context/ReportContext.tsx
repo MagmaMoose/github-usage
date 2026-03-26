@@ -52,11 +52,36 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     }
 
     if (restoredReports.length > 0) {
+      // Validate URL-restored filters against actual data to prevent
+      // "No matching usage rows" flash on initial render
+      const rows = restoredReports[0].rows as unknown as Record<string, unknown>[];
+
+      let validPeriodKey = initial.periodKey;
+      if (validPeriodKey !== 'all') {
+        const availablePeriods = [
+          ...new Set(rows.map((row) => String(row.date ?? '').slice(0, 7))),
+        ].filter(Boolean);
+
+        if (!availablePeriods.includes(validPeriodKey)) {
+          validPeriodKey = 'all';
+        }
+      }
+
+      // Drop any advanced filter values that don't exist in the data
+      const validFilters: Record<string, string[]> = {};
+      for (const [field, values] of Object.entries(initial.filters)) {
+        const dataValues = new Set(rows.map((r) => String(r[field] ?? '').toLowerCase()));
+        const kept = values.filter((v) => dataValues.has(v.toLowerCase()));
+        if (kept.length > 0) validFilters[field] = kept;
+      }
+
       return {
         ...initial,
         reports: restoredReports,
         rawCsvs: cached.map((c) => c.content),
         activeReportIndex: 0,
+        periodKey: validPeriodKey,
+        filters: validFilters,
       };
     }
 

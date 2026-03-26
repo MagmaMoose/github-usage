@@ -5,32 +5,56 @@
   flex-direction: column;
 }
 
+/* Virtual scroll spacer rows */
+.virtualSpacer {
+  padding: 0;
+  border: 0;
+}
+
+/* Inline avatar/model cells */
+.cellWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+}
+
+.modelIconBadge {
+  border-radius: 50%;
+  padding: var(--base-size-2, 2px);
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+/* Hidden file input */
+.hiddenInput {
+  display: none;
+}
+
 .tableTitle {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 24px;
+  font-size: var(--text-title-size-small, 16px);
+  font-weight: var(--base-text-weight-semibold, 600);
+  line-height: var(--control-medium-lineHeight, 24px);
   color: var(--fgColor-default, #1f2328);
   margin: 0;
 }
 
 .tableSubtitle {
-  font-size: 12px;
+  font-size: var(--text-body-size-small, 12px);
   color: var(--fgColor-muted, #59636e);
-  line-height: 18px;
+  line-height: var(--text-body-lineHeight-small, 18px);
 }
 
 .scrollWrapper {
   overflow-x: auto;
-  border: 1px solid var(--borderColor-default, #d1d9e0);
-  border-radius: 6px 6px 0 0;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px) var(--borderRadius-medium, 6px) 0 0;
 }
 
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: var(--text-body-lineHeight-medium, 20px);
   color: var(--fgColor-default, #1f2328);
 }
 
@@ -42,14 +66,14 @@
 }
 
 .th {
-  padding: 8px 16px;
-  font-weight: 600;
-  font-size: 12px;
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  font-weight: var(--base-text-weight-semibold, 600);
+  font-size: var(--text-body-size-small, 12px);
   text-align: left;
   white-space: nowrap;
   color: var(--fgColor-default, #1f2328);
   background: var(--bgColor-default, #ffffff);
-  border-bottom: 1px solid var(--borderColor-default, #d1d9e0);
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
   user-select: none;
 }
 
@@ -61,14 +85,14 @@
 .sortButton {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--base-size-4, 4px);
   background: none;
   border: none;
   padding: 0;
   margin: 0;
   font: inherit;
-  font-weight: 600;
-  font-size: 12px;
+  font-weight: var(--base-text-weight-semibold, 600);
+  font-size: var(--text-body-size-small, 12px);
   color: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -103,8 +127,8 @@
 }
 
 .td {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d1d9e0b3);
   white-space: nowrap;
 }
 
@@ -122,13 +146,13 @@
 .filterInput {
   width: 100%;
   max-width: 320px;
-  padding: 5px 12px;
-  font-size: 14px;
-  line-height: 20px;
+  padding: var(--base-size-4, 4px) var(--base-size-12, 12px);
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: var(--text-body-lineHeight-medium, 20px);
   color: var(--fgColor-default, #1f2328);
   background-color: var(--bgColor-default, #ffffff);
-  border: 1px solid var(--borderColor-default, #d1d9e0);
-  border-radius: 6px;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -152,34 +176,34 @@
 .rowCount {
   display: inline-flex;
   align-items: center;
-  padding: 0 6px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 20px;
+  padding: 0 var(--base-size-6, 6px);
+  font-size: var(--text-body-size-small, 12px);
+  font-weight: var(--base-text-weight-medium, 500);
+  line-height: var(--text-body-lineHeight-medium, 20px);
   color: var(--fgColor-default, #1f2328);
   background-color: var(--bgColor-neutral-muted, #818b981f);
-  border-radius: 10px;
-  margin-left: 8px;
+  border-radius: var(--borderRadius-full, 10px);
+  margin-left: var(--base-size-8, 8px);
 }
 
 .headerBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--base-size-12, 12px);
+  margin-bottom: var(--base-size-8, 8px);
 }
 
 .titleGroup {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--base-size-2, 2px);
 }
 
 .controlsRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-size-8, 8px);
 }
 
 /* Pagination */
@@ -187,29 +211,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
-  font-size: 12px;
+  padding: var(--base-size-8, 8px) 0;
+  font-size: var(--text-body-size-small, 12px);
   color: var(--fgColor-muted, #59636e);
 }
 
 .paginationButtons {
   display: flex;
-  gap: 4px;
+  gap: var(--base-size-4, 4px);
 }
 
 .pageButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 500;
+  min-width: var(--control-medium-size, 32px);
+  height: var(--control-medium-size, 32px);
+  padding: 0 var(--base-size-8, 8px);
+  font-size: var(--text-body-size-small, 12px);
+  font-weight: var(--base-text-weight-medium, 500);
   color: var(--fgColor-default, #1f2328);
   background-color: var(--bgColor-default, #ffffff);
-  border: 1px solid var(--borderColor-default, #d1d9e0);
-  border-radius: 6px;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
   cursor: pointer;
   user-select: none;
 }
@@ -231,12 +255,12 @@
 }
 
 .pageSizeSelect {
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: var(--base-size-4, 4px) var(--base-size-8, 8px);
+  font-size: var(--text-body-size-small, 12px);
   color: var(--fgColor-default, #1f2328);
   background-color: var(--bgColor-default, #ffffff);
-  border: 1px solid var(--borderColor-default, #d1d9e0);
-  border-radius: 6px;
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
   outline: none;
   cursor: pointer;
 }

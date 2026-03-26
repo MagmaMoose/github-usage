@@ -159,7 +159,7 @@ function VirtualBody({
     <tbody className={styles.tbody}>
       {paddingTop > 0 && (
         <tr>
-          <td style={{ height: `${paddingTop}px`, padding: 0, border: 0 }} />
+          <td style={{ height: `${paddingTop}px` }} className={styles.virtualSpacer} />
         </tr>
       )}
       {virtualRows.map((virtualRow) => {
@@ -180,7 +180,7 @@ function VirtualBody({
       })}
       {paddingBottom > 0 && (
         <tr>
-          <td style={{ height: `${paddingBottom}px`, padding: 0, border: 0 }} />
+          <td style={{ height: `${paddingBottom}px` }} className={styles.virtualSpacer} />
         </tr>
       )}
     </tbody>
@@ -274,7 +274,7 @@ export function ReportTable() {
           const value = info.getValue();
           if (isAvatarGroup && value) {
             return (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span className={styles.cellWithIcon}>
                 <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
                 <span title={value}>{value}</span>
               </span>
@@ -282,13 +282,13 @@ export function ReportTable() {
           }
           if (isModelGroup && value) {
             return (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span className={styles.cellWithIcon}>
                 <img
                   src={getModelIconUrl(value)}
                   alt=""
                   width={20}
                   height={20}
-                  style={{ borderRadius: '50%', padding: 2, backgroundColor: 'var(--bgColor-muted, #f6f8fa)' }}
+                  className={styles.modelIconBadge}
                 />
                 <span title={value}>{value}</span>
               </span>

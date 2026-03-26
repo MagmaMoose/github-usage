@@ -511,7 +511,7 @@ function AppContent() {
                 type="file"
                 accept=".csv"
                 multiple
-                style={{ display: 'none' }}
+                className={styles.hiddenInput}
                 onChange={(e) => {
                   if (e.target.files) handleAddFile(e.target.files);
                   e.target.value = '';

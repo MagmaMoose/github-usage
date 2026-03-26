@@ -9,6 +9,7 @@ import { humanizeColumn, formatCompact } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
+import styles from './Charts.module.css';
 
 type ViewMode = 'spend' | 'tokens';
 
@@ -162,7 +163,7 @@ export function ModelBreakdownChart() {
   return (
     <div>
       {isTokenReport && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+        <div className={styles.chartControlsRow}>
           <SegmentedControl aria-label="View mode" size="small">
             <SegmentedControl.IconButton
               aria-label="Spend"

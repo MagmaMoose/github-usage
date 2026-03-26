@@ -8,6 +8,7 @@ import { humanizeColumn } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { AnyReportRow } from '../../lib/types';
+import styles from './Charts.module.css';
 
 /** Compute a moving average — uses expanding window for early points so there's no gap */
 function rollingAverage(data: number[], window: number): number[] {
@@ -121,8 +122,8 @@ export function TimeSeriesChart() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: 'var(--fgColor-muted, #656d76)' }}>Rolling avg</span>
+      <div className={styles.chartToggleRow}>
+        <span className={styles.chartToggleLabel}>Rolling avg</span>
         <ToggleSwitch
           size="small"
           checked={showRollingAvg}

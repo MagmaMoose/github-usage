@@ -1,3 +1,7 @@
+.hiddenInput {
+  display: none;
+}
+
 .sidebarPane {
   background-color: var(--bgColor-default, #ffffff);
 }
@@ -23,15 +27,15 @@
 .sidebarStatusPill {
   display: inline-flex;
   align-items: center;
-  padding: 0 6px;
-  min-height: 20px;
+  padding: 0 var(--base-size-6, 6px);
+  min-height: var(--base-size-20, 20px);
   border: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
   border-radius: 999px;
   background-color: var(--bgColor-muted, #f6f8fa);
   color: var(--fgColor-muted, #656d76);
-  font-size: 11px;
+  font-size: var(--text-caption-size, 12px);
   font-weight: var(--base-text-weight-semibold, 600);
-  line-height: 1;
+  line-height: var(--line-height-condensed, 1.25);
   white-space: nowrap;
 }
 
@@ -108,17 +112,17 @@
 .heroCardBreakdown {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  margin-top: 4px;
+  gap: var(--base-size-2, 2px);
+  margin-top: var(--base-size-4, 4px);
   color: var(--fgColor-muted, #656d76);
   font-size: var(--text-body-size-small, 12px);
-  line-height: 1.5;
+  line-height: var(--line-height-default, 1.5);
 }
 
 .heroCardBreakdown span {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--base-size-8, 8px);
 }
 
 .reportTabs,
@@ -186,7 +190,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--base-size-6, 6px);
 }
 
 .toolbarSearch :global(.prc-Autocomplete-Overlay-bwNcB) {
