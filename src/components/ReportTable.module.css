@@ -31,6 +31,28 @@
   text-decoration: underline;
 }
 
+/* Clickable group cell — filters to that value */
+.cellClickable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--fgColor-default, #1f2328);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  border-radius: var(--borderRadius-small, 4px);
+}
+
+.cellClickable:hover {
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: underline;
+}
+
 .columnIcon {
   flex-shrink: 0;
   color: var(--fgColor-muted, #59636e);

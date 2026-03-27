@@ -9,7 +9,6 @@ import type { FunctionComponent, PropsWithChildren } from 'react';
 import {
   ActionList,
   ActionMenu,
-  CounterLabel,
   IconButton,
   Token,
 } from '@primer/react';
@@ -81,7 +80,6 @@ export function FilterBar({
     [filters],
   );
 
-  const filterCount = activeFilters.length;
 
   // Close overlay on outside click
   useEffect(() => {
@@ -266,7 +264,7 @@ export function FilterBar({
     onSearchChange('');
   }, [onClearAll, onSearchChange]);
 
-  const hasFilters = filterCount > 0 || searchQuery.trim().length > 0;
+  const hasFilters = activeFilters.length > 0 || searchQuery.trim().length > 0;
 
   return (
     <div className={styles.filterBar} ref={containerRef}>
@@ -293,11 +291,6 @@ export function FilterBar({
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
-
-        {/* Filter count badge */}
-        {filterCount > 0 && (
-          <CounterLabel className={styles.filterCount}>{filterCount}</CounterLabel>
-        )}
 
         {/* Input area with inline tokens */}
         <div className={styles.inputWrapper}>

@@ -713,7 +713,9 @@ function AppContent() {
                 </div>
               )}
 
-              {activeTab === 'table' && visibleRows.length > 0 && <ReportTable />}
+              {activeTab === 'table' && visibleRows.length > 0 && (
+                <ReportTable onGroupClick={() => setActiveTab('charts')} />
+              )}
             </div>
           </section>
         </div>

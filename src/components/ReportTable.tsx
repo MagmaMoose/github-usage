@@ -220,8 +220,12 @@ function StandardBody({
   );
 }
 
-export function ReportTable() {
-  const { activeReport, groupByColumn, visibleRows } = useReport();
+interface ReportTableProps {
+  onGroupClick?: () => void;
+}
+
+export function ReportTable({ onGroupClick }: ReportTableProps) {
+  const { activeReport, groupByColumn, visibleRows, setFilter, filters } = useReport();
   const [sorting, setSorting] = useState<SortingState>([{ id: 'quantity', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
@@ -272,6 +276,20 @@ export function ReportTable() {
     }));
   }, [activeReport, groupByColumn, visibleRows, isTokenReport]);
 
+  const activeFilterValues = filters[groupByColumn] ?? [];
+
+  const handleGroupClick = useCallback(
+    (value: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Toggle: if already filtered to this value, clear the filter
+      const isActive = activeFilterValues.some((v) => v.toLowerCase() === value.toLowerCase());
+      setFilter(groupByColumn, isActive ? [] : [value]);
+      if (!isActive) onGroupClick?.();
+    },
+    [groupByColumn, activeFilterValues, setFilter, onGroupClick],
+  );
+
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
     const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization';
     const isModelGroup = groupByColumn === 'model';
@@ -283,21 +301,25 @@ export function ReportTable() {
           const value = info.getValue();
           if (isAvatarGroup && value) {
             return (
-              <a
-                href={`https://github.com/${value}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.cellLink}
-                title={value}
+              <button
+                type="button"
+                className={styles.cellClickable}
+                onClick={(e) => handleGroupClick(value, e)}
+                title={`Filter to ${value}`}
               >
                 <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
                 <span>{value}</span>
-              </a>
+              </button>
             );
           }
           if (isModelGroup && value) {
             return (
-              <span className={styles.cellWithIcon}>
+              <button
+                type="button"
+                className={styles.cellClickable}
+                onClick={(e) => handleGroupClick(value, e)}
+                title={`Filter to ${value}`}
+              >
                 <img
                   src={getModelIconUrl(value)}
                   alt=""
@@ -305,31 +327,35 @@ export function ReportTable() {
                   height={20}
                   className={styles.modelIconBadge}
                 />
-                <span title={value}>{value}</span>
-              </span>
+                <span>{value}</span>
+              </button>
             );
           }
           const displayValue = formatDisplayValue(value, groupByColumn);
           if (groupByColumn === 'repository' && value) {
             return (
-              <a
-                href={`https://github.com/${value}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.cellLink}
-                title={value}
+              <button
+                type="button"
+                className={styles.cellClickable}
+                onClick={(e) => handleGroupClick(value, e)}
+                title={`Filter to ${value}`}
               >
                 <RepoIcon size={16} className={styles.columnIcon} />
                 {value}
-              </a>
+              </button>
             );
           }
           const ColumnIcon = COLUMN_ICONS[groupByColumn];
           return (
-            <span className={ColumnIcon ? styles.cellWithIcon : undefined} title={value}>
+            <button
+              type="button"
+              className={styles.cellClickable}
+              onClick={(e) => handleGroupClick(value, e)}
+              title={`Filter to ${displayValue || '(empty)'}`}
+            >
               {ColumnIcon && <ColumnIcon size={16} className={styles.columnIcon} />}
               {displayValue || '(empty)'}
-            </span>
+            </button>
           );
         },
         sortingFn: 'alphanumeric',
