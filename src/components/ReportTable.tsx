@@ -230,14 +230,37 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
 
+  // Hide token columns for non-token reports, hide irrelevant columns per type
   const defaultVisibility: VisibilityState = {
     grossAmount: false,
     discountAmount: false,
     count: false,
-  };
+    totalInputTokens: isTokenReport ? undefined : false,
+    totalOutputTokens: isTokenReport ? undefined : false,
+    totalCacheCreationTokens: isTokenReport ? undefined : false,
+    totalCacheReadTokens: isTokenReport ? undefined : false,
+  } as VisibilityState;
   const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(() =>
     getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
   );
+
+  // When report type changes, force-hide token columns for non-token reports
+  const prevIsTokenRef = useRef(isTokenReport);
+  if (prevIsTokenRef.current !== isTokenReport) {
+    prevIsTokenRef.current = isTokenReport;
+    if (!isTokenReport) {
+      const stored = getStoredValue<VisibilityState>(STORAGE_KEYS.COLUMN_VISIBILITY, {});
+      const patched = {
+        ...stored,
+        totalInputTokens: false,
+        totalOutputTokens: false,
+        totalCacheCreationTokens: false,
+        totalCacheReadTokens: false,
+      };
+      setStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, patched);
+      setColumnVisibilityRaw(patched);
+    }
+  }
   const setColumnVisibility = useCallback((updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
     setColumnVisibilityRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
