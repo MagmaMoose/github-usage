@@ -3,6 +3,7 @@ import type {
   PremiumRequestRow,
   TokenUsageRow,
   UsageReportRow,
+  GhasActiveCommittersRow,
   ParsedReport,
   ReportType,
 } from './types';
@@ -13,6 +14,7 @@ const HEADER_SIGNATURES: Record<ReportType, string[]> = {
   [REPORT_TYPES.TOKEN_USAGE]: ['total_input_tokens', 'total_output_tokens'],
   [REPORT_TYPES.PREMIUM_REQUEST]: ['aic_quantity', 'aic_gross_amount'],
   [REPORT_TYPES.USAGE_REPORT]: ['repository', 'workflow_path'],
+  [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS]: ['user login', 'organization / repository', 'last pushed date'],
 };
 
 /** Detect report type from CSV headers */
@@ -108,6 +110,16 @@ function mapUsageReportRow(raw: Record<string, string>): UsageReportRow {
   };
 }
 
+/** Map raw CSV row to GhasActiveCommittersRow */
+function mapGhasRow(raw: Record<string, string>): GhasActiveCommittersRow {
+  return {
+    userLogin: raw['user login'] ?? '',
+    organizationRepository: raw['organization / repository'] ?? '',
+    lastPushedDate: raw['last pushed date'] ?? '',
+    lastPushedEmail: raw['last pushed email'] ?? '',
+  };
+}
+
 /** Parse CSV text into a typed report */
 export function parseCSV(csvText: string, fileName: string): ParsedReport {
   const result = Papa.parse<Record<string, string>>(csvText, {
@@ -123,7 +135,7 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
   const headers = result.meta.fields ?? [];
   const type = detectReportType(headers);
 
-  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[];
+  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[] | GhasActiveCommittersRow[];
 
   switch (type) {
     case REPORT_TYPES.PREMIUM_REQUEST:
@@ -135,9 +147,15 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
     case REPORT_TYPES.USAGE_REPORT:
       rows = result.data.map(mapUsageReportRow);
       break;
+    case REPORT_TYPES.GHAS_ACTIVE_COMMITTERS:
+      rows = result.data.map(mapGhasRow);
+      break;
   }
 
-  const dates = rows.map((r) => r.date).filter(Boolean).sort();
+  const dates = rows
+    .map((r) => ('date' in r ? r.date : 'lastPushedDate' in r ? r.lastPushedDate : ''))
+    .filter(Boolean)
+    .sort();
   const dateRange = {
     start: dates[0] ?? '',
     end: dates[dates.length - 1] ?? '',
