@@ -15,7 +15,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Avatar, Button, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
-import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
+import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, WorkflowIcon } from '@primer/octicons-react';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';

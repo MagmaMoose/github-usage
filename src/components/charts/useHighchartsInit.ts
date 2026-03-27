@@ -9,6 +9,7 @@ function applyTheme() {
 
   // Re-apply visual styles (colors, backgrounds) to existing charts
   // without clobbering per-chart options like title, series, etc.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { title: _t, subtitle: _s, series: _sr, ...safeTheme } = theme;
   Highcharts.charts.forEach((chart) => {
     if (chart) {

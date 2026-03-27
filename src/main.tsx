@@ -7,7 +7,7 @@ import App from './App';
 import { ThemeContext } from './context/theme-context';
 import './global.css';
 
-function Root() {
+export default function Root() {
   const [colorMode, setColorMode] = useState<'auto' | 'day' | 'night'>(() => {
     const stored = localStorage.getItem('tbb-color-mode');
     return (stored as 'auto' | 'day' | 'night') || 'auto';
