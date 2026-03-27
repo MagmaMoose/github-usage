@@ -111,7 +111,7 @@ export function ModelBreakdownChart() {
         },
       },
       yAxis: {
-        title: { text: null },
+        title: { text: undefined },
         labels: { format: '${value}' },
       },
       tooltip: {

@@ -151,13 +151,6 @@ export function TimeSeriesChart() {
       });
     }
 
-    const windowLabel =
-      timeBucket === 'daily'
-        ? '7-day'
-        : timeBucket === 'weekly'
-          ? '4-week'
-          : '3-month';
-
     const yAxisTitle = activeMetric.isCurrency
       ? lineMode === 'cumulative' ? 'Cumulative Spend ($)' : 'Spend ($)'
       : lineMode === 'cumulative' ? `Cumulative ${activeMetric.label}` : activeMetric.label;
@@ -180,14 +173,8 @@ export function TimeSeriesChart() {
     };
   }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, effectiveMetricKey, activeMetric]);
 
-  const windowLabel =
-    timeBucket === 'daily'
-      ? '7-day'
-      : timeBucket === 'weekly'
-        ? '4-week'
-        : '3-month';
-
   const metricLabel = activeMetric.isCurrency ? 'Spend' : activeMetric.label;
+  const windowLabel = timeBucket === 'daily' ? '7-day' : timeBucket === 'weekly' ? '4-week' : '3-month';
   const titleMap: Record<LineMode, string> = {
     raw: `${metricLabel} over time by ${humanizeColumn(groupByColumn)} (top 10)`,
     rolling: `${metricLabel} over time by ${humanizeColumn(groupByColumn)} (${windowLabel} avg, top 10)`,
