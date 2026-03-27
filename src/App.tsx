@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -113,16 +114,19 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-switch page when a report is loaded that matches a different page type
+  // Auto-switch page when a NEW report is added that matches a different page type
+  const prevReportCountRef = useRef(reports.length);
   useEffect(() => {
-    if (!activeReport) return;
-    const reportPage = pageTypeForReport(activeReport.type);
-    if (reportPage !== activePage) {
-      setActivePage(reportPage);
+    // Only auto-switch when reports are added, not on every render
+    if (reports.length > prevReportCountRef.current && activeReport) {
+      const reportPage = pageTypeForReport(activeReport.type);
+      if (reportPage !== activePage) {
+        setActivePage(reportPage);
+      }
     }
-    // Only react to report changes, not page changes
+    prevReportCountRef.current = reports.length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeReport?.type]);
+  }, [reports.length]);
 
   // Auto-set period when only one period available
   const availablePeriods = useMemo(() => {
@@ -163,12 +167,12 @@ function AppContent() {
 
   // Determine the active schema from the page
   const activeSchema = useMemo(() => {
-    // If we have a loaded report, use its type directly
-    if (activeReport) {
+    const pageReportTypes = PAGE_REPORT_TYPES[activePage];
+    // If we have a loaded report that matches this page, use its specific type
+    if (activeReport && pageReportTypes.includes(activeReport.type)) {
       return getReportSchema(activeReport.type);
     }
     // Otherwise, use the default schema for the active page
-    const pageReportTypes = PAGE_REPORT_TYPES[activePage];
     return getReportSchema(pageReportTypes[0]);
   }, [activeReport, activePage]);
 
@@ -269,7 +273,7 @@ function AppContent() {
             />
           </div>
         )}
-        <ReportPageLayout schema={activeSchema} />
+        <ReportPageLayout schema={activeSchema} allowedReportTypes={PAGE_REPORT_TYPES[activePage]} />
       </PageLayout.Content>
     </PageLayout>
   );

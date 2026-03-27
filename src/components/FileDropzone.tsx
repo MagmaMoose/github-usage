@@ -6,7 +6,7 @@ import { parseCSV } from '../lib/csv-parser';
 import { useReport } from '../context/useReport';
 import styles from './FileDropzone.module.css';
 
-export function FileDropzone() {
+export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
   const { addReport, reports } = useReport();
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export function FileDropzone() {
     inputRef.current?.click();
   }, []);
 
-  if (reports.length > 0) return null;
+  if (reports.length > 0 && !forceShow) return null;
 
   return (
     <div>

@@ -42,6 +42,7 @@ import { PeriodSelector } from './PeriodSelector';
 import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
 import type { ReportSchema } from '../lib/report-schema';
+import type { ReportType } from '../lib/types';
 import { GROUPABLE_COLUMNS } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
@@ -110,17 +111,19 @@ function downloadReportAsCsv(report: NonNullable<ReturnType<typeof useReport>['a
 
 interface ReportPageLayoutProps {
   schema: ReportSchema;
+  /** Only show reports whose type is in this list. Others are hidden for this page. */
+  allowedReportTypes?: ReportType[];
 }
 
-export function ReportPageLayout({ schema }: ReportPageLayoutProps) {
+export function ReportPageLayout({ schema, allowedReportTypes }: ReportPageLayoutProps) {
   useHighchartsInit();
   const {
-    reports,
-    rawCsvs,
+    reports: allReports,
+    rawCsvs: allRawCsvs,
     activeReportIndex,
     setActiveReport,
     clearAllReports,
-    activeReport,
+    activeReport: contextActiveReport,
     addReport,
     groupByColumn,
     setGroupByColumn,
@@ -131,8 +134,32 @@ export function ReportPageLayout({ schema }: ReportPageLayoutProps) {
     filters,
     setFilter,
     clearFilters,
-    visibleRows,
+    visibleRows: contextVisibleRows,
   } = useReport();
+
+  // Filter reports to only those matching the current page's allowed types
+  const reports = useMemo(() => {
+    if (!allowedReportTypes) return allReports;
+    return allReports.filter((r) => allowedReportTypes.includes(r.type));
+  }, [allReports, allowedReportTypes]);
+
+  const rawCsvs = useMemo(() => {
+    if (!allowedReportTypes) return allRawCsvs;
+    return allRawCsvs.filter((_, i) => allowedReportTypes.includes(allReports[i]?.type));
+  }, [allRawCsvs, allReports, allowedReportTypes]);
+
+  // Active report is only valid if it matches this page's types
+  const activeReport = useMemo(() => {
+    if (!contextActiveReport) return null;
+    if (allowedReportTypes && !allowedReportTypes.includes(contextActiveReport.type)) return null;
+    return contextActiveReport;
+  }, [contextActiveReport, allowedReportTypes]);
+
+  // Use context visible rows only when active report matches this page
+  const visibleRows = useMemo(
+    () => (activeReport ? contextVisibleRows : []),
+    [activeReport, contextVisibleRows],
+  );
 
   const [activeTab, setActiveTabRaw] = useState<ViewTab>(() =>
     getStoredValue(STORAGE_KEYS.ACTIVE_TAB, 'charts') as ViewTab,
@@ -297,7 +324,7 @@ export function ReportPageLayout({ schema }: ReportPageLayoutProps) {
               {schema.emptyStateText}
             </Text>
           </div>
-          <FileDropzone />
+          <FileDropzone forceShow />
         </section>
       </div>
     );
