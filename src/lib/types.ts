@@ -298,6 +298,7 @@ export const GROUPABLE_COLUMNS = {
     'sku',
     'organization',
     'repository',
+    'workflowPath',
     'costCenterName',
   ] as const,
   ghas_active_committers: ['userLogin', 'organizationRepository'] as const,
