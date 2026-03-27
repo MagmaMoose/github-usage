@@ -27,6 +27,84 @@
   margin-bottom: var(--stack-gap-condensed, 8px);
 }
 
+.instructions {
+  padding: var(--stack-padding-normal, 16px) var(--stack-padding-spacious, 24px);
+  border-top: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+}
+
+.instructionsTitle {
+  font-size: var(--text-body-size-medium, 14px);
+  font-weight: var(--base-text-weight-semibold, 600);
+  color: var(--fgColor-default, #1f2328);
+  margin-bottom: var(--base-size-8, 8px);
+}
+
+.stepsList {
+  margin: 0;
+  padding-left: var(--base-size-20, 20px);
+  color: var(--fgColor-muted, #656d76);
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: 2;
+}
+
+.stepsList li::marker {
+  color: var(--fgColor-muted, #656d76);
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+.stepsList strong {
+  color: var(--fgColor-default, #1f2328);
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+.instructionsNote {
+  margin-top: var(--base-size-12, 12px);
+  font-size: var(--text-body-size-small, 12px);
+  color: var(--fgColor-muted, #656d76);
+}
+
+.instructionsFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--base-size-12, 12px);
+  margin-top: var(--base-size-12, 12px);
+}
+
+.stepsGroup {
+  padding: var(--base-size-12, 12px);
+  border: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-muted, #f6f8fa);
+  margin-bottom: var(--base-size-8, 8px);
+}
+
+.stepsGroup .stepsList {
+  margin-bottom: 0;
+}
+
+.skipRow {
+  margin-top: var(--base-size-8, 8px);
+  padding-top: var(--base-size-8, 8px);
+  border-top: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
+}
+
+.link {
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.codeInline {
+  padding: 0.15em 0.4em;
+  font-size: 85%;
+  font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace);
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  border-radius: var(--borderRadius-small, 4px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dropzone {
     transition: none;

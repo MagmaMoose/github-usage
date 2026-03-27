@@ -540,10 +540,10 @@ function AppContent() {
             <section className={styles.emptyStateSurface} aria-labelledby="upload-report-heading">
               <div className={styles.emptyStateHeader}>
                 <Heading as="h2" id="upload-report-heading" className={styles.surfaceTitle}>
-                  Upload usage data
+                  Get started
                 </Heading>
                 <Text as="p" className={styles.surfaceDescription}>
-                  Drag in a billing export to inspect spend, requests, and token consumption with GitHub-native chrome.
+                  Upload a GitHub billing CSV to visualize Copilot spend, premium requests, and token usage.
                 </Text>
               </div>
               <FileDropzone />
