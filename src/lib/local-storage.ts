@@ -33,6 +33,7 @@ export const STORAGE_KEYS = {
   CACHED_CSVS: 'cached-csvs',
   ACTIVE_TAB: 'active-tab',
   ROLLING_AVG: 'rolling-avg',
+  LINE_MODE: 'line-mode',
   COLUMN_VISIBILITY: 'column-visibility',
 } as const;
 

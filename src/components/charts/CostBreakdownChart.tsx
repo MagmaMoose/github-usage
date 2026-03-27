@@ -6,6 +6,7 @@ import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation'
 import { buildColorMap } from '../../lib/chart-theme';
 import { formatDisplayValue, bucketKeyToTimestamp } from '../../lib/formatters';
 import type { AnyReportRow } from '../../lib/types';
+import styles from './Charts.module.css';
 
 export function CostBreakdownChart() {
   const { activeReport, timeBucket, visibleRows } = useReport();
@@ -43,7 +44,7 @@ export function CostBreakdownChart() {
 
     return {
       chart: { type: 'column', height: 350 },
-      title: { text: 'Cost over Time' },
+      title: { text: undefined },
       xAxis: { type: 'datetime', crosshair: true },
       yAxis: {
         title: { text: 'Amount ($)' },
@@ -62,5 +63,12 @@ export function CostBreakdownChart() {
 
   if (!options) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} immutable />;
+  return (
+    <div>
+      <div className={styles.chartHeader}>
+        <h3 className={styles.chartTitle}>Cost over Time</h3>
+      </div>
+      <HighchartsReact highcharts={Highcharts} options={options} immutable />
+    </div>
+  );
 }

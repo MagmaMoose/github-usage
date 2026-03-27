@@ -90,7 +90,7 @@ export function ModelBreakdownChart() {
 
     return {
       chart: { type: 'bar', height: Math.max(300, sorted.length * 40) },
-      title: { text: `Top ${humanizeColumn(groupByColumn)} by Spend` },
+      title: { text: undefined },
       xAxis: {
         categories,
         crosshair: false,
@@ -146,7 +146,7 @@ export function ModelBreakdownChart() {
 
     return {
       chart: { type: 'bar', height: Math.max(350, enriched.length * 40) },
-      title: { text: `Token Usage by ${humanizeColumn(groupByColumn)} (Top 10)` },
+      title: { text: undefined },
       xAxis: { categories },
       yAxis: {
         title: { text: 'Tokens' },
@@ -176,12 +176,16 @@ export function ModelBreakdownChart() {
   }, [activeReport, groupByColumn, isTokenReport, visibleRows]);
 
   const activeOptions = viewMode === 'tokens' ? tokenOptions : spendOptions;
+  const chartTitle = viewMode === 'tokens'
+    ? `Token Usage by ${humanizeColumn(groupByColumn)} (Top 10)`
+    : `Top ${humanizeColumn(groupByColumn)} by Spend`;
   if (!activeOptions) return null;
 
   return (
     <div>
-      {isTokenReport && (
-        <div className={styles.chartControlsRow}>
+      <div className={styles.chartHeader}>
+        <h3 className={styles.chartTitle}>{chartTitle}</h3>
+        {isTokenReport && (
           <SegmentedControl aria-label="View mode" size="small">
             <SegmentedControl.IconButton
               aria-label="Spend"
@@ -196,8 +200,8 @@ export function ModelBreakdownChart() {
               onClick={() => setViewMode('tokens')}
             />
           </SegmentedControl>
-        </div>
-      )}
+        )}
+      </div>
       <HighchartsReact key={`${viewMode}-${[...hiddenModels].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
     </div>
   );

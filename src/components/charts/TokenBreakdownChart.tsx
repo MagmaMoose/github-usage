@@ -6,6 +6,7 @@ import { topN } from '../../lib/aggregation';
 import { formatCompact } from '../../lib/formatters';
 import { REPORT_TYPES } from '../../lib/types';
 import type { TokenUsageRow } from '../../lib/types';
+import styles from './Charts.module.css';
 
 export function TokenBreakdownChart() {
   const { activeReport, visibleRows } = useReport();
@@ -34,7 +35,7 @@ export function TokenBreakdownChart() {
 
     return {
       chart: { type: 'bar', height: Math.max(350, top.length * 40) },
-      title: { text: 'Token Usage by User (Top 10)' },
+      title: { text: undefined },
       xAxis: { categories },
       yAxis: {
         title: { text: 'Tokens' },
@@ -83,5 +84,12 @@ export function TokenBreakdownChart() {
 
   if (!activeReport || activeReport.type !== REPORT_TYPES.TOKEN_USAGE) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} immutable />;
+  return (
+    <div>
+      <div className={styles.chartHeader}>
+        <h3 className={styles.chartTitle}>Token Usage by User (Top 10)</h3>
+      </div>
+      <HighchartsReact highcharts={Highcharts} options={options} immutable />
+    </div>
+  );
 }

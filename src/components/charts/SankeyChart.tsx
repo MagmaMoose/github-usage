@@ -6,6 +6,7 @@ import { useReport } from '../../context/useReport';
 import { buildColorMap, GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
 import { formatDisplayValue } from '../../lib/formatters';
 import type { AnyReportRow } from '../../lib/types';
+import styles from './Charts.module.css';
 
 if (typeof HighchartsSankey === 'function') (HighchartsSankey as (hc: typeof Highcharts) => void)(Highcharts);
 
@@ -29,7 +30,7 @@ function getField(row: AnyReportRow, field: string): string {
 export function SankeyChart() {
   const { activeReport, visibleRows } = useReport();
 
-  const options = useMemo((): Highcharts.Options | null => {
+  const result = useMemo((): { options: Highcharts.Options; title: string } | null => {
     if (!activeReport) return null;
 
     const rows = visibleRows as AnyReportRow[];
@@ -138,51 +139,61 @@ export function SankeyChart() {
       });
     }
 
-    const title = showOrgLevel
+    const chartTitle = showOrgLevel
       ? 'Spend flow: Organization → User → Model'
       : 'Spend flow: User → Model';
 
     return {
-      chart: {
-        height: 600,
-        zooming: { type: 'xy' },
-        panning: { enabled: true, type: 'xy' },
-        panKey: 'shift',
-      },
-      title: { text: title },
-      tooltip: {
-        headerFormat: undefined,
-        pointFormat: '{point.fromNode.name} \u2192 {point.toNode.name}: <b>${point.weight:.2f}</b>',
-        // nodeFormat is valid for sankey but not in base TS types
-        ...({ nodeFormat: '<b>{point.name}</b>: ${point.sum:.2f}' } as Highcharts.TooltipOptions),
-      },
-      series: [
-        {
-          type: 'sankey' as const,
-          name: 'Spend flow',
-          keys: ['from', 'to', 'weight'],
-          data: links,
-          nodes,
-          nodeWidth: 20,
-          nodePadding: 14,
-          linkOpacity: 0.4,
-          curveFactor: 0.5,
-          dataLabels: {
-            enabled: true,
-            style: {
-              fontSize: '11px',
-              fontWeight: '500',
-              color: 'var(--fgColor-default, #f0f6fc)',
-              textOutline: '1px var(--bgColor-default, #0d1117)',
-            },
-            nodeFormat: '{point.name}',
-          },
+      title: chartTitle,
+      options: {
+        chart: {
+          height: 600,
+          zooming: { type: 'xy' },
+          panning: { enabled: true, type: 'xy' },
+          panKey: 'shift',
         },
-      ],
+        title: { text: undefined },
+        tooltip: {
+          headerFormat: undefined,
+          pointFormat: '{point.fromNode.name} \u2192 {point.toNode.name}: <b>${point.weight:.2f}</b>',
+          // nodeFormat is valid for sankey but not in base TS types
+          ...({ nodeFormat: '<b>{point.name}</b>: ${point.sum:.2f}' } as Highcharts.TooltipOptions),
+        },
+        series: [
+          {
+            type: 'sankey' as const,
+            name: 'Spend flow',
+            keys: ['from', 'to', 'weight'],
+            data: links,
+            nodes,
+            nodeWidth: 20,
+            nodePadding: 14,
+            linkOpacity: 0.4,
+            curveFactor: 0.5,
+            dataLabels: {
+              enabled: true,
+              style: {
+                fontSize: '11px',
+                fontWeight: '500',
+                color: 'var(--fgColor-default, #f0f6fc)',
+                textOutline: '1px var(--bgColor-default, #0d1117)',
+              },
+              nodeFormat: '{point.name}',
+            },
+          },
+        ],
+      },
     };
   }, [activeReport, visibleRows]);
 
-  if (!options) return null;
+  if (!result) return null;
 
-  return <HighchartsReact highcharts={Highcharts} options={options} immutable />;
+  return (
+    <div>
+      <div className={styles.chartHeader}>
+        <h3 className={styles.chartTitle}>{result.title}</h3>
+      </div>
+      <HighchartsReact highcharts={Highcharts} options={result.options} immutable />
+    </div>
+  );
 }
