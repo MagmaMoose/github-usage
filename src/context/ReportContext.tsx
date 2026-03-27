@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
 import type { DateRange } from './report-context';
@@ -186,12 +186,20 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         );
       }
 
+      // If in combined view and only 0-1 reports remain, snap to index 0
+      let nextIndex = prev.activeReportIndex;
+      if (nextIndex === -1 && reports.length <= 1) {
+        nextIndex = 0;
+      } else if (nextIndex >= 0) {
+        nextIndex = Math.min(nextIndex, Math.max(0, reports.length - 1));
+      }
+
       return {
         ...prev,
         reports,
         rawCsvs,
         fileHashes: new Set(rawCsvs.map(simpleHash)),
-        activeReportIndex: Math.min(prev.activeReportIndex, Math.max(0, reports.length - 1)),
+        activeReportIndex: nextIndex,
       };
     });
   }, []);
@@ -208,13 +216,19 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setActiveReport = useCallback((index: number) => {
-    setState((prev) => ({
-      ...prev,
-      activeReportIndex: index,
-      periodKey: 'all',
-      dateRange: null,
-      searchQuery: '',
-    }));
+    setState((prev) => {
+      // Combined view (-1) preserves filters so users can keep exploring
+      if (index === -1) {
+        return { ...prev, activeReportIndex: -1 };
+      }
+      return {
+        ...prev,
+        activeReportIndex: index,
+        periodKey: 'all',
+        dateRange: null,
+        searchQuery: '',
+      };
+    });
   }, []);
 
   const setGroupByColumn = useCallback((column: string) => {
@@ -258,7 +272,47 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, filters: {} }));
   }, []);
 
-  const activeReport = state.reports[state.activeReportIndex] ?? null;
+  // Build a synthetic merged report when activeReportIndex === -1
+  const activeReport = useMemo((): ParsedReport | null => {
+    if (state.activeReportIndex !== -1) {
+      return state.reports[state.activeReportIndex] ?? null;
+    }
+
+    if (state.reports.length < 2) return state.reports[0] ?? null;
+
+    // Find the most common report type
+    const typeCounts = new Map<string, number>();
+    for (const r of state.reports) {
+      typeCounts.set(r.type, (typeCounts.get(r.type) ?? 0) + 1);
+    }
+    let majorityType = state.reports[0].type;
+    let maxCount = 0;
+    for (const [type, count] of typeCounts) {
+      if (count > maxCount) {
+        majorityType = type as ParsedReport['type'];
+        maxCount = count;
+      }
+    }
+
+    const matchingReports = state.reports.filter((r) => r.type === majorityType);
+    if (matchingReports.length < 2) return state.reports[0] ?? null;
+
+    const allRows = matchingReports.flatMap((r) => r.rows);
+    const starts = matchingReports.map((r) => r.dateRange.start).sort();
+    const ends = matchingReports.map((r) => r.dateRange.end).sort();
+
+    return {
+      type: majorityType,
+      rows: allRows,
+      fileName: 'Combined View',
+      rowCount: allRows.length,
+      dateRange: {
+        start: starts[0],
+        end: ends[ends.length - 1],
+      },
+    };
+  }, [state.reports, state.activeReportIndex]);
+
   const activeReportType = activeReport?.type ?? null;
   const normalizedSearchQuery = state.searchQuery.trim().toLowerCase();
 

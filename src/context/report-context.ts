@@ -18,6 +18,8 @@ interface ReportState {
 }
 
 export interface ReportContextValue extends ReportState {
+  /** Raw CSV content parallel to reports[], used for sharing */
+  rawCsvs: string[];
   /** Returns -1 if the report was added, or the index of the existing duplicate */
   addReport: (report: ParsedReport, rawCsv: string) => number;
   removeReport: (index: number) => void;

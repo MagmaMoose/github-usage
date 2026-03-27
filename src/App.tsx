@@ -23,9 +23,12 @@ import {
 import { PageHeader } from '@primer/react/experimental';
 import type { IconProps } from '@primer/octicons-react';
 import {
+  ColumnsIcon,
   CopilotIcon,
+  CopyIcon,
   DownloadIcon,
   GraphIcon,
+  LinkIcon,
   MarkGithubIcon,
   MeterIcon,
   MoonIcon,
@@ -56,6 +59,7 @@ import { formatCurrency, formatCompact, formatDateRange, formatDateRangeCompact 
 import { computeSummary, topN } from './lib/aggregation';
 import { parseCSV } from './lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from './lib/local-storage';
+import { copyShareToClipboard, readShareData, clearShareHash } from './lib/share-state';
 import styles from './App.module.css';
 
 type ViewTab = 'charts' | 'table';
@@ -171,6 +175,7 @@ function AppContent() {
   const { colorMode, setColorMode } = useColorMode();
   const {
     reports,
+    rawCsvs,
     activeReportIndex,
     setActiveReport,
     clearAllReports,
@@ -178,6 +183,8 @@ function AppContent() {
     addReport,
     groupByColumn,
     setGroupByColumn,
+    timeBucket,
+    setTimeBucket,
     periodKey,
     setPeriodKey,
     searchQuery,
@@ -202,6 +209,35 @@ function AppContent() {
     setStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, collapsed);
   }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // Hydrate from share URL on mount
+  useEffect(() => {
+    const shareData = readShareData();
+    if (!shareData) return;
+
+    for (const csv of shareData.c) {
+      try {
+        addReport(parseCSV(csv.data, csv.name), csv.data);
+      } catch {
+        // Skip corrupted share entries
+      }
+    }
+
+    // Apply shared filter state
+    if (shareData.s.groupBy) setGroupByColumn(shareData.s.groupBy);
+    if (shareData.s.timeBucket) setTimeBucket(shareData.s.timeBucket as 'daily' | 'weekly' | 'monthly');
+    if (shareData.s.period) setPeriodKey(shareData.s.period);
+    if (shareData.s.search) setSearchQuery(shareData.s.search);
+    if (shareData.s.filters) {
+      for (const [field, values] of Object.entries(shareData.s.filters)) {
+        setFilter(field, values);
+      }
+    }
+
+    clearShareHash();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleReset = useCallback(() => {
     clearAllReports();
@@ -282,6 +318,20 @@ function AppContent() {
     if (!activeReport) return;
     downloadReportAsCsv(activeReport);
   }, [activeReport]);
+
+  const handleShare = useCallback(async () => {
+    const csvs = reports.map((r, i) => ({ fileName: r.fileName, content: rawCsvs[i] }));
+    const result = await copyShareToClipboard(
+      { groupBy: groupByColumn, timeBucket, period: periodKey, search: searchQuery, filters },
+      csvs,
+    );
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+    if (result === 'csv') {
+      // Data was too large for URL, raw CSV copied instead
+      console.info('Report data too large for URL — raw CSV copied to clipboard');
+    }
+  }, [reports, rawCsvs, groupByColumn, timeBucket, periodKey, searchQuery, filters]);
 
   const availableFilterFields = useMemo(() => {
     if (!activeReport) return FILTERABLE_FIELDS;
@@ -627,33 +677,56 @@ function AppContent() {
             </div>
           )}
 
-          {reports.length > 1 && (
-            <UnderlineNav
-              key={reports.length}
-              aria-label="Uploaded reports"
-              variant="flush"
-              className={styles.reportTabs}
-            >
-              {reports.map((report, i) => {
-                const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
+          {reports.length > 1 && (() => {
+            // Only show combined tab when 2+ reports share a type
+            const typeCounts = new Map<string, number>();
+            for (const r of reports) {
+              typeCounts.set(r.type, (typeCounts.get(r.type) ?? 0) + 1);
+            }
+            const hasMergeableReports = [...typeCounts.values()].some((c) => c >= 2);
 
-                return (
+            return (
+              <UnderlineNav
+                key={reports.length}
+                aria-label="Uploaded reports"
+                variant="flush"
+                className={styles.reportTabs}
+              >
+                {hasMergeableReports && (
                   <UnderlineNav.Item
-                    key={report.fileName}
+                    key="__combined__"
                     href="#"
-                    aria-current={i === activeReportIndex ? 'page' : undefined}
-                    leadingVisual={<Icon />}
+                    aria-current={activeReportIndex === -1 ? 'page' : undefined}
+                    leadingVisual={<ColumnsIcon />}
                     onSelect={(event) => {
                       event.preventDefault();
-                      setActiveReport(i);
+                      setActiveReport(-1);
                     }}
                   >
-                    {getReportTabLabel(report)}
+                    Combined
                   </UnderlineNav.Item>
-                );
-              })}
-            </UnderlineNav>
-          )}
+                )}
+                {reports.map((report, i) => {
+                  const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
+
+                  return (
+                    <UnderlineNav.Item
+                      key={report.fileName}
+                      href="#"
+                      aria-current={i === activeReportIndex ? 'page' : undefined}
+                      leadingVisual={<Icon />}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        setActiveReport(i);
+                      }}
+                    >
+                      {getReportTabLabel(report)}
+                    </UnderlineNav.Item>
+                  );
+                })}
+              </UnderlineNav>
+            );
+          })()}
 
           <section className={styles.contentSurface} aria-label="Usage viewer content">
             <div className={styles.surfaceTabsRow}>{renderViewTabs()}</div>
@@ -676,6 +749,13 @@ function AppContent() {
                 />
               </div>
               <div className={styles.toolbarActions}>
+                <IconButton
+                  aria-label={shareCopied ? 'Link copied!' : 'Copy share link'}
+                  icon={shareCopied ? CopyIcon : LinkIcon}
+                  size="small"
+                  variant="invisible"
+                  onClick={handleShare}
+                />
                 <IconButton
                   aria-label="Download current report CSV"
                   icon={DownloadIcon}
