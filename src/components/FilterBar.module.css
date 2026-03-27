@@ -28,10 +28,6 @@
   flex-shrink: 0;
 }
 
-.filterCount {
-  margin-left: var(--base-size-4, 4px);
-}
-
 /* Input area — flex container for tokens + input */
 .inputArea {
   display: flex;
