@@ -318,4 +318,10 @@ export interface ReportSummary {
   uniqueModels: number;
   uniqueOrganizations: number;
   dateRange: { start: string; end: string };
+  // Usage report specific
+  uniqueRepositories: number;
+  uniqueProducts: number;
+  totalMinutes: number;
+  totalStorageGBH: number;
+  totalTokens: number;
 }

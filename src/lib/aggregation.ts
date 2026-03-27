@@ -98,11 +98,16 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
   const users = new Set<string>();
   const organizations = new Set<string>();
   const models = new Set<string>();
+  const repositories = new Set<string>();
+  const products = new Set<string>();
 
   let totalGrossAmount = 0;
   let totalNetAmount = 0;
   let totalDiscountAmount = 0;
   let totalQuantity = 0;
+  let totalMinutes = 0;
+  let totalStorageGBH = 0;
+  let totalTokens = 0;
 
   for (const row of rows) {
     totalGrossAmount += row.grossAmount;
@@ -113,6 +118,22 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
     if ('username' in row && row.username) users.add(row.username as string);
     if ('organization' in row && row.organization) organizations.add(row.organization as string);
     if ('model' in row && row.model) models.add(row.model as string);
+    if ('repository' in row && (row as Record<string, unknown>).repository) repositories.add((row as Record<string, unknown>).repository as string);
+    if ('product' in row && (row as Record<string, unknown>).product) products.add((row as Record<string, unknown>).product as string);
+
+    // Accumulate unit-type-specific totals
+    if ('unitType' in row) {
+      const unitType = (row as Record<string, unknown>).unitType;
+      if (unitType === 'minutes') totalMinutes += row.quantity;
+      if (unitType === 'gigabyte-hours') totalStorageGBH += row.quantity;
+    }
+
+    // Accumulate token totals
+    if ('totalInputTokens' in row) {
+      const r = row as Record<string, number>;
+      totalTokens += (r.totalInputTokens ?? 0) + (r.totalOutputTokens ?? 0)
+        + (r.totalCacheCreationTokens ?? 0) + (r.totalCacheReadTokens ?? 0);
+    }
   }
 
   return {
@@ -123,6 +144,11 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
     uniqueUsers: users.size,
     uniqueModels: models.size,
     uniqueOrganizations: organizations.size,
+    uniqueRepositories: repositories.size,
+    uniqueProducts: products.size,
+    totalMinutes,
+    totalStorageGBH,
+    totalTokens,
     dateRange: {
       start: dates[0] ?? '',
       end: dates[dates.length - 1] ?? '',

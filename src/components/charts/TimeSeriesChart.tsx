@@ -7,7 +7,7 @@ import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation'
 import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
-import { REPORT_TYPES } from '../../lib/types';
+import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
@@ -20,15 +20,11 @@ const LINE_MODE_LABELS: Record<LineMode, string> = {
   cumulative: 'Cumulative',
 };
 
-const METRIC_OPTIONS = [
+const DEFAULT_METRIC_OPTIONS: MetricOption[] = [
   { key: 'grossAmount', label: 'Spend', isCurrency: true },
-  { key: 'totalInputTokens', label: 'Input Tokens', isCurrency: false },
-  { key: 'totalOutputTokens', label: 'Output Tokens', isCurrency: false },
-  { key: 'totalCacheCreationTokens', label: 'Cache Creation', isCurrency: false },
-  { key: 'totalCacheReadTokens', label: 'Cache Reads', isCurrency: false },
-] as const;
+];
 
-type MetricKey = (typeof METRIC_OPTIONS)[number]['key'];
+type MetricKey = string;
 
 /** Compute a moving average with expanding window for early points */
 function rollingAverage(data: number[], window: number): number[] {
@@ -53,9 +49,10 @@ function isValidLineMode(value: unknown): value is LineMode {
   return typeof value === 'string' && LINE_MODES.includes(value as LineMode);
 }
 
-export function TimeSeriesChart() {
-  const { activeReport, activeReportType, groupByColumn, timeBucket, visibleRows } = useReport();
-  const isTokenReport = activeReportType === REPORT_TYPES.TOKEN_USAGE;
+export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOption[] }) {
+  const { activeReport, groupByColumn, timeBucket, visibleRows } = useReport();
+  const resolvedMetrics = metricOptions ?? DEFAULT_METRIC_OPTIONS;
+  const showMetricToggle = resolvedMetrics.length > 1;
 
   const [lineMode, setLineModeRaw] = useState<LineMode>(() => {
     // Migrate old boolean rolling-avg preference
@@ -71,9 +68,9 @@ export function TimeSeriesChart() {
   }, []);
 
   const [metricKey, setMetricKeyRaw] = useState<MetricKey>('grossAmount');
-  // Reset to spend when switching away from token reports
-  const effectiveMetricKey = isTokenReport ? metricKey : 'grossAmount';
-  const activeMetric = METRIC_OPTIONS.find((m) => m.key === effectiveMetricKey) ?? METRIC_OPTIONS[0];
+  // Reset to spend when metric key is not available in current options
+  const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
+  const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
   const setMetricKey = useCallback((key: MetricKey) => setMetricKeyRaw(key), []);
 
   // Window size adapts to the bucket granularity
@@ -188,12 +185,12 @@ export function TimeSeriesChart() {
       <div className={styles.chartHeader}>
         <h3 className={styles.chartTitle}>{titleMap[lineMode]}</h3>
         <div className={styles.chartControls}>
-          {isTokenReport && (
+          {showMetricToggle && (
             <ActionMenu>
               <ActionMenu.Button size="small">{activeMetric.label}</ActionMenu.Button>
               <ActionMenu.Overlay>
                 <ActionList selectionVariant="single">
-                  {METRIC_OPTIONS.map((opt) => (
+                  {resolvedMetrics.map((opt) => (
                     <ActionList.Item
                       key={opt.key}
                       selected={metricKey === opt.key}

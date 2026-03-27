@@ -1,6 +1,7 @@
 /** Read/write filter state to URL search params */
 
 export interface URLFilterState {
+  page?: string;
   groupBy?: string;
   timeBucket?: string;
   period?: string;
@@ -13,6 +14,9 @@ export interface URLFilterState {
 export function readURLFilterState(): URLFilterState {
   const params = new URLSearchParams(window.location.search);
   const state: URLFilterState = {};
+
+  const page = params.get('page');
+  if (page) state.page = page;
 
   const groupBy = params.get('groupBy');
   if (groupBy) state.groupBy = groupBy;
@@ -46,6 +50,10 @@ export function readURLFilterState(): URLFilterState {
 /** Write filter state to URL search params without triggering navigation */
 export function writeURLFilterState(state: URLFilterState): void {
   const params = new URLSearchParams();
+
+  if (state.page && state.page !== 'copilot') {
+    params.set('page', state.page);
+  }
 
   if (state.groupBy && state.groupBy !== 'username') {
     params.set('groupBy', state.groupBy);

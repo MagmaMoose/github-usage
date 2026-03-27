@@ -13,17 +13,18 @@ import styles from './Charts.module.css';
 
 type ViewMode = 'spend' | 'tokens';
 
-export function ModelBreakdownChart() {
+export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: string }) {
   const { activeReport, groupByColumn, visibleRows } = useReport();
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
+  const showTokensView = isTokenReport && stackField === 'model';
   const [viewMode, setViewMode] = useState<ViewMode>('spend');
-  const [hiddenModels, setHiddenModels] = useState<Set<string>>(new Set());
+  const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set());
 
-  const toggleModel = useCallback((modelName: string) => {
-    setHiddenModels((prev) => {
+  const toggleGroup = useCallback((groupName: string) => {
+    setHiddenGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(modelName)) next.delete(modelName);
-      else next.add(modelName);
+      if (next.has(groupName)) next.delete(groupName);
+      else next.add(groupName);
       return next;
     });
   }, []);
@@ -37,27 +38,27 @@ export function ModelBreakdownChart() {
     const top = topN(rows, groupByColumn as keyof AnyReportRow & string, 'grossAmount' as keyof AnyReportRow & string, 15);
     if (top.length === 0) return null;
 
-    // Collect all models across those top groups, ranked by total spend
+    // Collect all stack groups across those top groups, ranked by total spend
     const allTopRows = top.flatMap((item) => item.rows);
-    const modelGroups = groupBy(allTopRows, 'model' as keyof AnyReportRow & string);
-    const rankedModels = [...modelGroups.entries()]
-      .map(([model, modelRows]) => ({ model, total: sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) }))
+    const stackGroups = groupBy(allTopRows, stackField as keyof AnyReportRow & string);
+    const rankedStacks = [...stackGroups.entries()]
+      .map(([stack, stackRows]) => ({ stack, total: sumBy(stackRows, 'grossAmount' as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    // Build deterministic color map from ranked model names
-    const colorMap = buildColorMap(rankedModels.map((m) => m.model));
+    // Build deterministic color map from ranked stack names
+    const colorMap = buildColorMap(rankedStacks.map((m) => m.stack));
 
-    // Only count spend from models that actually have a bar (in rankedModels AND not hidden)
-    const visibleModelNames = new Set(
-      rankedModels.map((m) => m.model).filter((m) => !hiddenModels.has(m)),
+    // Only count spend from stacks that actually have a bar (in rankedStacks AND not hidden)
+    const visibleStackNames = new Set(
+      rankedStacks.map((m) => m.stack).filter((m) => !hiddenGroups.has(m)),
     );
 
     // Re-sort groups by visible bar spend only
     const sorted = [...top]
       .map((item) => {
         const chartRows = item.rows
-          .filter((r) => visibleModelNames.has(String(r['model' as keyof AnyReportRow])));
+          .filter((r) => visibleStackNames.has(String(r[stackField as keyof AnyReportRow])));
         const visibleSpend = Math.round(sumBy(chartRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
         return { ...item, visibleSpend };
       })
@@ -65,23 +66,23 @@ export function ModelBreakdownChart() {
 
     const categories = sorted.map((item) => formatDisplayValue(item.key, groupByColumn) || '(empty)');
 
-    // Build a stacked series per model
-    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo) => {
-      const isHidden = hiddenModels.has(modelInfo.model);
+    // Build a stacked series per stack group
+    const series: Highcharts.SeriesOptionsType[] = rankedStacks.map((stackInfo) => {
+      const isHidden = hiddenGroups.has(stackInfo.stack);
       const data = sorted.map((item) => {
-        const modelRows = item.rows.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
-        return Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+        const stackRows = item.rows.filter((r) => String(r[stackField as keyof AnyReportRow]) === stackInfo.stack);
+        return Math.round(sumBy(stackRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
       });
 
       return {
         type: 'bar' as const,
-        name: formatDisplayValue(modelInfo.model, groupByColumn) || '(empty)',
+        name: formatDisplayValue(stackInfo.stack, stackField) || '(empty)',
         data,
-        color: colorMap.get(modelInfo.model) ?? '#808fa3',
+        color: colorMap.get(stackInfo.stack) ?? '#808fa3',
         visible: !isHidden,
         events: {
           legendItemClick: function () {
-            toggleModel(modelInfo.model);
+            toggleGroup(stackInfo.stack);
             return false; // prevent default Highcharts toggle — we handle it via state
           },
         },
@@ -123,7 +124,7 @@ export function ModelBreakdownChart() {
       plotOptions: { bar: { stacking: 'normal' } },
       series,
     };
-  }, [activeReport, groupByColumn, visibleRows, hiddenModels, toggleModel]);
+  }, [activeReport, groupByColumn, stackField, visibleRows, hiddenGroups, toggleGroup]);
 
   const tokenOptions = useMemo((): Highcharts.Options | null => {
     if (!activeReport || !isTokenReport) return null;
@@ -185,7 +186,7 @@ export function ModelBreakdownChart() {
     <div>
       <div className={styles.chartHeader}>
         <h3 className={styles.chartTitle}>{chartTitle}</h3>
-        {isTokenReport && (
+        {showTokensView && (
           <SegmentedControl aria-label="View mode" size="small">
             <SegmentedControl.IconButton
               aria-label="Spend"
@@ -202,7 +203,7 @@ export function ModelBreakdownChart() {
           </SegmentedControl>
         )}
       </div>
-      <HighchartsReact key={`${viewMode}-${[...hiddenModels].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
+      <HighchartsReact key={`${viewMode}-${[...hiddenGroups].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
     </div>
   );
 }

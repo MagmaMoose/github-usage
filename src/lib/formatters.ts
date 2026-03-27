@@ -179,3 +179,42 @@ export function humanizeColumn(column: string): string {
   };
   return MAP[column] ?? column.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 }
+
+/** Check if a username is a bot (ends with [bot]) */
+export function isBot(username: string): boolean {
+  return username.endsWith('[bot]');
+}
+
+/**
+ * Format a workflow path for display.
+ * - `.github/workflows/ci.yml` → `ci.yml`
+ * - `dynamic/dependabot/dependabot-updates` → `dependabot-updates`
+ * - `required/123/.github/workflows/review.yml` → `review.yml`
+ * Returns the full path unchanged if no pattern matches.
+ */
+export function formatWorkflowPath(path: string): string {
+  if (!path) return '(empty)';
+
+  // Standard: .github/workflows/name.yml
+  const stdMatch = path.match(/\.github\/workflows\/([^/]+)$/);
+  if (stdMatch) return stdMatch[1];
+
+  // Dynamic: dynamic/service/name
+  const dynMatch = path.match(/^dynamic\/[^/]+\/(.+)$/);
+  if (dynMatch) return dynMatch[1];
+
+  // Required: required/{id}/.github/workflows/name.yml
+  const reqMatch = path.match(/^required\/[^/]+\/\.github\/workflows\/([^/]+)$/);
+  if (reqMatch) return reqMatch[1];
+
+  return path;
+}
+
+/** Classify a workflow path type for badge display */
+export function classifyWorkflowPath(path: string): 'standard' | 'managed' | 'required' | null {
+  if (!path) return null;
+  if (path.startsWith('dynamic/')) return 'managed';
+  if (path.startsWith('required/')) return 'required';
+  if (path.includes('.github/workflows/')) return 'standard';
+  return null;
+}

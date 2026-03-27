@@ -8,7 +8,7 @@ import { formatDisplayValue, bucketKeyToTimestamp } from '../../lib/formatters';
 import type { AnyReportRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
-export function CostBreakdownChart() {
+export function CostBreakdownChart({ stackField = 'model' }: { stackField?: string }) {
   const { activeReport, timeBucket, visibleRows } = useReport();
 
   const options = useMemo((): Highcharts.Options | null => {
@@ -18,27 +18,27 @@ export function CostBreakdownChart() {
     const buckets = bucketRows(rows, timeBucket);
     const categories = [...buckets.keys()];
 
-    // Find top models by total spend across all buckets
-    const modelGroups = groupBy(rows, 'model' as keyof AnyReportRow & string);
-    const rankedModels = [...modelGroups.entries()]
-      .map(([model, modelRows]) => ({ model, total: sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) }))
+    // Find top groups by total spend across all buckets
+    const stackGroups = groupBy(rows, stackField as keyof AnyReportRow & string);
+    const rankedGroups = [...stackGroups.entries()]
+      .map(([group, groupRows]) => ({ group, total: sumBy(groupRows, 'grossAmount' as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    const colorMap = buildColorMap(rankedModels.map((m) => m.model));
+    const colorMap = buildColorMap(rankedGroups.map((g) => g.group));
 
-    const series: Highcharts.SeriesOptionsType[] = rankedModels.map((modelInfo) => {
+    const series: Highcharts.SeriesOptionsType[] = rankedGroups.map((groupInfo) => {
       const data = categories.map((bucketKey) => {
         const bucketRowList = buckets.get(bucketKey) ?? [];
-        const modelRows = bucketRowList.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
-        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100] as [number, number];
+        const matchingRows = bucketRowList.filter((r) => String(r[stackField as keyof AnyReportRow]) === groupInfo.group);
+        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100] as [number, number];
       });
 
       return {
         type: 'column' as const,
-        name: formatDisplayValue(modelInfo.model, 'model') || '(empty)',
+        name: formatDisplayValue(groupInfo.group, stackField) || '(empty)',
         data,
-        color: colorMap.get(modelInfo.model) ?? '#808fa3',
+        color: colorMap.get(groupInfo.group) ?? '#808fa3',
       };
     });
 
