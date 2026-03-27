@@ -47,7 +47,6 @@ import { ReportTable } from './components/ReportTable';
 import { TimeSeriesChart } from './components/charts/TimeSeriesChart';
 import { ModelBreakdownChart } from './components/charts/ModelBreakdownChart';
 import { CostBreakdownChart } from './components/charts/CostBreakdownChart';
-import { TreemapChart } from './components/charts/TreemapChart';
 import { SankeyChart } from './components/charts/SankeyChart';
 import { useHighchartsInit } from './components/charts/useHighchartsInit';
 import { PeriodSelector } from './components/PeriodSelector';
@@ -711,10 +710,6 @@ function AppContent() {
 
                   <div className={styles.chartSurface}>
                     <CostBreakdownChart />
-                  </div>
-
-                  <div className={styles.chartSurface}>
-                    <TreemapChart />
                   </div>
 
                   <div className={styles.chartSurface}>

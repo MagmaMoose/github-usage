@@ -42,6 +42,47 @@ export function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} — ${formatDate(end)}`;
 }
 
+/**
+ * Format an array of time bucket keys (YYYY-MM-DD or YYYY-MM) into display labels.
+ * Uses compact numeric format: "3/5" for daily, "Mar" for monthly.
+ * Includes year only when data spans multiple years.
+ */
+export function formatBucketLabels(keys: string[]): string[] {
+  if (keys.length === 0) return [];
+
+  const years = new Set(keys.map((k) => k.slice(0, 4)));
+  const sameYear = years.size === 1;
+
+  return keys.map((key) => {
+    if (!key) return '';
+
+    if (key.length === 7) {
+      // Monthly: YYYY-MM
+      const [year, month] = key.split('-').map(Number);
+      const d = new Date(year, month - 1);
+      return sameYear
+        ? d.toLocaleDateString('en-US', { month: 'short' })
+        : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    // Daily/weekly: YYYY-MM-DD → "3/5" or "3/5/26"
+    const [year, month, day] = key.split('-').map(Number);
+    return sameYear
+      ? `${month}/${day}`
+      : `${month}/${day}/${String(year).slice(2)}`;
+  });
+}
+
+/** Convert a bucket key (YYYY-MM-DD or YYYY-MM) to a UTC timestamp for Highcharts datetime axes */
+export function bucketKeyToTimestamp(key: string): number {
+  if (key.length === 7) {
+    const [y, m] = key.split('-').map(Number);
+    return Date.UTC(y, m - 1, 1);
+  }
+  const [y, m, d] = key.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
 /** Compact date range for tab labels — e.g. "Mar 2026" or "Feb–Mar 2026" */
 export function formatDateRangeCompact(start: string, end: string): string {
   if (!start || !end) return '';

@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
-import { formatDisplayValue } from '../../lib/formatters';
+import { formatDisplayValue, bucketKeyToTimestamp } from '../../lib/formatters';
 import type { AnyReportRow } from '../../lib/types';
 
 export function CostBreakdownChart() {
@@ -30,7 +30,7 @@ export function CostBreakdownChart() {
       const data = categories.map((bucketKey) => {
         const bucketRowList = buckets.get(bucketKey) ?? [];
         const modelRows = bucketRowList.filter((r) => String(r['model' as keyof AnyReportRow]) === modelInfo.model);
-        return Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(modelRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100] as [number, number];
       });
 
       return {
@@ -44,7 +44,7 @@ export function CostBreakdownChart() {
     return {
       chart: { type: 'column', height: 350 },
       title: { text: 'Cost over Time' },
-      xAxis: { categories, crosshair: true },
+      xAxis: { type: 'datetime', crosshair: true },
       yAxis: {
         title: { text: 'Amount ($)' },
         labels: { format: '${value}' },

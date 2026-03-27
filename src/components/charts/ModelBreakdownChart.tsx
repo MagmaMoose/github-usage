@@ -111,7 +111,7 @@ export function ModelBreakdownChart() {
         },
       },
       yAxis: {
-        title: { text: 'Spend ($)' },
+        title: { text: null },
         labels: { format: '${value}' },
       },
       tooltip: {

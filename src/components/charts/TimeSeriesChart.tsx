@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ToggleSwitch } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn, formatDisplayValue } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue, bucketKeyToTimestamp } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { AnyReportRow } from '../../lib/types';
@@ -71,12 +71,14 @@ export function TimeSeriesChart() {
         return sumBy(groupRows, 'grossAmount' as keyof AnyReportRow & string);
       });
 
+      const timestamps = categories.map(bucketKeyToTimestamp);
+
       if (showRollingAvg) {
-        // Rolling average as the primary line
+        const avgData = rollingAverage(data, rollingWindow);
         series.push({
           type: 'line' as const,
           name: `${formatDisplayValue(group.key, groupByColumn) || '(empty)'}`,
-          data: rollingAverage(data, rollingWindow),
+          data: timestamps.map((t, j) => [t, avgData[j]] as [number, number]),
           color,
           lineWidth: 2.5,
           marker: { enabled: false },
@@ -89,7 +91,7 @@ export function TimeSeriesChart() {
         series.push({
           type: 'line' as const,
           name: formatDisplayValue(group.key, groupByColumn) || '(empty)',
-          data,
+          data: timestamps.map((t, j) => [t, data[j]] as [number, number]),
           color,
         });
       }
@@ -108,7 +110,7 @@ export function TimeSeriesChart() {
           ? `Spend over time by ${humanizeColumn(groupByColumn)} (${windowLabel} avg, top 10)`
           : `Spend over time by ${humanizeColumn(groupByColumn)} (top 10)`,
       },
-      xAxis: { categories, crosshair: true },
+      xAxis: { type: 'datetime', crosshair: true },
       yAxis: {
         title: { text: 'Spend ($)' },
         labels: { format: '${value}' },
