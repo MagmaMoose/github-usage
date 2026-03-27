@@ -1,24 +1,37 @@
 import { useCallback, useMemo, useState } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
-import { SegmentedControl } from '@primer/react';
+import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue, formatCurrency } from '../../lib/formatters';
 import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
+import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
 type ViewMode = 'spend' | 'tokens';
 
-export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: string }) {
+interface GroupBreakdownChartProps {
+  stackField?: string;
+  metricOptions?: MetricOption[];
+}
+
+export function GroupBreakdownChart({ stackField = 'model', metricOptions }: GroupBreakdownChartProps) {
   const { activeReport, groupByColumn, visibleRows } = useReport();
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
   const showTokensView = isTokenReport && stackField === 'model';
   const [viewMode, setViewMode] = useState<ViewMode>('spend');
   const [hiddenGroups, setHiddenGroups] = useState<Set<string>>(new Set());
+  const [metricKey, setMetricKey] = useState('grossAmount');
+
+  // Resolve metric from options
+  const resolvedMetrics = metricOptions ?? [{ key: 'grossAmount', label: 'Spend', isCurrency: true }];
+  const showMetricToggle = resolvedMetrics.length > 1 && !showTokensView;
+  const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
+  const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
 
   const toggleGroup = useCallback((groupName: string) => {
     setHiddenGroups((prev) => {
@@ -34,33 +47,33 @@ export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: str
 
     const rows = visibleRows as AnyReportRow[];
 
-    // Get top users/groups by total gross spend
-    const top = topN(rows, groupByColumn as keyof AnyReportRow & string, 'grossAmount' as keyof AnyReportRow & string, 15);
+    // Get top users/groups by total metric
+    const top = topN(rows, groupByColumn as keyof AnyReportRow & string, effectiveMetricKey as keyof AnyReportRow & string, 15);
     if (top.length === 0) return null;
 
-    // Collect all stack groups across those top groups, ranked by total spend
+    // Collect all stack groups across those top groups, ranked by total metric
     const allTopRows = top.flatMap((item) => item.rows);
     const stackGroups = groupBy(allTopRows, stackField as keyof AnyReportRow & string);
     const rankedStacks = [...stackGroups.entries()]
-      .map(([stack, stackRows]) => ({ stack, total: sumBy(stackRows, 'grossAmount' as keyof AnyReportRow & string) }))
+      .map(([stack, stackRows]) => ({ stack, total: sumBy(stackRows, effectiveMetricKey as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
     // Build deterministic color map from ranked stack names
     const colorMap = buildColorMap(rankedStacks.map((m) => m.stack));
 
-    // Only count spend from stacks that actually have a bar (in rankedStacks AND not hidden)
+    // Only count from stacks that actually have a bar (in rankedStacks AND not hidden)
     const visibleStackNames = new Set(
       rankedStacks.map((m) => m.stack).filter((m) => !hiddenGroups.has(m)),
     );
 
-    // Re-sort groups by visible bar spend only
+    // Re-sort groups by visible bar metric only
     const sorted = [...top]
       .map((item) => {
         const chartRows = item.rows
           .filter((r) => visibleStackNames.has(String(r[stackField as keyof AnyReportRow])));
-        const visibleSpend = Math.round(sumBy(chartRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
-        return { ...item, visibleSpend };
+        const visibleMetric = Math.round(sumBy(chartRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100;
+        return { ...item, visibleSpend: visibleMetric };
       })
       .sort((a, b) => b.visibleSpend - a.visibleSpend);
 
@@ -71,7 +84,7 @@ export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: str
       const isHidden = hiddenGroups.has(stackInfo.stack);
       const data = sorted.map((item) => {
         const stackRows = item.rows.filter((r) => String(r[stackField as keyof AnyReportRow]) === stackInfo.stack);
-        return Math.round(sumBy(stackRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100;
+        return Math.round(sumBy(stackRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100;
       });
 
       return {
@@ -113,18 +126,28 @@ export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: str
       },
       yAxis: {
         title: { text: undefined },
-        labels: { format: '${value}' },
+        labels: activeMetric.isCurrency
+          ? { format: '${value}' }
+          : {
+              formatter: function () {
+                return formatCompact(this.value as number);
+              },
+            },
       },
       tooltip: {
         shared: false,
         headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
-        pointFormat: '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>',
-        footerFormat: '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>',
+        pointFormat: activeMetric.isCurrency
+          ? '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>'
+          : '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>{point.y:,.0f}</b></td></tr>',
+        footerFormat: activeMetric.isCurrency
+          ? '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>'
+          : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { bar: { stacking: 'normal' } },
       series,
     };
-  }, [activeReport, groupByColumn, stackField, visibleRows, hiddenGroups, toggleGroup]);
+  }, [activeReport, groupByColumn, stackField, effectiveMetricKey, visibleRows, hiddenGroups, toggleGroup, activeMetric]);
 
   const tokenOptions = useMemo((): Highcharts.Options | null => {
     if (!activeReport || !isTokenReport) return null;
@@ -179,31 +202,51 @@ export function GroupBreakdownChart({ stackField = 'model' }: { stackField?: str
   const activeOptions = viewMode === 'tokens' ? tokenOptions : spendOptions;
   const chartTitle = viewMode === 'tokens'
     ? `Token Usage by ${humanizeColumn(groupByColumn)} (Top 10)`
-    : `Top ${humanizeColumn(groupByColumn)} by Spend`;
+    : `Top ${humanizeColumn(groupByColumn)} by ${activeMetric.label}`;
   if (!activeOptions) return null;
 
   return (
     <div>
       <div className={styles.chartHeader}>
         <h3 className={styles.chartTitle}>{chartTitle}</h3>
-        {showTokensView && (
-          <SegmentedControl aria-label="View mode" size="small">
-            <SegmentedControl.IconButton
-              aria-label="Spend"
-              icon={CreditCardIcon}
-              selected={viewMode === 'spend'}
-              onClick={() => setViewMode('spend')}
-            />
-            <SegmentedControl.IconButton
-              aria-label="Tokens"
-              icon={CopilotIcon}
-              selected={viewMode === 'tokens'}
-              onClick={() => setViewMode('tokens')}
-            />
-          </SegmentedControl>
-        )}
+        <div className={styles.chartControls}>
+          {showMetricToggle && (
+            <ActionMenu>
+              <ActionMenu.Button size="small">{activeMetric.label}</ActionMenu.Button>
+              <ActionMenu.Overlay>
+                <ActionList selectionVariant="single">
+                  {resolvedMetrics.map((opt) => (
+                    <ActionList.Item
+                      key={opt.key}
+                      selected={effectiveMetricKey === opt.key}
+                      onSelect={() => setMetricKey(opt.key)}
+                    >
+                      {opt.label}
+                    </ActionList.Item>
+                  ))}
+                </ActionList>
+              </ActionMenu.Overlay>
+            </ActionMenu>
+          )}
+          {showTokensView && (
+            <SegmentedControl aria-label="View mode" size="small">
+              <SegmentedControl.IconButton
+                aria-label="Spend"
+                icon={CreditCardIcon}
+                selected={viewMode === 'spend'}
+                onClick={() => setViewMode('spend')}
+              />
+              <SegmentedControl.IconButton
+                aria-label="Tokens"
+                icon={CopilotIcon}
+                selected={viewMode === 'tokens'}
+                onClick={() => setViewMode('tokens')}
+              />
+            </SegmentedControl>
+          )}
+        </div>
       </div>
-      <HighchartsReact key={`${viewMode}-${[...hiddenGroups].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
+      <HighchartsReact key={`${viewMode}-${effectiveMetricKey}-${[...hiddenGroups].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
     </div>
   );
 }

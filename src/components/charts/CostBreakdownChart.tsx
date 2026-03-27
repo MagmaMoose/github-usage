@@ -1,15 +1,28 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import Highcharts from 'highcharts';
 import { HighchartsReact } from 'highcharts-react-official';
+import { ActionList, ActionMenu } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
-import { formatDisplayValue, bucketKeyToTimestamp } from '../../lib/formatters';
+import { formatDisplayValue, formatCompact, bucketKeyToTimestamp } from '../../lib/formatters';
+import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
-export function CostBreakdownChart({ stackField = 'model' }: { stackField?: string }) {
+interface CostBreakdownChartProps {
+  stackField?: string;
+  metricOptions?: MetricOption[];
+}
+
+export function CostBreakdownChart({ stackField = 'model', metricOptions }: CostBreakdownChartProps) {
   const { activeReport, timeBucket, visibleRows } = useReport();
+
+  const resolvedMetrics = metricOptions ?? [{ key: 'grossAmount', label: 'Spend', isCurrency: true }];
+  const showMetricToggle = resolvedMetrics.length > 1;
+  const [metricKey, setMetricKey] = useState('grossAmount');
+  const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
+  const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
 
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
@@ -18,10 +31,10 @@ export function CostBreakdownChart({ stackField = 'model' }: { stackField?: stri
     const buckets = bucketRows(rows, timeBucket);
     const categories = [...buckets.keys()];
 
-    // Find top groups by total spend across all buckets
+    // Find top groups by total metric across all buckets
     const stackGroups = groupBy(rows, stackField as keyof AnyReportRow & string);
     const rankedGroups = [...stackGroups.entries()]
-      .map(([group, groupRows]) => ({ group, total: sumBy(groupRows, 'grossAmount' as keyof AnyReportRow & string) }))
+      .map(([group, groupRows]) => ({ group, total: sumBy(groupRows, effectiveMetricKey as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
@@ -31,7 +44,7 @@ export function CostBreakdownChart({ stackField = 'model' }: { stackField?: stri
       const data = categories.map((bucketKey) => {
         const bucketRowList = buckets.get(bucketKey) ?? [];
         const matchingRows = bucketRowList.filter((r) => String(r[stackField as keyof AnyReportRow]) === groupInfo.group);
-        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, 'grossAmount' as keyof AnyReportRow & string) * 100) / 100] as [number, number];
+        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100] as [number, number];
       });
 
       return {
@@ -47,28 +60,58 @@ export function CostBreakdownChart({ stackField = 'model' }: { stackField?: stri
       title: { text: undefined },
       xAxis: { type: 'datetime', crosshair: true },
       yAxis: {
-        title: { text: 'Amount ($)' },
-        labels: { format: '${value}' },
+        title: { text: activeMetric.isCurrency ? 'Amount ($)' : activeMetric.label },
+        labels: activeMetric.isCurrency
+          ? { format: '${value}' }
+          : {
+              formatter: function (this: Highcharts.AxisLabelsFormatterContextObject) {
+                return formatCompact(this.value as number);
+              },
+            },
       },
       tooltip: {
         shared: false,
         headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
-        pointFormat: '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>',
-        footerFormat: '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>',
+        pointFormat: activeMetric.isCurrency
+          ? '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>'
+          : '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>{point.y:,.0f}</b></td></tr>',
+        footerFormat: activeMetric.isCurrency
+          ? '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>'
+          : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { column: { stacking: 'normal' } },
       series,
     };
-  }, [activeReport, timeBucket, visibleRows]);
+  }, [activeReport, timeBucket, visibleRows, effectiveMetricKey, stackField, activeMetric]);
 
   if (!options) return null;
 
   return (
     <div>
       <div className={styles.chartHeader}>
-        <h3 className={styles.chartTitle}>Cost over Time</h3>
+        <h3 className={styles.chartTitle}>{activeMetric.label} over Time</h3>
+        {showMetricToggle && (
+          <div className={styles.chartControls}>
+            <ActionMenu>
+              <ActionMenu.Button size="small">{activeMetric.label}</ActionMenu.Button>
+              <ActionMenu.Overlay>
+                <ActionList selectionVariant="single">
+                  {resolvedMetrics.map((opt) => (
+                    <ActionList.Item
+                      key={opt.key}
+                      selected={effectiveMetricKey === opt.key}
+                      onSelect={() => setMetricKey(opt.key)}
+                    >
+                      {opt.label}
+                    </ActionList.Item>
+                  ))}
+                </ActionList>
+              </ActionMenu.Overlay>
+            </ActionMenu>
+          </div>
+        )}
       </div>
-      <HighchartsReact highcharts={Highcharts} options={options} immutable />
+      <HighchartsReact key={effectiveMetricKey} highcharts={Highcharts} options={options} immutable />
     </div>
   );
 }

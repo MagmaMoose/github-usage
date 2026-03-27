@@ -488,10 +488,10 @@ export function ReportPageLayout({ schema, allowedReportTypes }: ReportPageLayou
                 <TimeSeriesChart metricOptions={schema.metricOptions} />
               </div>
               <div className={styles.chartSurface}>
-                <GroupBreakdownChart stackField={schema.breakdownStackField} />
+                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={schema.metricOptions} />
               </div>
               <div className={styles.chartSurface}>
-                <CostBreakdownChart stackField={schema.breakdownStackField} />
+                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={schema.metricOptions} />
               </div>
               <div className={styles.chartSurface}>
                 <SankeyChart hierarchy={schema.sankeyHierarchy} />
