@@ -12,7 +12,6 @@ import {
   type VisibilityState,
   type Table as TanstackTable,
 } from '@tanstack/react-table';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { Avatar, Button, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
 import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, WorkflowIcon } from '@primer/octicons-react';
@@ -56,9 +55,6 @@ interface TableRow {
   totalCacheCreationTokens: number;
   totalCacheReadTokens: number;
 }
-
-const ROW_HEIGHT = 37;
-const VIRTUAL_THRESHOLD = 200;
 
 const columnHelper = createColumnHelper<TableRow>();
 
@@ -141,62 +137,7 @@ function SortIcon({ direction }: { direction: 'asc' | 'desc' | false }) {
   );
 }
 
-function VirtualBody({
-  table,
-  scrollRef,
-}: {
-  table: ReturnType<typeof useReactTable<TableRow>>;
-  scrollRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const rows = table.getRowModel().rows;
-
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 20,
-  });
-
-  const virtualRows = virtualizer.getVirtualItems();
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
-  const paddingBottom =
-    virtualRows.length > 0
-      ? virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
-      : 0;
-
-  return (
-    <tbody className={styles.tbody}>
-      {paddingTop > 0 && (
-        <tr>
-          <td style={{ height: `${paddingTop}px` }} className={styles.virtualSpacer} />
-        </tr>
-      )}
-      {virtualRows.map((virtualRow) => {
-        const row = rows[virtualRow.index];
-        return (
-          <tr key={row.id} className={styles.tr}>
-            {row.getVisibleCells().map((cell) => (
-              <td
-                key={cell.id}
-                className={styles.td}
-                data-align={cell.column.columnDef.meta?.align}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </td>
-            ))}
-          </tr>
-        );
-      })}
-      {paddingBottom > 0 && (
-        <tr>
-          <td style={{ height: `${paddingBottom}px` }} className={styles.virtualSpacer} />
-        </tr>
-      )}
-    </tbody>
-  );
-}
-
-function StandardBody({
+function TableBody({
   table,
 }: {
   table: ReturnType<typeof useReactTable<TableRow>>;
@@ -230,37 +171,26 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   const [globalFilter, setGlobalFilter] = useState('');
   const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
 
-  // Hide token columns for non-token reports, hide irrelevant columns per type
   const defaultVisibility: VisibilityState = {
     grossAmount: false,
     discountAmount: false,
     count: false,
-    totalInputTokens: isTokenReport ? undefined : false,
-    totalOutputTokens: isTokenReport ? undefined : false,
-    totalCacheCreationTokens: isTokenReport ? undefined : false,
-    totalCacheReadTokens: isTokenReport ? undefined : false,
-  } as VisibilityState;
+  };
   const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(() =>
     getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
   );
 
-  // When report type changes, force-hide token columns for non-token reports
-  const prevIsTokenRef = useRef(isTokenReport);
-  if (prevIsTokenRef.current !== isTokenReport) {
-    prevIsTokenRef.current = isTokenReport;
+  // Merge stored visibility with report-type-aware overrides
+  const effectiveVisibility = useMemo((): VisibilityState => {
+    const base = { ...columnVisibility };
     if (!isTokenReport) {
-      const stored = getStoredValue<VisibilityState>(STORAGE_KEYS.COLUMN_VISIBILITY, {});
-      const patched = {
-        ...stored,
-        totalInputTokens: false,
-        totalOutputTokens: false,
-        totalCacheCreationTokens: false,
-        totalCacheReadTokens: false,
-      };
-      setStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, patched);
-      setColumnVisibilityRaw(patched);
+      base.totalInputTokens = false;
+      base.totalOutputTokens = false;
+      base.totalCacheCreationTokens = false;
+      base.totalCacheReadTokens = false;
     }
-  }
+    return base;
+  }, [columnVisibility, isTokenReport]);
   const setColumnVisibility = useCallback((updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
     setColumnVisibilityRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -268,7 +198,6 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       return next;
     });
   }, []);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const tableData = useMemo(() => {
     if (!activeReport) return [];
@@ -431,19 +360,17 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     ];
   }, [groupByColumn]);
 
-  const useVirtual = tableData.length > VIRTUAL_THRESHOLD;
-
   const table = useReactTable({
     data: tableData,
     columns,
-    state: { sorting, globalFilter, columnVisibility },
+    state: { sorting, globalFilter, columnVisibility: effectiveVisibility },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    ...(!useVirtual ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: { pageSize: 10 },
     },
@@ -473,9 +400,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       </div>
 
       <div
-        ref={scrollRef}
         className={styles.scrollWrapper}
-        style={useVirtual ? { maxHeight: 600, overflowY: 'auto' } : undefined}
       >
         <table className={styles.table} role="table" aria-labelledby="report-table">
           <thead className={styles.thead}>
@@ -498,15 +423,11 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
               </tr>
             ))}
           </thead>
-          {useVirtual ? (
-            <VirtualBody table={table} scrollRef={scrollRef} />
-          ) : (
-            <StandardBody table={table} />
-          )}
+          <TableBody table={table} />
         </table>
       </div>
 
-      {!useVirtual && totalRows > 0 && (
+      {totalRows > 0 && (
         <PrimerTable.Pagination
           aria-label="Pagination for report table"
           pageSize={table.getState().pagination.pageSize}
