@@ -185,7 +185,7 @@ const USAGE_REPORT_SCHEMA: ReportSchema = {
     },
   ],
   filterableFields: [
-    'username', 'product', 'sku', 'organization', 'repository', 'costCenterName',
+    'username', 'product', 'sku', 'organization', 'repository', 'workflowPath', 'costCenterName',
   ],
 };
 

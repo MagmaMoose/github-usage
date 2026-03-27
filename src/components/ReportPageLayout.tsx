@@ -60,10 +60,11 @@ type FilterableField =
   | 'sku'
   | 'costCenterName'
   | 'product'
-  | 'repository';
+  | 'repository'
+  | 'workflowPath';
 
 const ALL_FILTERABLE_FIELDS: FilterableField[] = [
-  'username', 'model', 'organization', 'sku', 'costCenterName', 'product', 'repository',
+  'username', 'model', 'organization', 'sku', 'costCenterName', 'product', 'repository', 'workflowPath',
 ];
 
 const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<IconProps>>> = {
@@ -74,6 +75,7 @@ const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<I
   costCenterName: TableIcon,
   product: WorkflowIcon,
   repository: WorkflowIcon,
+  workflowPath: WorkflowIcon,
 };
 
 const REPORT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
