@@ -25,6 +25,7 @@ import {
   LinkIcon,
   OrganizationIcon,
   PackageIcon,
+  PersonIcon,
   RepoIcon,
   ServerIcon,
   TableIcon,
@@ -70,7 +71,7 @@ const ALL_FILTERABLE_FIELDS: FilterableField[] = [
 ];
 
 const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<IconProps>>> = {
-  username: CopilotIcon,
+  username: PersonIcon,
   model: GraphIcon,
   organization: OrganizationIcon,
   sku: ServerIcon,
