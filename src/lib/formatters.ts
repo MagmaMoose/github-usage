@@ -146,6 +146,7 @@ export function formatDisplayValue(value: string, column?: string): string {
   if (!value) return value;
   if (column === 'sku') return SKU_DISPLAY_NAMES[value] ?? value;
   if (column === 'product') return PRODUCT_DISPLAY_NAMES[value] ?? value;
+  if (column === 'workflowPath') return formatWorkflowPath(value);
   // For unknown columns, check both maps as a best-effort fallback
   return SKU_DISPLAY_NAMES[value] ?? PRODUCT_DISPLAY_NAMES[value] ?? value;
 }

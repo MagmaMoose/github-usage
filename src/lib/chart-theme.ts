@@ -271,6 +271,12 @@ export function buildGitHubChartTheme(): Highcharts.Options {
       verticalAlign: 'top',
       x: -8,
       y: -12,
+      maxHeight: 120,
+      navigation: {
+        activeColor: fgDefault,
+        inactiveColor: fgMuted,
+        style: { fontFamily, fontSize: '11px' },
+      },
     },
     navigation: { buttonOptions: { enabled: false } },
     exporting: { fallbackToExportServer: false },
