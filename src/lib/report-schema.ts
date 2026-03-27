@@ -3,7 +3,7 @@ import type { ReportType } from './types';
 import { REPORT_TYPES } from './types';
 import {
   CopilotIcon,
-  MeterIcon,
+  GraphIcon,
   ServerIcon,
   WorkflowIcon,
 } from '@primer/octicons-react';
@@ -230,7 +230,7 @@ export interface NavPageConfig {
 
 export const NAV_PAGES: NavPageConfig[] = [
   { id: PAGE_TYPES.COPILOT, label: 'Copilot usage', icon: CopilotIcon },
-  { id: PAGE_TYPES.USAGE, label: 'Metered usage', icon: MeterIcon },
+  { id: PAGE_TYPES.USAGE, label: 'Metered usage', icon: GraphIcon },
 ];
 
 /** Infer the page type from a report type */
