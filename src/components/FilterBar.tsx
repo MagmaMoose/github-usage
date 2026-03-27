@@ -279,15 +279,19 @@ export function FilterBar({
           </ActionMenu.Button>
           <ActionMenu.Overlay width="auto">
             <ActionList selectionVariant="single">
-              {groupableColumns.map((col) => (
-                <ActionList.Item
-                  key={col}
-                  selected={col === groupByColumn}
-                  onSelect={() => onGroupByChange(col)}
-                >
-                  {humanizeColumn(col)}
-                </ActionList.Item>
-              ))}
+              {groupableColumns.map((col) => {
+                const Icon = fieldIcons[col];
+                return (
+                  <ActionList.Item
+                    key={col}
+                    selected={col === groupByColumn}
+                    onSelect={() => onGroupByChange(col)}
+                  >
+                    {Icon && <ActionList.LeadingVisual><Icon /></ActionList.LeadingVisual>}
+                    {humanizeColumn(col)}
+                  </ActionList.Item>
+                );
+              })}
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
