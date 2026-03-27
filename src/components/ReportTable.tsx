@@ -19,7 +19,7 @@ import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
 import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue } from '../lib/formatters';
-import type { AnyReportRow, TokenUsageRow } from '../lib/types';
+import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
@@ -50,10 +50,14 @@ interface TableRow {
   discountAmount: number;
   netAmount: number;
   quantity: number;
+  // Token usage columns (copilot reports only)
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCacheCreationTokens: number;
   totalCacheReadTokens: number;
+  // Usage report columns
+  totalMinutes: number;
+  totalStorageGBH: number;
 }
 
 const columnHelper = createColumnHelper<TableRow>();
@@ -169,7 +173,9 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   const { activeReport, groupByColumn, visibleRows, setFilter, filters } = useReport();
   const [sorting, setSorting] = useState<SortingState>([{ id: 'quantity', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const isTokenReport = activeReport?.type === REPORT_TYPES.TOKEN_USAGE;
+  const reportType = activeReport?.type;
+  const isTokenReport = reportType === REPORT_TYPES.TOKEN_USAGE;
+  const isUsageReport = reportType === REPORT_TYPES.USAGE_REPORT;
 
   const defaultVisibility: VisibilityState = {
     grossAmount: false,
@@ -180,17 +186,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
   );
 
-  // Merge stored visibility with report-type-aware overrides
-  const effectiveVisibility = useMemo((): VisibilityState => {
-    const base = { ...columnVisibility };
-    if (!isTokenReport) {
-      base.totalInputTokens = false;
-      base.totalOutputTokens = false;
-      base.totalCacheCreationTokens = false;
-      base.totalCacheReadTokens = false;
-    }
-    return base;
-  }, [columnVisibility, isTokenReport]);
+  // No need for effectiveVisibility overrides; columns are only added when relevant
   const setColumnVisibility = useCallback((updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
     setColumnVisibilityRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -205,28 +201,44 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       visibleRows as AnyReportRow[],
       groupByColumn as keyof AnyReportRow & string,
     );
-    return [...groups.entries()].map(([key, rows]) => ({
-      id: key,
-      group: key,
-      count: rows.length,
-      grossAmount: sumBy(rows, 'grossAmount' as keyof AnyReportRow & string),
-      discountAmount: sumBy(rows, 'discountAmount' as keyof AnyReportRow & string),
-      netAmount: sumBy(rows, 'netAmount' as keyof AnyReportRow & string),
-      quantity: sumBy(rows, 'quantity' as keyof AnyReportRow & string),
-      totalInputTokens: isTokenReport
-        ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalInputTokens ?? 0), 0)
-        : 0,
-      totalOutputTokens: isTokenReport
-        ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalOutputTokens ?? 0), 0)
-        : 0,
-      totalCacheCreationTokens: isTokenReport
-        ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalCacheCreationTokens ?? 0), 0)
-        : 0,
-      totalCacheReadTokens: isTokenReport
-        ? (rows as TokenUsageRow[]).reduce((s, r) => s + (r.totalCacheReadTokens ?? 0), 0)
-        : 0,
-    }));
-  }, [activeReport, groupByColumn, visibleRows, isTokenReport]);
+    return [...groups.entries()].map(([key, rows]) => {
+      const base = {
+        id: key,
+        group: key,
+        count: rows.length,
+        grossAmount: sumBy(rows, 'grossAmount' as keyof AnyReportRow & string),
+        discountAmount: sumBy(rows, 'discountAmount' as keyof AnyReportRow & string),
+        netAmount: sumBy(rows, 'netAmount' as keyof AnyReportRow & string),
+        quantity: sumBy(rows, 'quantity' as keyof AnyReportRow & string),
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalCacheCreationTokens: 0,
+        totalCacheReadTokens: 0,
+        totalMinutes: 0,
+        totalStorageGBH: 0,
+      };
+
+      if (isTokenReport) {
+        const tokenRows = rows as TokenUsageRow[];
+        base.totalInputTokens = tokenRows.reduce((s, r) => s + (r.totalInputTokens ?? 0), 0);
+        base.totalOutputTokens = tokenRows.reduce((s, r) => s + (r.totalOutputTokens ?? 0), 0);
+        base.totalCacheCreationTokens = tokenRows.reduce((s, r) => s + (r.totalCacheCreationTokens ?? 0), 0);
+        base.totalCacheReadTokens = tokenRows.reduce((s, r) => s + (r.totalCacheReadTokens ?? 0), 0);
+      }
+
+      if (isUsageReport) {
+        const usageRows = rows as unknown as UsageReportRow[];
+        base.totalMinutes = usageRows
+          .filter((r) => r.unitType === 'minutes')
+          .reduce((s, r) => s + r.quantity, 0);
+        base.totalStorageGBH = usageRows
+          .filter((r) => r.unitType === 'gigabyte-hours')
+          .reduce((s, r) => s + r.quantity, 0);
+      }
+
+      return base;
+    });
+  }, [activeReport, groupByColumn, visibleRows, isTokenReport, isUsageReport]);
 
   const activeFilterValues = filters[groupByColumn] ?? [];
 
@@ -246,7 +258,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization';
     const isModelGroup = groupByColumn === 'model';
 
-    return [
+    const cols: ColumnDef<TableRow, unknown>[] = [
       columnHelper.accessor('group', {
         header: humanizeColumn(groupByColumn),
         cell: (info) => {
@@ -312,6 +324,10 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
         },
         sortingFn: 'alphanumeric',
       }) as ColumnDef<TableRow, unknown>,
+    ];
+
+    // Shared financial columns
+    cols.push(
       columnHelper.accessor('quantity', {
         header: 'Quantity',
         cell: (info) => formatCompact(info.getValue()),
@@ -332,38 +348,72 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
         cell: (info) => formatCurrency(info.getValue()),
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
-      columnHelper.accessor('totalInputTokens', {
-        header: 'Input tokens',
-        cell: (info) => formatCompact(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
-      columnHelper.accessor('totalOutputTokens', {
-        header: 'Output tokens',
-        cell: (info) => formatCompact(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
-      columnHelper.accessor('totalCacheCreationTokens', {
-        header: 'Cache create',
-        cell: (info) => formatCompact(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
-      columnHelper.accessor('totalCacheReadTokens', {
-        header: 'Cache read',
-        cell: (info) => formatCompact(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
+    );
+
+    // Token columns (token usage reports only)
+    if (isTokenReport) {
+      cols.push(
+        columnHelper.accessor('totalInputTokens', {
+          header: 'Input tokens',
+          cell: (info) => formatCompact(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+        columnHelper.accessor('totalOutputTokens', {
+          header: 'Output tokens',
+          cell: (info) => formatCompact(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+        columnHelper.accessor('totalCacheCreationTokens', {
+          header: 'Cache create',
+          cell: (info) => formatCompact(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+        columnHelper.accessor('totalCacheReadTokens', {
+          header: 'Cache read',
+          cell: (info) => formatCompact(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+      );
+    }
+
+    // Usage report columns (metered usage only)
+    if (isUsageReport) {
+      cols.push(
+        columnHelper.accessor('totalMinutes', {
+          header: 'Minutes',
+          cell: (info) => {
+            const v = info.getValue();
+            return v > 0 ? formatCompact(v) : '—';
+          },
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+        columnHelper.accessor('totalStorageGBH', {
+          header: 'Storage (GB·h)',
+          cell: (info) => {
+            const v = info.getValue();
+            return v > 0 ? formatCompact(v) : '—';
+          },
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+      );
+    }
+
+    // Row count (always last)
+    cols.push(
       columnHelper.accessor('count', {
         header: 'Rows',
         cell: (info) => formatCompact(info.getValue()),
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
-    ];
-  }, [groupByColumn]);
+    );
+
+    return cols;
+  }, [groupByColumn, isTokenReport, isUsageReport, handleGroupClick]);
 
   const table = useReactTable({
     data: tableData,
     columns,
-    state: { sorting, globalFilter, columnVisibility: effectiveVisibility },
+    state: { sorting, globalFilter, columnVisibility },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
