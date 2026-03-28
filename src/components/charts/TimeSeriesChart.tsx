@@ -8,7 +8,7 @@ import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { MetricOption } from '../../lib/report-schema';
-import type { AnyReportRow } from '../../lib/types';
+import type { AnyReportRow, BillingRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
 const LINE_MODES = ['raw', 'rolling', 'cumulative'] as const;
@@ -80,7 +80,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const allRows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as BillingRow[];
     const rows = activeMetric.rowFilter
       ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
       : allRows;

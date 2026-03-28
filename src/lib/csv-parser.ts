@@ -6,6 +6,10 @@ import type {
   GhasActiveCommittersRow,
   ParsedReport,
   ReportType,
+  CopilotProduct,
+  PremiumRequestSku,
+  UsageProduct,
+  UsageUnitType,
 } from './types';
 import { REPORT_TYPES } from './types';
 
@@ -47,11 +51,11 @@ function mapPremiumRequestRow(raw: Record<string, string>): PremiumRequestRow {
   return {
     date: raw['date'] ?? '',
     username: raw['username'] ?? '',
-    product: raw['product'] ?? '',
-    sku: raw['sku'] ?? '',
+    product: (raw['product'] ?? '') as CopilotProduct,
+    sku: (raw['sku'] ?? '') as PremiumRequestSku,
     model: raw['model'] ?? '',
     quantity: parseNum(raw['quantity']),
-    unitType: raw['unit_type'] ?? '',
+    unitType: (raw['unit_type'] ?? '') as 'requests' | 'ai-units',
     appliedCostPerQuantity: parseNum(raw['applied_cost_per_quantity']),
     grossAmount: parseNum(raw['gross_amount']),
     discountAmount: parseNum(raw['discount_amount']),
@@ -70,11 +74,11 @@ function mapTokenUsageRow(raw: Record<string, string>): TokenUsageRow {
   return {
     date: raw['date'] ?? '',
     username: raw['username'] ?? '',
-    product: raw['product'] ?? '',
-    sku: raw['sku'] ?? '',
+    product: (raw['product'] ?? '') as CopilotProduct,
+    sku: (raw['sku'] ?? '') as PremiumRequestSku,
     model: raw['model'] ?? '',
     quantity: parseNum(raw['quantity']),
-    unitType: raw['unit_type'] ?? '',
+    unitType: (raw['unit_type'] ?? '') as 'requests' | 'ai-units',
     appliedCostPerQuantity: parseNum(raw['applied_cost_per_quantity']),
     grossAmount: parseNum(raw['gross_amount']),
     discountAmount: parseNum(raw['discount_amount']),
@@ -94,10 +98,10 @@ function mapTokenUsageRow(raw: Record<string, string>): TokenUsageRow {
 function mapUsageReportRow(raw: Record<string, string>): UsageReportRow {
   return {
     date: raw['date'] ?? '',
-    product: raw['product'] ?? '',
+    product: (raw['product'] ?? '') as UsageProduct,
     sku: raw['sku'] ?? '',
     quantity: parseNum(raw['quantity']),
-    unitType: raw['unit_type'] ?? '',
+    unitType: (raw['unit_type'] ?? '') as UsageUnitType,
     appliedCostPerQuantity: parseNum(raw['applied_cost_per_quantity']),
     grossAmount: parseNum(raw['gross_amount']),
     discountAmount: parseNum(raw['discount_amount']),

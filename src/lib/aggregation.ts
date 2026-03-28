@@ -1,4 +1,4 @@
-import type { AnyReportRow, TimeBucket, ReportSummary } from './types';
+import type { AnyReportRow, BillingRow, TimeBucket, ReportSummary, UsageReportRow, TokenUsageRow } from './types';
 
 /** Group rows by a column value, returning a map of group key → rows */
 export function groupBy<T extends AnyReportRow>(
@@ -53,7 +53,7 @@ export function getTimeBucketKey(dateStr: string, bucket: TimeBucket): string {
 }
 
 /** Group rows by time bucket, returning sorted entries */
-export function timeBucket<T extends AnyReportRow>(
+export function timeBucket<T extends BillingRow>(
   rows: T[],
   bucket: TimeBucket,
 ): Map<string, T[]> {
@@ -92,9 +92,15 @@ export function topN<T extends AnyReportRow>(
   return ranked.slice(0, n);
 }
 
+/** Type guard for rows with billing fields */
+function isBillingRow(row: AnyReportRow): row is BillingRow {
+  return 'date' in row && 'grossAmount' in row;
+}
+
 /** Compute summary metrics for a set of rows */
 export function computeSummary(rows: AnyReportRow[]): ReportSummary {
-  const dates = rows.map((r) => r.date).filter(Boolean).sort();
+  const billingRows = rows.filter(isBillingRow);
+  const dates = billingRows.map((r) => r.date).filter(Boolean).sort();
   const users = new Set<string>();
   const organizations = new Set<string>();
   const models = new Set<string>();
@@ -109,30 +115,31 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
   let totalStorageGBH = 0;
   let totalTokens = 0;
 
-  for (const row of rows) {
+  for (const row of billingRows) {
     totalGrossAmount += row.grossAmount;
     totalNetAmount += row.netAmount;
     totalDiscountAmount += row.discountAmount;
     totalQuantity += row.quantity;
 
-    if ('username' in row && row.username) users.add(row.username as string);
-    if ('organization' in row && row.organization) organizations.add(row.organization as string);
-    if ('model' in row && row.model) models.add(row.model as string);
-    if ('repository' in row && (row as Record<string, unknown>).repository) repositories.add((row as Record<string, unknown>).repository as string);
-    if ('product' in row && (row as Record<string, unknown>).product) products.add((row as Record<string, unknown>).product as string);
+    if ('username' in row && row.username) users.add(row.username);
+    if ('organization' in row && row.organization) organizations.add(row.organization);
+    if ('model' in row) models.add(row.model);
+    const usageRow = row as UsageReportRow;
+    if ('repository' in row && usageRow.repository) repositories.add(usageRow.repository);
+    if ('product' in row && row.product) products.add(String(row.product));
 
-    // Accumulate unit-type-specific totals
+    // Accumulate unit-type-specific totals for usage reports
     if ('unitType' in row) {
-      const unitType = (row as Record<string, unknown>).unitType;
-      if (unitType === 'minutes') totalMinutes += row.quantity;
-      if (unitType === 'gigabyte-hours') totalStorageGBH += row.quantity;
+      const u = row as UsageReportRow;
+      if (u.unitType === 'minutes') totalMinutes += u.quantity;
+      if (u.unitType === 'gigabyte-hours') totalStorageGBH += u.quantity;
     }
 
     // Accumulate token totals
     if ('totalInputTokens' in row) {
-      const r = row as Record<string, number>;
-      totalTokens += (r.totalInputTokens ?? 0) + (r.totalOutputTokens ?? 0)
-        + (r.totalCacheCreationTokens ?? 0) + (r.totalCacheReadTokens ?? 0);
+      const t = row as TokenUsageRow;
+      totalTokens += (t.totalInputTokens ?? 0) + (t.totalOutputTokens ?? 0)
+        + (t.totalCacheCreationTokens ?? 0) + (t.totalCacheReadTokens ?? 0);
     }
   }
 

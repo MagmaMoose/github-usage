@@ -323,7 +323,7 @@ describe('parseCSV — Token Usage (real file)', () => {
 
   it('does NOT have aicQuantity or aicGrossAmount fields', () => {
     const report = parseCSV(csv, 'Token.Usage.Report.csv');
-    const row = report.rows[0] as Record<string, unknown>;
+    const row = report.rows[0] as TokenUsageRow;
     expect(row).not.toHaveProperty('aicQuantity');
     expect(row).not.toHaveProperty('aicGrossAmount');
   });
@@ -523,7 +523,7 @@ describe('parseCSV — GHAS Active Committers (real file)', () => {
 
   it('does NOT have billing columns (no grossAmount, netAmount, etc.)', () => {
     const report = parseCSV(csv, 'ghas.csv');
-    const row = report.rows[0] as Record<string, unknown>;
+    const row = report.rows[0] as GhasActiveCommittersRow;
     expect(row).not.toHaveProperty('grossAmount');
     expect(row).not.toHaveProperty('netAmount');
     expect(row).not.toHaveProperty('quantity');
@@ -567,7 +567,7 @@ describe('cross-report schema validation', () => {
   it('token usage has token fields that premium request lacks', () => {
     const tuCsv = loadExample('Token.Usage.Report.csv');
     const tuReport = parseCSV(tuCsv, 'tu.csv');
-    const tuRow = tuReport.rows[0] as Record<string, unknown>;
+    const tuRow = tuReport.rows[0] as TokenUsageRow;
 
     expect(tuRow).toHaveProperty('totalInputTokens');
     expect(tuRow).toHaveProperty('totalOutputTokens');
@@ -579,7 +579,7 @@ describe('cross-report schema validation', () => {
   it('premium request has AIC fields that token usage lacks', () => {
     const prCsv = loadExample('premiumRequestUsageReport_1_c6fca30f0acd458098a95808eaf43399.csv');
     const prReport = parseCSV(prCsv, 'pr.csv');
-    const prRow = prReport.rows[0] as Record<string, unknown>;
+    const prRow = prReport.rows[0] as PremiumRequestRow;
 
     expect(prRow).toHaveProperty('aicQuantity');
     expect(prRow).toHaveProperty('aicGrossAmount');

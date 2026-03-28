@@ -170,8 +170,7 @@ export type GhasActiveCommittersCsvHeader =
 // ─── Parsed Row Interfaces ─────────────────────────────────────────────────────
 
 /** Shared columns across Premium Request and Token Usage reports */
-interface BaseCopilotReportRow {
-  /** ISO date string (YYYY-MM-DD) */
+interface BaseCopilotReportRow {  /** ISO date string (YYYY-MM-DD) */
   date: string;
   /** GitHub username */
   username: string;
@@ -224,8 +223,7 @@ export interface TokenUsageRow extends BaseCopilotReportRow {
 }
 
 /** General Usage Report row (Actions, Copilot seats, LFS, Packages) */
-export interface UsageReportRow {
-  /** ISO date string (YYYY-MM-DD), first of month */
+export interface UsageReportRow {  /** ISO date string (YYYY-MM-DD), first of month */
   date: string;
   /** Product category */
   product: UsageProduct;
@@ -256,8 +254,7 @@ export interface UsageReportRow {
 }
 
 /** GHAS Active Committers report row */
-export interface GhasActiveCommittersRow {
-  /** GitHub username */
+export interface GhasActiveCommittersRow {  /** GitHub username */
   userLogin: string;
   /** Combined "org/repo" string that needs splitting for org vs repo */
   organizationRepository: string;
@@ -286,7 +283,10 @@ export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageRepor
   dateRange: { start: string; end: string };
 }
 
-export type AnyReportRow = PremiumRequestRow | TokenUsageRow | UsageReportRow | GhasActiveCommittersRow;
+/** Report rows that have billing fields (date, grossAmount, netAmount, etc.) */
+export type BillingRow = PremiumRequestRow | TokenUsageRow | UsageReportRow;
+
+export type AnyReportRow = BillingRow | GhasActiveCommittersRow;
 
 /** Groupable columns vary by report type */
 export const GROUPABLE_COLUMNS = {

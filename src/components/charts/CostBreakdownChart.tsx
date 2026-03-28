@@ -7,7 +7,7 @@ import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation'
 import { buildColorMap } from '../../lib/chart-theme';
 import { formatDisplayValue, formatCompact, bucketKeyToTimestamp } from '../../lib/formatters';
 import type { MetricOption } from '../../lib/report-schema';
-import type { AnyReportRow } from '../../lib/types';
+import type { AnyReportRow, BillingRow } from '../../lib/types';
 import styles from './Charts.module.css';
 
 interface CostBreakdownChartProps {
@@ -28,7 +28,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const allRows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as BillingRow[];
     const rows = activeMetric.rowFilter
       ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
       : allRows;
