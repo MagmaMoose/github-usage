@@ -254,6 +254,10 @@ export const PRODUCT_METRIC_OPTIONS: Record<string, MetricOption[]> = {
     { key: 'grossAmount', label: 'Spend', isCurrency: true },
     { key: 'quantity', label: 'Minutes', isCurrency: false },
   ],
+  actions_storage: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'GB-Hours', isCurrency: false },
+  ],
   copilot: [
     { key: 'grossAmount', label: 'Spend', isCurrency: true },
     { key: 'seats', label: 'Seats', isCurrency: false, valueField: 'quantity', rowFilter: (r) => r.unitType === 'user-months' },

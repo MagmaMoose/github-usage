@@ -1,4 +1,4 @@
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -14,12 +14,18 @@ import {
   PageLayout,
 } from '@primer/react';
 import {
+  CopilotIcon,
+  DatabaseIcon,
+  FileIcon,
   MarkGithubIcon,
   MoonIcon,
+  PackageIcon,
   QuestionIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
+  SparkleIcon,
   SunIcon,
+  ZapIcon,
 } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
@@ -45,6 +51,18 @@ import { readURLFilterState, writeURLFilterState } from './lib/url-state';
 import { formatDateRangeCompact } from './lib/formatters';
 import { OnboardingProvider, useOnboardingContext } from './components/onboarding';
 import styles from './App.module.css';
+
+/** Storage SKUs are billed in GB-Hours, not minutes */
+const ACTIONS_STORAGE_SKUS = ['actions_storage', 'actions_custom_image_storage'] as const;
+
+/** Icons for each product in the sidebar sub-nav */
+const PRODUCT_ICONS: Record<string, React.ReactNode> = {
+  actions: <ZapIcon />,
+  copilot: <CopilotIcon />,
+  spark: <SparkleIcon />,
+  git_lfs: <FileIcon />,
+  packages: <PackageIcon />,
+};
 
 function AppContent() {
   const { colorMode, setColorMode } = useColorMode();
@@ -225,23 +243,47 @@ function AppContent() {
 
   // Current product filter (from filters state)
   const activeProductFilter = filters.product?.[0] ?? null;
+  const activeSkuFilter = filters.sku ?? [];
+
+  /** Detect sub-view: 'compute' | 'storage' | null */
+  const actionsSubView = useMemo(() => {
+    if (activeProductFilter !== 'actions' || activeSkuFilter.length === 0) return null;
+    if (ACTIONS_STORAGE_SKUS.some((s) => activeSkuFilter.includes(s))) return 'storage' as const;
+    return 'compute' as const;
+  }, [activeProductFilter, activeSkuFilter]);
 
   // Compute effective metric options based on product filter
   const effectiveMetricOptions = useMemo(() => {
     if (activePage !== PAGE_TYPES.USAGE) return activeSchema.metricOptions;
     if (!activeProductFilter) return MIXED_METRIC_OPTIONS;
+    // Storage sub-view shows GB-Hours instead of Minutes
+    if (activeProductFilter === 'actions' && actionsSubView === 'storage') {
+      return PRODUCT_METRIC_OPTIONS['actions_storage'] ?? MIXED_METRIC_OPTIONS;
+    }
     return PRODUCT_METRIC_OPTIONS[activeProductFilter] ?? MIXED_METRIC_OPTIONS;
-  }, [activePage, activeProductFilter, activeSchema.metricOptions]);
+  }, [activePage, activeProductFilter, actionsSubView, activeSchema.metricOptions]);
 
   const handleProductSelect = useCallback(
-    (product: string | null) => {
+    (product: string | null, subView?: 'compute' | 'storage') => {
       if (product) {
         setFilter('product', [product]);
+        if (product === 'actions' && subView === 'storage') {
+          setFilter('sku', [...ACTIONS_STORAGE_SKUS]);
+        } else if (product === 'actions' && subView === 'compute') {
+          const allActionSkus = activeReport
+            ? [...new Set((activeReport.rows as UsageReportRow[]).filter(r => r.product === 'actions').map(r => r.sku))]
+            : [];
+          const computeSkus = allActionSkus.filter(s => !(ACTIONS_STORAGE_SKUS as readonly string[]).includes(s));
+          setFilter('sku', computeSkus);
+        } else {
+          setFilter('sku', []);
+        }
       } else {
         setFilter('product', []);
+        setFilter('sku', []);
       }
     },
-    [setFilter],
+    [setFilter, activeReport],
   );
 
   const renderInsightsSidebar = () => (
@@ -292,20 +334,63 @@ function AppContent() {
                   >
                     All products
                   </NavList.Item>
-                  {availableProducts.map((product) => (
-                    <NavList.Item
-                      key={product}
-                      href="#"
-                      aria-current={activeProductFilter === product ? 'page' : undefined}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        setActivePage(PAGE_TYPES.USAGE);
-                        handleProductSelect(product);
-                      }}
-                    >
-                      {formatDisplayValue(product, 'product')}
-                    </NavList.Item>
-                  ))}
+                  {availableProducts.map((product) => {
+                    // Split Actions into Compute + Storage sub-entries
+                    if (product === 'actions') {
+                      const hasStorageSkus = activeReport
+                        ? (activeReport.rows as UsageReportRow[]).some(
+                            (r) => r.product === 'actions' && (ACTIONS_STORAGE_SKUS as readonly string[]).includes(r.sku),
+                          )
+                        : false;
+
+                      if (hasStorageSkus) {
+                        return (
+                          <React.Fragment key={product}>
+                            <NavList.Item
+                              href="#"
+                              aria-current={activeProductFilter === 'actions' && actionsSubView === 'compute' ? 'page' : undefined}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                setActivePage(PAGE_TYPES.USAGE);
+                                handleProductSelect('actions', 'compute');
+                              }}
+                            >
+                              <NavList.LeadingVisual><ZapIcon /></NavList.LeadingVisual>
+                              Actions Compute
+                            </NavList.Item>
+                            <NavList.Item
+                              href="#"
+                              aria-current={activeProductFilter === 'actions' && actionsSubView === 'storage' ? 'page' : undefined}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                setActivePage(PAGE_TYPES.USAGE);
+                                handleProductSelect('actions', 'storage');
+                              }}
+                            >
+                              <NavList.LeadingVisual><DatabaseIcon /></NavList.LeadingVisual>
+                              Actions Storage
+                            </NavList.Item>
+                          </React.Fragment>
+                        );
+                      }
+                    }
+
+                    return (
+                      <NavList.Item
+                        key={product}
+                        href="#"
+                        aria-current={activeProductFilter === product && !actionsSubView ? 'page' : undefined}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          setActivePage(PAGE_TYPES.USAGE);
+                          handleProductSelect(product);
+                        }}
+                      >
+                        <NavList.LeadingVisual>{PRODUCT_ICONS[product] ?? <PackageIcon />}</NavList.LeadingVisual>
+                        {formatDisplayValue(product, 'product')}
+                      </NavList.Item>
+                    );
+                  })}
                 </NavList.SubNav>
               )}
             </NavList.Item>
