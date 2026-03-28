@@ -86,7 +86,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       plotOptions: { column: { stacking: 'normal' } },
       series,
     };
-  }, [activeReport, timeBucket, visibleRows, effectiveMetricKey, stackField, activeMetric]);
+  }, [activeReport, timeBucket, visibleRows, stackField, activeMetric, dataField]);
 
   if (!options) return null;
 

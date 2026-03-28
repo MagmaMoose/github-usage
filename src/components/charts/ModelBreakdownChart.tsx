@@ -151,7 +151,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       plotOptions: { bar: { stacking: 'normal' } },
       series,
     };
-  }, [activeReport, groupByColumn, stackField, effectiveMetricKey, visibleRows, hiddenGroups, toggleGroup, activeMetric]);
+  }, [activeReport, groupByColumn, stackField, visibleRows, hiddenGroups, toggleGroup, activeMetric, dataField]);
 
   const tokenOptions = useMemo((): Highcharts.Options | null => {
     if (!activeReport || !isTokenReport) return null;

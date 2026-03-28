@@ -10,7 +10,7 @@ export function createZipArchive(files: Record<string, string>): Blob {
     zipData[name] = strToU8(content);
   }
   const zipped = zipSync(zipData);
-  return new Blob([zipped], { type: 'application/zip' });
+  return new Blob([zipped as unknown as BlobPart], { type: 'application/zip' });
 }
 
 /**

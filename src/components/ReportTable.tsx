@@ -205,14 +205,14 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     });
   }, []);
 
-  const emptyRow: Partial<TableRow> = {
-    count: 0, grossAmount: 0, discountAmount: 0, netAmount: 0, quantity: 0,
-    totalInputTokens: 0, totalOutputTokens: 0, totalCacheCreationTokens: 0, totalCacheReadTokens: 0,
-    totalMinutes: 0, totalStorageGBH: 0,
-  };
-
   const tableData = useMemo(() => {
     if (!activeReport) return [];
+
+    const emptyRow = {
+      count: 0, grossAmount: 0, discountAmount: 0, netAmount: 0, quantity: 0,
+      totalInputTokens: 0, totalOutputTokens: 0, totalCacheCreationTokens: 0, totalCacheReadTokens: 0,
+      totalMinutes: 0, totalStorageGBH: 0,
+    };
 
     // Helper to resolve a display value for group labels
     const resolveGroupLabel = (val: unknown): string => {
@@ -232,7 +232,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       }
 
       return [...groups.entries()].map(([key, rows]) => {
-        const first = rows[0] as Record<string, unknown>;
+        const first = rows[0] as unknown as Record<string, unknown>;
         const base: TableRow = {
           ...emptyRow,
           id: key,
@@ -303,18 +303,16 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     return populated;
   }, [activeReport, isFlatReport, visibleRows]);
 
-  const activeFilterValues = filters[groupByColumn] ?? [];
-
   const handleGroupClick = useCallback(
     (value: string, e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      // Toggle: if already filtered to this value, clear the filter
-      const isActive = activeFilterValues.some((v) => v.toLowerCase() === value.toLowerCase());
+      const currentFilterValues = filters[groupByColumn] ?? [];
+      const isActive = currentFilterValues.some((v) => v.toLowerCase() === value.toLowerCase());
       setFilter(groupByColumn, isActive ? [] : [value]);
       if (!isActive) onGroupClick?.();
     },
-    [groupByColumn, activeFilterValues, setFilter, onGroupClick],
+    [groupByColumn, filters, setFilter, onGroupClick],
   );
 
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
@@ -465,7 +463,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     // Helper to build flat columns, skipping the one used as the group column
     const flatCol = (key: string, header: string, fmt?: 'datetime' | 'end') => {
       if (key === groupByColumn) return null;
-      return columnHelper.accessor(key as keyof TableRow, {
+      return columnHelper.accessor(key as string & keyof TableRow, {
         header,
         cell: (info) => {
           const v = info.getValue();

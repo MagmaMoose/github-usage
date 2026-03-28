@@ -25,7 +25,7 @@ export function groupBy<T extends AnyReportRow>(
 export function sumBy<T extends AnyReportRow>(rows: T[], column: string): number {
   if (column === '_count') return rows.length;
   return rows.reduce((sum, row) => {
-    const val = (row as Record<string, unknown>)[column];
+    const val = (row as unknown as Record<string, unknown>)[column];
     return sum + (typeof val === 'number' ? val : 0);
   }, 0);
 }
@@ -147,7 +147,7 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
   // Flat report types: extract users, orgs, repos from non-billing rows
   for (const row of rows) {
     if (isBillingRow(row)) continue;
-    const r = row as Record<string, unknown>;
+    const r = row as unknown as Record<string, unknown>;
     if (r.userLogin) users.add(String(r.userLogin));
     if (r.login) users.add(String(r.login));
     if (r.organization) organizations.add(String(r.organization));
@@ -158,7 +158,7 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
   const flatDates = rows
     .filter((r) => !isBillingRow(r))
     .map((r) => {
-      const rec = r as Record<string, unknown>;
+      const rec = r as unknown as Record<string, unknown>;
       return String(rec.lastPushedDate ?? rec.lastActivityAt ?? rec.createdAt ?? '').slice(0, 10);
     })
     .filter(Boolean)
