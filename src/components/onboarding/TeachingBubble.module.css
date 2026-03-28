@@ -1,0 +1,70 @@
+.teachingBubbleWrapper {
+  position: relative;
+  animation: onboardingPulse 2s ease-in-out infinite;
+  border-radius: var(--borderRadius-medium);
+}
+
+.teachingBubble {
+  z-index: 100;
+  width: 280px;
+  max-width: calc(100vw - 2rem);
+}
+
+/* Ensure popover content doesn't overflow viewport */
+.teachingBubble > div {
+  max-width: calc(100vw - var(--base-size-32, 32px));
+}
+
+.teachingBubbleShiftLeft > div {
+  transform: translateX(-70%);
+}
+
+.teachingBubbleContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8);
+  font-size: var(--text-body-size-medium, 14px);
+  font-weight: var(--base-text-weight-normal, 400);
+  line-height: var(--text-body-lineHeight-medium, 1.5);
+}
+
+.teachingBubbleHeading {
+  font-size: var(--text-title-size-small);
+  font-weight: var(--base-text-weight-semibold);
+  margin: 0;
+}
+
+.teachingBubbleBody {
+  font-size: var(--text-body-size-medium);
+  color: var(--fgColor-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.teachingBubbleFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--base-size-8);
+  margin-top: var(--base-size-4);
+}
+
+.teachingBubbleProgress {
+  font-size: var(--text-body-size-small);
+  color: var(--fgColor-muted);
+}
+
+.teachingBubbleActions {
+  display: flex;
+  gap: var(--base-size-8);
+  align-items: center;
+}
+
+@keyframes onboardingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--bgColor-accent-emphasis);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bgColor-accent-emphasis) 40%, transparent);
+  }
+}

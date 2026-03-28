@@ -250,7 +250,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
           )}
         </div>
       </div>
-      <HighchartsReact key={`${viewMode}-${effectiveMetricKey}-${[...hiddenGroups].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} immutable />
+      <HighchartsReact key={`${viewMode}-${effectiveMetricKey}-${[...hiddenGroups].sort().join(',')}`} highcharts={Highcharts} options={activeOptions} />
     </div>
   );
 }

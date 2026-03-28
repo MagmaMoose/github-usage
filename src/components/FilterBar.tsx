@@ -18,6 +18,7 @@ import {
   XCircleIcon,
 } from '@primer/octicons-react';
 import { humanizeColumn, formatDisplayValue } from '../lib/formatters';
+import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import styles from './FilterBar.module.css';
 
 type FilterableField = string;
@@ -270,7 +271,8 @@ export function FilterBar({
     <div className={styles.filterBar} ref={containerRef}>
       <div className={styles.filterBarInner}>
         {/* Group by dropdown */}
-        <ActionMenu>
+        <OnboardingBubble step={ONBOARDING_STEPS.GROUP_BY}>
+          <ActionMenu>
           <ActionMenu.Button
             size="medium"
             className={styles.filterButton}
@@ -295,6 +297,7 @@ export function FilterBar({
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
+        </OnboardingBubble>
 
         {/* Input area with inline tokens */}
         <div className={styles.inputWrapper}>

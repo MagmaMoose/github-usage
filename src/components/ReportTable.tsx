@@ -15,6 +15,7 @@ import {
 import { Avatar, Button, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
 import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, WorkflowIcon } from '@primer/octicons-react';
+import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
@@ -447,7 +448,9 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
           </div>
         </div>
         <div className={styles.controlsRow}>
-          <ColumnVisibilityPanel table={table} />
+          <OnboardingBubble step={ONBOARDING_STEPS.COLUMNS} alignRight>
+            <ColumnVisibilityPanel table={table} />
+          </OnboardingBubble>
         </div>
       </div>
 

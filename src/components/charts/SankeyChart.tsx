@@ -364,7 +364,7 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
       <div className={styles.chartHeader}>
         <h3 className={styles.chartTitle}>{result.title}</h3>
       </div>
-      <HighchartsReact highcharts={Highcharts} options={result.options} immutable />
+      <HighchartsReact highcharts={Highcharts} options={result.options} />
     </div>
   );
 }

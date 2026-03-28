@@ -89,7 +89,7 @@ export function TokenBreakdownChart() {
       <div className={styles.chartHeader}>
         <h3 className={styles.chartTitle}>Token Usage by User (Top 10)</h3>
       </div>
-      <HighchartsReact highcharts={Highcharts} options={options} immutable />
+      <HighchartsReact highcharts={Highcharts} options={options} />
     </div>
   );
 }

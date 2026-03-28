@@ -13,6 +13,7 @@ import {
   Button,
   Heading,
   IconButton,
+  Spinner,
   Stack,
   Text,
   UnderlineNav,
@@ -21,11 +22,9 @@ import { PageHeader } from '@primer/react/experimental';
 import type { IconProps } from '@primer/octicons-react';
 import {
   ColumnsIcon,
-  CopyIcon,
   CopilotIcon,
   DownloadIcon,
   GraphIcon,
-  LinkIcon,
   OrganizationIcon,
   PackageIcon,
   PersonIcon,
@@ -44,6 +43,7 @@ import { TimeSeriesChart } from './charts/TimeSeriesChart';
 import { GroupBreakdownChart } from './charts/ModelBreakdownChart';
 import { CostBreakdownChart } from './charts/CostBreakdownChart';
 import { SankeyChart } from './charts/SankeyChart';
+import { LazyChart } from './charts/LazyChart';
 import { PeriodSelector } from './PeriodSelector';
 import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
@@ -55,7 +55,7 @@ import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
-import { copyShareToClipboard } from '../lib/share-state';
+import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import styles from '../App.module.css';
 
 type ViewTab = 'charts' | 'table';
@@ -130,7 +130,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   useHighchartsInit();
   const {
     reports: allReports,
-    rawCsvs: allRawCsvs,
     activeReportIndex,
     setActiveReport,
     clearAllReports,
@@ -138,14 +137,13 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     addReport,
     groupByColumn,
     setGroupByColumn,
-    timeBucket,
-    periodKey,
     searchQuery,
     setSearchQuery,
     filters,
     setFilter,
     clearFilters,
     visibleRows: contextVisibleRows,
+    isHydrating,
   } = useReport();
 
   // Filter reports to only those matching the current page's allowed types
@@ -153,11 +151,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     if (!allowedReportTypes) return allReports;
     return allReports.filter((r) => allowedReportTypes.includes(r.type));
   }, [allReports, allowedReportTypes]);
-
-  const rawCsvs = useMemo(() => {
-    if (!allowedReportTypes) return allRawCsvs;
-    return allRawCsvs.filter((_, i) => allowedReportTypes.includes(allReports[i]?.type));
-  }, [allRawCsvs, allReports, allowedReportTypes]);
 
   // Active report is only valid if it matches this page's types
   const activeReport = useMemo(() => {
@@ -209,8 +202,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [shareCopied, setShareCopied] = useState(false);
-
   const handleReset = useCallback(() => {
     clearAllReports();
   }, [clearAllReports]);
@@ -244,19 +235,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     if (!activeReport) return;
     downloadReportAsCsv(activeReport);
   }, [activeReport]);
-
-  const handleShare = useCallback(async () => {
-    const csvs = reports.map((r, i) => ({ fileName: r.fileName, content: rawCsvs[i] }));
-    const result = await copyShareToClipboard(
-      { groupBy: groupByColumn, timeBucket, period: periodKey, search: searchQuery, filters },
-      csvs,
-    );
-    setShareCopied(true);
-    setTimeout(() => setShareCopied(false), 2000);
-    if (result === 'csv') {
-      console.info('Report data too large for URL — raw CSV copied to clipboard');
-    }
-  }, [reports, rawCsvs, groupByColumn, timeBucket, periodKey, searchQuery, filters]);
 
   // Filter fields available for the current report data
   const availableFilterFields = useMemo(() => {
@@ -340,6 +318,13 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
 
   // Empty state
   if (reports.length === 0) {
+    if (isHydrating) {
+      return (
+        <div className={styles.pageStack} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <Spinner size="large" srText="Loading cached reports" delay="short" />
+        </div>
+      );
+    }
     return (
       <div className={styles.pageStack}>
         <PageHeader className={styles.pageHeader}>
@@ -403,9 +388,11 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               </ActionMenu>
             )}
             <PeriodSelector />
-            <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
-              Add file
-            </Button>
+            <OnboardingBubble step={ONBOARDING_STEPS.ADD_FILE} alignRight>
+              <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
+                Add file
+              </Button>
+            </OnboardingBubble>
             <Button size="small" variant="invisible" leadingVisual={XIcon} onClick={handleReset}>
               Clear
             </Button>
@@ -485,33 +472,32 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
       })()}
 
       <section className={styles.contentSurface} aria-label="Usage viewer content">
-        <div className={styles.surfaceTabsRow}>{renderViewTabs()}</div>
+        <div className={styles.surfaceTabsRow}>
+          <OnboardingBubble step={ONBOARDING_STEPS.VIEW_TABS}>
+            {renderViewTabs()}
+          </OnboardingBubble>
+        </div>
 
         <div className={styles.sectionToolbar}>
           <div className={styles.toolbarLeading}>
-            <FilterBar
-              availableFields={availableFilterFields}
-              valuesByField={filterValuesByField}
-              filters={filters}
-              searchQuery={searchQuery}
-              fieldIcons={FIELD_ICONS}
-              groupByColumn={groupByColumn}
-              groupableColumns={groupableColumns}
-              onAddFilter={applyAdvancedFilter}
-              onRemoveFilter={removeAdvancedFilter}
-              onClearAll={clearAllToolbarFilters}
-              onSearchChange={setSearchQuery}
-              onGroupByChange={setGroupByColumn}
-            />
+            <OnboardingBubble step={ONBOARDING_STEPS.FILTER_BAR}>
+              <FilterBar
+                availableFields={availableFilterFields}
+                valuesByField={filterValuesByField}
+                filters={filters}
+                searchQuery={searchQuery}
+                fieldIcons={FIELD_ICONS}
+                groupByColumn={groupByColumn}
+                groupableColumns={groupableColumns}
+                onAddFilter={applyAdvancedFilter}
+                onRemoveFilter={removeAdvancedFilter}
+                onClearAll={clearAllToolbarFilters}
+                onSearchChange={setSearchQuery}
+                onGroupByChange={setGroupByColumn}
+              />
+            </OnboardingBubble>
           </div>
           <div className={styles.toolbarActions}>
-            <IconButton
-              aria-label={shareCopied ? 'Link copied!' : 'Copy share link'}
-              icon={shareCopied ? CopyIcon : LinkIcon}
-              size="small"
-              variant="invisible"
-              onClick={handleShare}
-            />
             <IconButton
               aria-label="Download current report CSV"
               icon={DownloadIcon}
@@ -539,15 +525,15 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               <div className={styles.chartSurface}>
                 <TimeSeriesChart metricOptions={chartMetricOptions} />
               </div>
-              <div className={styles.chartSurface}>
+              <LazyChart className={styles.chartSurface}>
                 <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
-              </div>
-              <div className={styles.chartSurface}>
+              </LazyChart>
+              <LazyChart className={styles.chartSurface}>
                 <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
-              </div>
-              <div className={styles.chartSurface}>
+              </LazyChart>
+              <LazyChart className={styles.chartSurface}>
                 <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
-              </div>
+              </LazyChart>
             </div>
           )}
 

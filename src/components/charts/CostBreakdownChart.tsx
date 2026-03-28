@@ -115,7 +115,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
           </div>
         )}
       </div>
-      <HighchartsReact key={effectiveMetricKey} highcharts={Highcharts} options={options} immutable />
+      <HighchartsReact key={effectiveMetricKey} highcharts={Highcharts} options={options} />
     </div>
   );
 }

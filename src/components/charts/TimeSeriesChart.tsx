@@ -224,7 +224,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
         </SegmentedControl>
         </div>
       </div>
-      <HighchartsReact key={lineMode} highcharts={Highcharts} options={options} immutable />
+      <HighchartsReact key={lineMode} highcharts={Highcharts} options={options} />
     </div>
   );
 }

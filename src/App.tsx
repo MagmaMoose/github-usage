@@ -16,6 +16,7 @@ import {
 import {
   MarkGithubIcon,
   MoonIcon,
+  QuestionIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
   SunIcon,
@@ -42,10 +43,12 @@ import { getStoredValue, setStoredValue, STORAGE_KEYS } from './lib/local-storag
 import { readShareData, clearShareHash } from './lib/share-state';
 import { readURLFilterState, writeURLFilterState } from './lib/url-state';
 import { formatDateRangeCompact } from './lib/formatters';
+import { OnboardingProvider, useOnboardingContext } from './components/onboarding';
 import styles from './App.module.css';
 
 function AppContent() {
   const { colorMode, setColorMode } = useColorMode();
+  const onboarding = useOnboardingContext();
   const {
     reports,
     activeReport,
@@ -141,12 +144,17 @@ function AppContent() {
 
   // Auto-switch page when a NEW report is added that matches a different page type
   const prevReportCountRef = useRef(reports.length);
+  const isInitialHydrationRef = useRef(true);
   useEffect(() => {
-    // Only auto-switch when reports are added, not on every render
-    if (reports.length > prevReportCountRef.current && activeReport) {
-      const reportPage = pageTypeForReport(activeReport.type);
-      if (reportPage !== activePage) {
-        setActivePage(reportPage);
+    if (reports.length > prevReportCountRef.current) {
+      // Skip auto-switch on initial hydration (respect URL page param)
+      if (isInitialHydrationRef.current) {
+        isInitialHydrationRef.current = false;
+      } else if (activeReport) {
+        const reportPage = pageTypeForReport(activeReport.type);
+        if (reportPage !== activePage) {
+          setActivePage(reportPage);
+        }
       }
     }
     prevReportCountRef.current = reports.length;
@@ -339,6 +347,13 @@ function AppContent() {
           variant="invisible"
           size="small"
         />
+        <IconButton
+          aria-label="Restart feature tour"
+          icon={QuestionIcon}
+          variant="invisible"
+          size="small"
+          onClick={onboarding.restart}
+        />
       </div>
     </div>
   );
@@ -360,13 +375,13 @@ function AppContent() {
       <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
         {sidebarCollapsed && (
           <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 1 }}>
-            <IconButton
-              aria-label="Expand sidebar"
-              icon={SidebarExpandIcon}
-              variant="invisible"
-              size="small"
-              onClick={() => setSidebarCollapsed(false)}
-            />
+              <IconButton
+                aria-label="Expand sidebar"
+                icon={SidebarExpandIcon}
+                variant="invisible"
+                size="small"
+                onClick={() => setSidebarCollapsed(false)}
+              />
           </div>
         )}
         <ReportPageLayout schema={activeSchema} allowedReportTypes={PAGE_REPORT_TYPES[activePage]} metricOptions={effectiveMetricOptions} />
@@ -378,7 +393,9 @@ function AppContent() {
 export default function App() {
   return (
     <ReportProvider>
-      <AppContent />
+      <OnboardingProvider>
+        <AppContent />
+      </OnboardingProvider>
     </ReportProvider>
   );
 }

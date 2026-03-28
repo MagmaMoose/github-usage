@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
 import type { DateRange } from './report-context';
-import { parseCSV } from '../lib/csv-parser';
-import { getCachedCSVs, setCachedCSVs, clearCachedCSVs } from '../lib/local-storage';
+import { getCachedParsedReports, getCachedRawCSV, setCachedCSV, removeCachedCSV, clearCachedCSVs } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 
 /** Fast FNV-1a hash for dedup — not crypto-grade, just collision-resistant enough for CSV content */
@@ -48,59 +47,76 @@ function buildInitialState(): ReportState {
 }
 
 export function ReportProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ReportState>(() => {
-    const initial = buildInitialState();
+  const [state, setState] = useState<ReportState>(buildInitialState);
+  const [isHydrating, setIsHydrating] = useState(true);
 
-    // Restore cached CSVs from localStorage on mount
-    const cached = getCachedCSVs();
-    if (cached.length === 0) return initial;
+  // Restore cached CSVs from IndexedDB on mount (async)
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
 
-    const restoredReports: ParsedReport[] = [];
-    for (const entry of cached) {
-      try {
-        restoredReports.push(parseCSV(entry.content, entry.fileName));
-      } catch {
-        // Skip corrupted cache entries
+    getCachedParsedReports().then(async (cached) => {
+      if (cached.length === 0) {
+        setIsHydrating(false);
+        return;
       }
-    }
 
-    if (restoredReports.length > 0) {
-      // Validate URL-restored filters against actual data to prevent
-      // "No matching usage rows" flash on initial render
-      const rows = restoredReports[0].rows as unknown as Record<string, unknown>[];
+      const restoredReports = cached.map((e) => e.parsed);
 
-      let validPeriodKey = initial.periodKey;
-      if (validPeriodKey !== 'all') {
-        const availablePeriods = [
-          ...new Set(rows.map((row) => String(row.date ?? '').slice(0, 7))),
-        ].filter(Boolean);
+      if (restoredReports.length === 0) {
+        setIsHydrating(false);
+        return;
+      }
 
-        if (!availablePeriods.includes(validPeriodKey)) {
-          validPeriodKey = 'all';
+      // Render immediately with parsed data (no raw CSVs yet)
+      setState((prev) => {
+        if (prev.reports.length > 0) return prev;
+
+        const urlState = readURLFilterState();
+        // Validate against ALL restored reports so cross-report filters survive
+        const allRows = restoredReports.flatMap((r) => r.rows) as unknown as Record<string, unknown>[];
+
+        let validPeriodKey = urlState.period ?? 'all';
+        if (validPeriodKey !== 'all') {
+          const availablePeriods = [
+            ...new Set(allRows.map((row) => String(row.date ?? '').slice(0, 7))),
+          ].filter(Boolean);
+          if (!availablePeriods.includes(validPeriodKey)) {
+            validPeriodKey = 'all';
+          }
         }
-      }
 
-      // Drop any advanced filter values that don't exist in the data
-      const validFilters: Record<string, string[]> = {};
-      for (const [field, values] of Object.entries(initial.filters)) {
-        const dataValues = new Set(rows.map((r) => String(r[field] ?? '').toLowerCase()));
-        const kept = values.filter((v) => dataValues.has(v.toLowerCase()));
-        if (kept.length > 0) validFilters[field] = kept;
-      }
+        const validFilters: Record<string, string[]> = {};
+        const rawFilters = urlState.filters ?? {};
+        for (const [field, values] of Object.entries(rawFilters)) {
+          const dataValues = new Set(allRows.map((r) => String(r[field] ?? '').toLowerCase()));
+          const kept = values.filter((v) => dataValues.has(v.toLowerCase()));
+          if (kept.length > 0) validFilters[field] = kept;
+        }
 
-      return {
-        ...initial,
-        reports: restoredReports,
-        rawCsvs: cached.map((c) => c.content),
-        fileHashes: new Set(cached.map((c) => simpleHash(c.content))),
-        activeReportIndex: 0,
-        periodKey: validPeriodKey,
-        filters: validFilters,
-      };
-    }
+        return {
+          ...prev,
+          reports: restoredReports,
+          rawCsvs: cached.map(() => ''), // placeholder, backfilled below
+          activeReportIndex: 0,
+          periodKey: validPeriodKey,
+          filters: validFilters,
+        };
+      });
+      setIsHydrating(false);
 
-    return initial;
-  });
+      // Backfill raw CSVs in background (needed for dedup + re-export)
+      const rawCsvs = await Promise.all(
+        cached.map(async (e) => (await getCachedRawCSV(e.fileName)) ?? ''),
+      );
+      setState((prev) => ({
+        ...prev,
+        rawCsvs,
+        fileHashes: new Set(rawCsvs.map((c) => simpleHash(c))),
+      }));
+    });
+  }, []);
 
   // Sync filter state to URL params whenever it changes
   useEffect(() => {
@@ -145,14 +161,8 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       const nextHashes = new Set(prev.fileHashes);
       nextHashes.add(hash);
 
-      // Persist all CSVs to localStorage
-      setCachedCSVs(
-        nextRawCsvs.map((content, i) => ({
-          fileName: nextReports[i].fileName,
-          content,
-          cachedAt: new Date().toISOString(),
-        })),
-      );
+      // Persist raw + parsed to IndexedDB by filename
+      setCachedCSV(report.fileName, rawCsv, report);
 
       return {
         ...prev,
@@ -170,21 +180,12 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
   const removeReport = useCallback((index: number) => {
     setState((prev) => {
+      // Remove from localStorage by filename
+      const removedReport = prev.reports[index];
+      if (removedReport) removeCachedCSV(removedReport.fileName);
+
       const reports = prev.reports.filter((_, i) => i !== index);
       const rawCsvs = prev.rawCsvs.filter((_, i) => i !== index);
-
-      // Sync localStorage with remaining CSVs
-      if (reports.length === 0) {
-        clearCachedCSVs();
-      } else {
-        setCachedCSVs(
-          rawCsvs.map((content, i) => ({
-            fileName: reports[i].fileName,
-            content,
-            cachedAt: new Date().toISOString(),
-          })),
-        );
-      }
 
       // If in combined view and only 0-1 reports remain, snap to index 0
       let nextIndex = prev.activeReportIndex;
@@ -240,18 +241,19 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setPeriodKey = useCallback((periodKey: string) => {
-    setState((prev) => ({ ...prev, periodKey, dateRange: null }));
+    startTransition(() => setState((prev) => ({ ...prev, periodKey, dateRange: null })));
   }, []);
 
   const setDateRange = useCallback((dateRange: DateRange | null) => {
-    setState((prev) => ({ ...prev, dateRange, periodKey: dateRange ? 'custom' : 'all' }));
+    startTransition(() => setState((prev) => ({ ...prev, dateRange, periodKey: dateRange ? 'custom' : 'all' })));
   }, []);
 
   const setSearchQuery = useCallback((searchQuery: string) => {
-    setState((prev) => ({ ...prev, searchQuery }));
+    startTransition(() => setState((prev) => ({ ...prev, searchQuery })));
   }, []);
 
   const setFilter = useCallback((column: string, values: string[]) => {
+    startTransition(() => {
     setState((prev) => {
       const nextFilters = { ...prev.filters };
 
@@ -266,10 +268,11 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         filters: nextFilters,
       };
     });
+    });
   }, []);
 
   const clearFilters = useCallback(() => {
-    setState((prev) => ({ ...prev, filters: {} }));
+    startTransition(() => setState((prev) => ({ ...prev, filters: {} })));
   }, []);
 
   // Build a synthetic merged report when activeReportIndex === -1
@@ -316,36 +319,39 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const activeReportType = activeReport?.type ?? null;
   const normalizedSearchQuery = state.searchQuery.trim().toLowerCase();
 
-  const visibleRows = (activeReport?.rows ?? []).filter((row) => {
-    const rowRecord = row as unknown as Record<string, unknown>;
-    const matchesPeriod =
-      state.periodKey === 'all' ||
-      (state.dateRange
-        ? String(rowRecord.date ?? '') >= state.dateRange.start &&
-          String(rowRecord.date ?? '') <= state.dateRange.end
-        : String(rowRecord.date ?? '').startsWith(state.periodKey));
+  const visibleRows = useMemo(() => {
+    return (activeReport?.rows ?? []).filter((row) => {
+      const rowRecord = row as unknown as Record<string, unknown>;
+      const matchesPeriod =
+        state.periodKey === 'all' ||
+        (state.dateRange
+          ? String(rowRecord.date ?? '') >= state.dateRange.start &&
+            String(rowRecord.date ?? '') <= state.dateRange.end
+          : String(rowRecord.date ?? '').startsWith(state.periodKey));
 
-    const matchesAdvancedFilters = Object.entries(state.filters).every(([field, values]) => {
-      if (values.length === 0) return true;
+      const matchesAdvancedFilters = Object.entries(state.filters).every(([field, values]) => {
+        if (values.length === 0) return true;
 
-      const currentValue = String(rowRecord[field] ?? '').toLowerCase();
-      return values.some((value) => currentValue === value.toLowerCase());
+        const currentValue = String(rowRecord[field] ?? '').toLowerCase();
+        return values.some((value) => currentValue === value.toLowerCase());
+      });
+
+      if (!matchesPeriod || !matchesAdvancedFilters) return false;
+      if (!normalizedSearchQuery) return true;
+
+      return Object.values(rowRecord).some((value) =>
+        String(value ?? '')
+          .toLowerCase()
+          .includes(normalizedSearchQuery),
+      );
     });
-
-    if (!matchesPeriod || !matchesAdvancedFilters) return false;
-    if (!normalizedSearchQuery) return true;
-
-    return Object.values(rowRecord).some((value) =>
-      String(value ?? '')
-        .toLowerCase()
-        .includes(normalizedSearchQuery),
-    );
-  });
+  }, [activeReport, state.periodKey, state.dateRange, state.filters, normalizedSearchQuery]);
 
   return (
     <ReportContext.Provider
       value={{
         ...state,
+        isHydrating,
         addReport,
         removeReport,
         clearAllReports,

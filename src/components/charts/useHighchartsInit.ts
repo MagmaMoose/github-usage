@@ -7,6 +7,12 @@ function applyTheme() {
   const theme = buildGitHubChartTheme();
   Highcharts.setOptions(theme);
 
+  // Disable animations globally for snappy filter/page transitions
+  Highcharts.setOptions({
+    chart: { animation: false },
+    plotOptions: { series: { animation: false } },
+  });
+
   // Re-apply visual styles (colors, backgrounds) to existing charts
   // without clobbering per-chart options like title, series, etc.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
