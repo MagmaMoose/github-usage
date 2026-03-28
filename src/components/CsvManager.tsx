@@ -134,13 +134,13 @@ export function CsvManager() {
     [reports, rawCsvs],
   );
 
-  const handleDownloadAll = useCallback(() => {
+  const handleDownloadAll = useCallback(async () => {
     const files: Record<string, string> = {};
     reports.forEach((report, i) => {
       const csv = rawCsvs[i];
       if (csv) files[report.fileName] = csv;
     });
-    const blob = createZipArchive(files);
+    const blob = await createZipArchive(files);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

@@ -22,28 +22,30 @@ export function useShareHydration({
   setFilter,
 }: ShareHydrationDeps): void {
   useEffect(() => {
-    const shareData = readShareData();
-    if (!shareData) return;
+    (async () => {
+      const shareData = await readShareData();
+      if (!shareData) return;
 
-    for (const csv of shareData.c) {
-      try {
-        addReport(parseCSV(csv.data, csv.name), csv.data);
-      } catch {
-        // Skip corrupted share entries
+      for (const csv of shareData.c) {
+        try {
+          addReport(parseCSV(csv.data, csv.name), csv.data);
+        } catch {
+          // Skip corrupted share entries
+        }
       }
-    }
 
-    if (shareData.s.groupBy) setGroupByColumn(shareData.s.groupBy);
-    if (shareData.s.timeBucket) setTimeBucket(shareData.s.timeBucket as TimeBucket);
-    if (shareData.s.period) setPeriodKey(shareData.s.period);
-    if (shareData.s.search) setSearchQuery(shareData.s.search);
-    if (shareData.s.filters) {
-      for (const [field, values] of Object.entries(shareData.s.filters)) {
-        setFilter(field, values);
+      if (shareData.s.groupBy) setGroupByColumn(shareData.s.groupBy);
+      if (shareData.s.timeBucket) setTimeBucket(shareData.s.timeBucket as TimeBucket);
+      if (shareData.s.period) setPeriodKey(shareData.s.period);
+      if (shareData.s.search) setSearchQuery(shareData.s.search);
+      if (shareData.s.filters) {
+        for (const [field, values] of Object.entries(shareData.s.filters)) {
+          setFilter(field, values);
+        }
       }
-    }
 
-    clearShareHash();
+      clearShareHash();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

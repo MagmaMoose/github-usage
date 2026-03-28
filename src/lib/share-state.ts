@@ -1,4 +1,3 @@
-import LZString from 'lz-string';
 import type { URLFilterState } from './url-state';
 
 /** Payload compressed into the URL hash for sharing */
@@ -18,10 +17,11 @@ const MAX_URL_LENGTH = 8_000;
  * Compress current state + CSV data into a shareable URL.
  * Returns the full URL string, or null if the data is too large.
  */
-export function buildShareURL(
+export async function buildShareURL(
   filterState: URLFilterState,
   csvs: { fileName: string; content: string }[],
-): string | null {
+): Promise<string | null> {
+  const LZString = (await import('lz-string')).default;
   const payload: SharePayload = {
     s: filterState,
     c: csvs.map((csv) => ({ name: csv.fileName, data: csv.content })),
@@ -38,7 +38,7 @@ export function buildShareURL(
  * Check the current URL hash for compressed share data.
  * Returns the decoded payload or null if nothing is present.
  */
-export function readShareData(): SharePayload | null {
+export async function readShareData(): Promise<SharePayload | null> {
   const hash = window.location.hash;
   if (!hash.startsWith(`#${HASH_PREFIX}`)) return null;
 
@@ -46,6 +46,7 @@ export function readShareData(): SharePayload | null {
   if (!compressed) return null;
 
   try {
+    const LZString = (await import('lz-string')).default;
     const json = LZString.decompressFromEncodedURIComponent(compressed);
     if (!json) return null;
     return JSON.parse(json) as SharePayload;
@@ -70,7 +71,7 @@ export async function copyShareToClipboard(
   filterState: URLFilterState,
   csvs: { fileName: string; content: string }[],
 ): Promise<'url' | 'csv'> {
-  const url = buildShareURL(filterState, csvs);
+  const url = await buildShareURL(filterState, csvs);
 
   if (url) {
     await navigator.clipboard.writeText(url);

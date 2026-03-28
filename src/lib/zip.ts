@@ -1,10 +1,9 @@
-import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
-
 /**
  * Create a ZIP archive from a map of filename → CSV content.
  * Returns a Blob ready for download.
  */
-export function createZipArchive(files: Record<string, string>): Blob {
+export async function createZipArchive(files: Record<string, string>): Promise<Blob> {
+  const { zipSync, strToU8 } = await import('fflate');
   const zipData: Record<string, Uint8Array> = {};
   for (const [name, content] of Object.entries(files)) {
     zipData[name] = strToU8(content);
@@ -20,6 +19,7 @@ export function createZipArchive(files: Record<string, string>): Blob {
 export async function extractCsvsFromZip(
   file: File,
 ): Promise<Array<{ name: string; content: string }>> {
+  const { unzipSync, strFromU8 } = await import('fflate');
   const buffer = await file.arrayBuffer();
   const unzipped = unzipSync(new Uint8Array(buffer));
   const csvFiles: Array<{ name: string; content: string }> = [];
