@@ -18,7 +18,7 @@ import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, WorkflowIcon } from
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
-import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue } from '../lib/formatters';
+import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl } from '../lib/formatters';
 import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
@@ -271,7 +271,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
                 onClick={(e) => handleGroupClick(value, e)}
                 title={`Filter to ${value}`}
               >
-                <Avatar src={`https://github.com/${value}.png?size=40`} size={20} alt={`@${value}`} />
+                <Avatar src={getAvatarUrl(value)} size={20} alt={`@${value}`} />
                 <span>{value}</span>
               </button>
             );

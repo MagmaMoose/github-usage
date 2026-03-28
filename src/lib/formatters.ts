@@ -187,6 +187,29 @@ export function isBot(username: string): boolean {
   return username.endsWith('[bot]');
 }
 
+/** Known GitHub App installation IDs for bot avatars */
+const BOT_APP_IDS: Record<string, number> = {
+  'dependabot[bot]': 29110,
+  'github-actions[bot]': 65916,
+  'renovate[bot]': 29139,
+  'github-advanced-security[bot]': 37929,
+  'copilot-swe-agent[bot]': 198982,
+};
+
+/** Get the GitHub avatar URL for a username, handling bot accounts correctly */
+export function getAvatarUrl(username: string, size = 40): string {
+  const appId = BOT_APP_IDS[username];
+  if (appId) {
+    return `https://avatars.githubusercontent.com/in/${appId}?s=${size}&v=4`;
+  }
+  if (isBot(username)) {
+    // Unknown bot: strip [bot] suffix and try as a regular user
+    const base = username.replace('[bot]', '');
+    return `https://github.com/${encodeURIComponent(base)}.png?size=${size}`;
+  }
+  return `https://github.com/${encodeURIComponent(username)}.png?size=${size}`;
+}
+
 /**
  * Format a workflow path for display.
  * - `.github/workflows/ci.yml` → `ci.yml`
