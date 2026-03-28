@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://austenstone.github.io/tbb/sitemap.xml
+Sitemap: https://austenstone.github.io/github-actions-usage-report/sitemap.xml

@@ -1,15 +1,15 @@
 {
-  "name": "TBB — GitHub Copilot Billing Dashboard",
-  "short_name": "TBB",
-  "description": "Drag-and-drop GitHub billing CSVs to visualize Copilot spend, premium request usage, and token consumption. 100% client-side.",
-  "start_url": "/tbb/",
-  "scope": "/tbb/",
+  "name": "GitHub Usage Report Viewer",
+  "short_name": "Usage Viewer",
+  "description": "Visualize your GitHub Usage Report. All processing is done client side and your usage report never leaves your computer.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
   "icons": [
     {
-      "src": "/tbb/favicon.svg",
+      "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
