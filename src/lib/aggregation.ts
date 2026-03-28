@@ -1,4 +1,4 @@
-import type { AnyReportRow, BillingRow, TimeBucket, ReportSummary, UsageReportRow, TokenUsageRow } from './types';
+import type { AnyReportRow, BillingRow, TimeBucket, ReportSummary, UsageReportRow, TokenUsageRow, DormantUsersRow, CopilotSeatActivityRow } from './types';
 
 /** Group rows by a column value, returning a map of group key → rows */
 export function groupBy<T extends AnyReportRow>(
@@ -21,10 +21,11 @@ export function groupBy<T extends AnyReportRow>(
   return groups;
 }
 
-/** Sum a numeric column across rows */
-export function sumBy<T extends AnyReportRow>(rows: T[], column: keyof T & string): number {
+/** Sum a numeric column across rows. Special key '_count' returns the row count. */
+export function sumBy<T extends AnyReportRow>(rows: T[], column: string): number {
+  if (column === '_count') return rows.length;
   return rows.reduce((sum, row) => {
-    const val = row[column];
+    const val = (row as Record<string, unknown>)[column];
     return sum + (typeof val === 'number' ? val : 0);
   }, 0);
 }
@@ -77,7 +78,7 @@ export function timeBucket<T extends BillingRow>(
 export function topN<T extends AnyReportRow>(
   rows: T[],
   groupColumn: keyof T & string,
-  metricColumn: keyof T & string,
+  metricColumn: string,
   n: number,
 ): Array<{ key: string; value: number; rows: T[] }> {
   const groups = groupBy(rows, groupColumn);
@@ -143,6 +144,49 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
     }
   }
 
+  // Flat report types: extract users, orgs, repos from non-billing rows
+  for (const row of rows) {
+    if (isBillingRow(row)) continue;
+    const r = row as Record<string, unknown>;
+    if (r.userLogin) users.add(String(r.userLogin));
+    if (r.login) users.add(String(r.login));
+    if (r.organization) organizations.add(String(r.organization));
+    if (r.repository) repositories.add(String(r.repository));
+  }
+
+  // Flat date ranges
+  const flatDates = rows
+    .filter((r) => !isBillingRow(r))
+    .map((r) => {
+      const rec = r as Record<string, unknown>;
+      return String(rec.lastPushedDate ?? rec.lastActivityAt ?? rec.createdAt ?? '').slice(0, 10);
+    })
+    .filter(Boolean)
+    .sort();
+  const allDates = [...dates, ...flatDates].filter(Boolean).sort();
+
+  // Flat report specific summaries
+  let totalMembers = 0;
+  let twoFactorCount = 0;
+  let totalSeats = 0;
+  let activeSeats = 0;
+
+  for (const row of rows) {
+    if (isBillingRow(row)) continue;
+    // Dormant users
+    if ('twoFactorEnabled' in row) {
+      totalMembers++;
+      if ((row as DormantUsersRow).twoFactorEnabled) twoFactorCount++;
+    }
+    // Seat activity
+    if ('lastActivityAt' in row) {
+      totalSeats++;
+      if ((row as CopilotSeatActivityRow).lastActivityAt && (row as CopilotSeatActivityRow).lastActivityAt !== 'None') {
+        activeSeats++;
+      }
+    }
+  }
+
   return {
     totalGrossAmount,
     totalNetAmount,
@@ -156,9 +200,13 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
     totalMinutes,
     totalStorageGBH,
     totalTokens,
+    totalMembers,
+    twoFactorCount,
+    totalSeats,
+    activeSeats,
     dateRange: {
-      start: dates[0] ?? '',
-      end: dates[dates.length - 1] ?? '',
+      start: allDates[0] ?? '',
+      end: allDates[allDates.length - 1] ?? '',
     },
   };
 }

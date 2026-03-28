@@ -460,7 +460,7 @@ function generateGhasReport() {
 
 // ── 5. Enterprise Members Export ────────────────────────────────
 
-function generateMemberExport() {
+function generateDormantUsers() {
   // Unquoted CSV
   const header = 'created_at,id,login,role,last_logged_ip,2fa_enabled?,outside_collaborator';
   const rows: string[] = [header];
@@ -593,7 +593,7 @@ function generateSeatActivityReport() {
 
 console.log('🎲 Generating fake example data...\n');
 
-generateMemberExport();
+generateDormantUsers();
 generateUsageReport();
 generatePremiumRequestReport();
 generateTokenUsageReport();

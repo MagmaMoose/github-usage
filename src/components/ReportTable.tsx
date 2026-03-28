@@ -19,8 +19,8 @@ import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
-import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl } from '../lib/formatters';
-import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
+import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime } from '../lib/formatters';
+import type { AnyReportRow, TokenUsageRow, UsageReportRow, CopilotSeatActivityRow, DormantUsersRow, GhasActiveCommittersRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
@@ -59,6 +59,25 @@ interface TableRow {
   // Usage report columns
   totalMinutes: number;
   totalStorageGBH: number;
+  // Seat activity columns (flat rows)
+  reportTime: string;
+  login: string;
+  lastAuthenticatedAt: string;
+  lastActivityAt: string;
+  lastSurfaceUsed: string;
+  organization: string;
+  // Dormant users columns (flat rows)
+  role: string;
+  createdAt: string;
+  memberId: number;
+  lastLoggedIp: string;
+  twoFactorEnabled: string;
+  outsideCollaborator: string;
+  // GHAS columns (flat rows)
+  userLogin: string;
+  repository: string;
+  lastPushedDate: string;
+  lastPushedEmail: string;
 }
 
 const columnHelper = createColumnHelper<TableRow>();
@@ -175,8 +194,12 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   const reportType = activeReport?.type;
   const isTokenReport = reportType === REPORT_TYPES.TOKEN_USAGE;
   const isUsageReport = reportType === REPORT_TYPES.USAGE_REPORT;
+  const isSeatActivity = reportType === REPORT_TYPES.COPILOT_SEAT_ACTIVITY;
+  const isDormantUsers = reportType === REPORT_TYPES.DORMANT_USERS;
+  const isGhas = reportType === REPORT_TYPES.GHAS_ACTIVE_COMMITTERS;
+  const isFlatReport = isSeatActivity || isDormantUsers || isGhas;
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'netAmount', desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: isFlatReport ? 'count' : 'netAmount', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
 
   const defaultVisibility: VisibilityState = {
@@ -184,6 +207,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     discountAmount: false,
     count: false,
     ...(isUsageReport && { quantity: false }),
+    ...(isFlatReport && { count: true }),
   };
   const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(() =>
     getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
@@ -198,14 +222,65 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     });
   }, []);
 
+  const emptyRow: Omit<TableRow, 'id' | 'group'> = {
+    count: 0, grossAmount: 0, discountAmount: 0, netAmount: 0, quantity: 0,
+    totalInputTokens: 0, totalOutputTokens: 0, totalCacheCreationTokens: 0, totalCacheReadTokens: 0,
+    totalMinutes: 0, totalStorageGBH: 0,
+    reportTime: '', login: '', lastAuthenticatedAt: '', lastActivityAt: '', lastSurfaceUsed: '', organization: '',
+    role: '', createdAt: '', memberId: 0, lastLoggedIp: '', twoFactorEnabled: '', outsideCollaborator: '',
+    userLogin: '', repository: '', lastPushedDate: '', lastPushedEmail: '',
+  };
+
   const tableData = useMemo(() => {
     if (!activeReport) return [];
+
+    // Helper to resolve a display value for group labels
+    const resolveGroupLabel = (val: unknown): string => {
+      if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+      return String(val ?? '(empty)');
+    };
+
+    // Flat report types: aggregate by groupByColumn, show count + first-row values
+    if (isFlatReport) {
+      const groups = new Map<string, AnyReportRow[]>();
+      for (const row of visibleRows as AnyReportRow[]) {
+        const raw = (row as unknown as Record<string, unknown>)[groupByColumn];
+        const key = raw === '' || raw === null || raw === undefined ? '(empty)' : resolveGroupLabel(raw);
+        const arr = groups.get(key);
+        if (arr) arr.push(row);
+        else groups.set(key, [row]);
+      }
+
+      return [...groups.entries()].map(([key, rows]) => {
+        const first = rows[0] as Record<string, unknown>;
+        const base: TableRow = {
+          ...emptyRow,
+          id: key,
+          group: key,
+          count: rows.length,
+        };
+        // Copy all string/number fields from the first row for display
+        for (const [field, val] of Object.entries(first)) {
+          if (field in base) {
+            if (typeof val === 'boolean') {
+              (base as Record<string, unknown>)[field] = val ? 'Yes' : 'No';
+            } else if (typeof val === 'string' || typeof val === 'number') {
+              (base as Record<string, unknown>)[field] = val;
+            }
+          }
+        }
+        return base;
+      });
+    }
+
+    // Aggregated rendering for billing report types
     const groups = groupBy(
       visibleRows as AnyReportRow[],
       groupByColumn as keyof AnyReportRow & string,
     );
     return [...groups.entries()].map(([key, rows]) => {
-      const base = {
+      const base: TableRow = {
+        ...emptyRow,
         id: key,
         group: key,
         count: rows.length,
@@ -213,12 +288,6 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
         discountAmount: sumBy(rows, 'discountAmount' as keyof AnyReportRow & string),
         netAmount: sumBy(rows, 'netAmount' as keyof AnyReportRow & string),
         quantity: sumBy(rows, 'quantity' as keyof AnyReportRow & string),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheCreationTokens: 0,
-        totalCacheReadTokens: 0,
-        totalMinutes: 0,
-        totalStorageGBH: 0,
       };
 
       if (isTokenReport) {
@@ -241,7 +310,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
 
       return base;
     });
-  }, [activeReport, groupByColumn, visibleRows, isTokenReport, isUsageReport]);
+  }, [activeReport, groupByColumn, visibleRows, isTokenReport, isUsageReport, isSeatActivity, isDormantUsers, isGhas]);
 
   const activeFilterValues = filters[groupByColumn] ?? [];
 
@@ -258,7 +327,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   );
 
   const columns = useMemo<ColumnDef<TableRow, unknown>[]>(() => {
-    const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization';
+    const isAvatarGroup = groupByColumn === 'username' || groupByColumn === 'organization' || groupByColumn === 'login' || groupByColumn === 'userLogin';
     const isModelGroup = groupByColumn === 'model';
 
     const cols: ColumnDef<TableRow, unknown>[] = [
@@ -329,18 +398,28 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       }) as ColumnDef<TableRow, unknown>,
     ];
 
-    // Shared financial columns
+    // Count/Rows column — always 2nd (right after group)
     cols.push(
-      columnHelper.accessor('quantity', {
-        header: 'Quantity',
+      columnHelper.accessor('count', {
+        header: isFlatReport ? 'Count' : 'Rows',
         cell: (info) => formatCompact(info.getValue()),
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
-      columnHelper.accessor('grossAmount', {
-        header: 'Gross',
-        cell: (info) => formatCurrency(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
+    );
+
+    // Shared financial columns (billing report types only)
+    if (!isFlatReport) {
+      cols.push(
+        columnHelper.accessor('quantity', {
+          header: 'Quantity',
+          cell: (info) => formatCompact(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
+        columnHelper.accessor('grossAmount', {
+          header: 'Gross',
+          cell: (info) => formatCurrency(info.getValue()),
+          meta: { align: 'end' },
+        }) as ColumnDef<TableRow, unknown>,
       columnHelper.accessor('discountAmount', {
         header: 'Discount',
         cell: (info) => formatCurrency(info.getValue()),
@@ -352,6 +431,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
         meta: { align: 'end' },
       }) as ColumnDef<TableRow, unknown>,
     );
+    }
 
     // Token columns (token usage reports only)
     if (isTokenReport) {
@@ -401,17 +481,58 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       );
     }
 
-    // Row count (always last)
-    cols.push(
-      columnHelper.accessor('count', {
-        header: 'Rows',
-        cell: (info) => formatCompact(info.getValue()),
-        meta: { align: 'end' },
-      }) as ColumnDef<TableRow, unknown>,
-    );
+    // Helper to build flat columns, skipping the one used as the group column
+    const flatCol = (key: keyof TableRow, header: string, fmt?: 'datetime' | 'end') => {
+      if (key === groupByColumn) return null;
+      return columnHelper.accessor(key, {
+        header,
+        cell: (info) => {
+          const v = info.getValue();
+          if (fmt === 'datetime') return formatDatetime(String(v));
+          return String(v ?? '') || '\u2014';
+        },
+        ...(fmt === 'end' && { meta: { align: 'end' as const } }),
+      }) as ColumnDef<TableRow, unknown>;
+    };
+
+    // Seat activity columns
+    if (isSeatActivity) {
+      [
+        flatCol('login', 'Login'),
+        flatCol('reportTime', 'Report Time', 'datetime'),
+        flatCol('lastAuthenticatedAt', 'Last Authenticated', 'datetime'),
+        flatCol('lastActivityAt', 'Last Activity', 'datetime'),
+        flatCol('lastSurfaceUsed', 'Surface'),
+        flatCol('organization', 'Organization'),
+      ].forEach((c) => c && cols.push(c));
+    }
+
+    // Dormant users columns
+    if (isDormantUsers) {
+      [
+        flatCol('login', 'Login'),
+        flatCol('memberId', 'ID', 'end'),
+        flatCol('role', 'Role'),
+        flatCol('createdAt', 'Created', 'datetime'),
+        flatCol('lastLoggedIp', 'Last IP'),
+        flatCol('twoFactorEnabled', '2FA'),
+        flatCol('outsideCollaborator', 'Outside Collab'),
+      ].forEach((c) => c && cols.push(c));
+    }
+
+    // GHAS columns
+    if (isGhas) {
+      [
+        flatCol('userLogin', 'User'),
+        flatCol('organization', 'Organization'),
+        flatCol('repository', 'Repository'),
+        flatCol('lastPushedDate', 'Last Pushed'),
+        flatCol('lastPushedEmail', 'Email'),
+      ].forEach((c) => c && cols.push(c));
+    }
 
     return cols;
-  }, [groupByColumn, isTokenReport, isUsageReport, handleGroupClick]);
+  }, [groupByColumn, isTokenReport, isUsageReport, isFlatReport, isSeatActivity, isDormantUsers, isGhas, handleGroupClick]);
 
   const table = useReactTable({
     data: tableData,

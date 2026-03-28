@@ -8,6 +8,8 @@ import type {
   TokenUsageRow,
   UsageReportRow,
   GhasActiveCommittersRow,
+  DormantUsersRow,
+  CopilotSeatActivityRow,
 } from './types';
 
 /** Load an example CSV from the examples/ directory */
@@ -473,21 +475,19 @@ describe('parseCSV — GHAS Active Committers (real file)', () => {
     const report = parseCSV(csv, 'ghas.csv');
     const row = report.rows[0] as GhasActiveCommittersRow;
     const expectedKeys: (keyof GhasActiveCommittersRow)[] = [
-      'userLogin', 'organizationRepository', 'lastPushedDate', 'lastPushedEmail',
+      'userLogin', 'organization', 'repository', 'lastPushedDate', 'lastPushedEmail',
     ];
     for (const key of expectedKeys) {
       expect(row).toHaveProperty(key);
     }
   });
 
-  it('organizationRepository contains org/repo format', () => {
+  it('splits organization/repository into separate fields', () => {
     const report = parseCSV(csv, 'ghas.csv');
     for (const row of report.rows as GhasActiveCommittersRow[]) {
-      expect(row.organizationRepository).toContain('/');
-      const parts = row.organizationRepository.split('/');
-      expect(parts.length).toBe(2);
-      expect(parts[0].length).toBeGreaterThan(0);
-      expect(parts[1].length).toBeGreaterThan(0);
+      expect(row.organization.length).toBeGreaterThan(0);
+      expect(row.repository.length).toBeGreaterThan(0);
+      expect(row.organization).not.toContain('/');
     }
   });
 
@@ -534,7 +534,7 @@ describe('parseCSV — GHAS Active Committers (real file)', () => {
     const row = report.rows[0] as GhasActiveCommittersRow;
     // PapaParse strips quotes, but GHAS format has no quotes to begin with
     expect(row.userLogin.startsWith('"')).toBe(false);
-    expect(row.organizationRepository.startsWith('"')).toBe(false);
+    expect(row.organization.startsWith('"')).toBe(false);
   });
 });
 
@@ -586,7 +586,7 @@ describe('cross-report schema validation', () => {
     expect(prRow).not.toHaveProperty('totalInputTokens');
   });
 
-  it('all 4 report types are uniquely detectable', () => {
+  it('all 4 original report types are uniquely detectable', () => {
     const files = [
       { file: 'premiumRequestUsageReport_1_c6fca30f0acd458098a95808eaf43399.csv', expected: REPORT_TYPES.PREMIUM_REQUEST },
       { file: 'Token.Usage.Report.csv', expected: REPORT_TYPES.TOKEN_USAGE },
@@ -652,5 +652,161 @@ describe('parseCSV — edge cases', () => {
     const row = report.rows[0] as UsageReportRow;
     expect(row.appliedCostPerQuantity).toBeCloseTo(0.000094086, 8);
     expect(row.quantity).toBe(49152);
+  });
+});
+
+// ─── Dormant Users (Real Example File) ─────────────────────────────────────────
+
+describe('parseCSV — Dormant Users (real file)', () => {
+  const csv = loadExample('export-octodemo-1774679438.csv');
+
+  it('detects report type correctly', () => {
+    const report = parseCSV(csv, 'export.csv');
+    expect(report.type).toBe(REPORT_TYPES.DORMANT_USERS);
+  });
+
+  it('parses all rows without errors', () => {
+    const report = parseCSV(csv, 'export.csv');
+    expect(report.rowCount).toBeGreaterThan(0);
+    expect(report.rows.length).toBe(report.rowCount);
+  });
+
+  it('maps all columns to camelCase properties', () => {
+    const report = parseCSV(csv, 'export.csv');
+    const row = report.rows[0] as DormantUsersRow;
+    const expectedKeys: (keyof DormantUsersRow)[] = [
+      'createdAt', 'id', 'login', 'role', 'lastLoggedIp', 'twoFactorEnabled', 'outsideCollaborator',
+    ];
+    for (const key of expectedKeys) {
+      expect(row).toHaveProperty(key);
+    }
+  });
+
+  it('parses id as a number', () => {
+    const report = parseCSV(csv, 'export.csv');
+    const row = report.rows[0] as DormantUsersRow;
+    expect(typeof row.id).toBe('number');
+    expect(row.id).toBeGreaterThan(0);
+  });
+
+  it('parses twoFactorEnabled as boolean', () => {
+    const report = parseCSV(csv, 'export.csv');
+    for (const row of report.rows as DormantUsersRow[]) {
+      expect(typeof row.twoFactorEnabled).toBe('boolean');
+    }
+  });
+
+  it('parses outsideCollaborator as boolean', () => {
+    const report = parseCSV(csv, 'export.csv');
+    for (const row of report.rows as DormantUsersRow[]) {
+      expect(typeof row.outsideCollaborator).toBe('boolean');
+    }
+  });
+
+  it('contains known roles', () => {
+    const report = parseCSV(csv, 'export.csv');
+    const roles = new Set((report.rows as DormantUsersRow[]).map((r) => r.role));
+    // At minimum the "user" role should exist
+    expect(roles.has('user')).toBe(true);
+  });
+
+  it('every row has a non-empty login', () => {
+    const report = parseCSV(csv, 'export.csv');
+    for (const row of report.rows as DormantUsersRow[]) {
+      expect(row.login.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('does NOT have billing columns', () => {
+    const report = parseCSV(csv, 'export.csv');
+    const row = report.rows[0] as DormantUsersRow;
+    expect(row).not.toHaveProperty('grossAmount');
+    expect(row).not.toHaveProperty('netAmount');
+  });
+});
+
+// ─── Copilot Seat Activity (Real Example File) ────────────────────────────────
+
+describe('parseCSV — Copilot Seat Activity (real file)', () => {
+  const csv = loadExample('octodemo-seat-activity-1774680875.csv');
+
+  it('detects report type correctly', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.type).toBe(REPORT_TYPES.COPILOT_SEAT_ACTIVITY);
+  });
+
+  it('parses all rows without errors', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.rowCount).toBeGreaterThan(0);
+    expect(report.rows.length).toBe(report.rowCount);
+  });
+
+  it('maps all columns to camelCase properties', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    const row = report.rows[0] as CopilotSeatActivityRow;
+    const expectedKeys: (keyof CopilotSeatActivityRow)[] = [
+      'reportTime', 'login', 'lastAuthenticatedAt', 'lastActivityAt', 'lastSurfaceUsed', 'organization',
+    ];
+    for (const key of expectedKeys) {
+      expect(row).toHaveProperty(key);
+    }
+  });
+
+  it('reportTime is an ISO datetime string', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    const row = report.rows[0] as CopilotSeatActivityRow;
+    expect(row.reportTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('lastSurfaceUsed contains editor info or "None"', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    for (const row of report.rows as CopilotSeatActivityRow[]) {
+      expect(row.lastSurfaceUsed.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('a user can appear multiple times (one row per org)', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    const loginCounts = new Map<string, number>();
+    for (const row of report.rows as CopilotSeatActivityRow[]) {
+      loginCounts.set(row.login, (loginCounts.get(row.login) ?? 0) + 1);
+    }
+    const multiOrgUsers = [...loginCounts.values()].filter((c) => c > 1);
+    expect(multiOrgUsers.length).toBeGreaterThan(0);
+  });
+
+  it('every row has a non-empty organization', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    for (const row of report.rows as CopilotSeatActivityRow[]) {
+      expect(row.organization.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('does NOT have billing columns', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    const row = report.rows[0] as CopilotSeatActivityRow;
+    expect(row).not.toHaveProperty('grossAmount');
+    expect(row).not.toHaveProperty('quantity');
+  });
+});
+
+// ─── Updated Cross-Report Schema Validation ───────────────────────────────────
+
+describe('cross-report: all 6 report types are uniquely detectable', () => {
+  it('detects all 6 report types from real example files', () => {
+    const files = [
+      { file: 'premiumRequestUsageReport_1_c6fca30f0acd458098a95808eaf43399.csv', expected: REPORT_TYPES.PREMIUM_REQUEST },
+      { file: 'Token.Usage.Report.csv', expected: REPORT_TYPES.TOKEN_USAGE },
+      { file: 'usageReport_1_7f2ed6006ee54fb8af73f5cbb7ac1f1d.csv', expected: REPORT_TYPES.USAGE_REPORT },
+      { file: 'ghas_active_committers_octodemo_2026-03-27T1521.csv', expected: REPORT_TYPES.GHAS_ACTIVE_COMMITTERS },
+      { file: 'export-octodemo-1774679438.csv', expected: REPORT_TYPES.DORMANT_USERS },
+      { file: 'octodemo-seat-activity-1774680875.csv', expected: REPORT_TYPES.COPILOT_SEAT_ACTIVITY },
+    ];
+
+    for (const { file, expected } of files) {
+      const csvText = loadExample(file);
+      const report = parseCSV(csvText, file);
+      expect(report.type).toBe(expected);
+    }
   });
 });

@@ -49,7 +49,7 @@ import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
 import { getReportSchema, type ReportSchema, type MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
-import { GROUPABLE_COLUMNS } from '../lib/types';
+import { GROUPABLE_COLUMNS, REPORT_TYPES } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
@@ -537,22 +537,31 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
             </div>
           )}
 
-          {activeTab === 'charts' && visibleRows.length > 0 && (
-            <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
-              <div className={styles.chartSurface}>
-                <TimeSeriesChart metricOptions={chartMetricOptions} />
+          {activeTab === 'charts' && visibleRows.length > 0 && (() => {
+            const isFlatReport = activeReport?.type === REPORT_TYPES.GHAS_ACTIVE_COMMITTERS
+              || activeReport?.type === REPORT_TYPES.DORMANT_USERS
+              || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY;
+            return (
+              <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
+                {!isFlatReport && (
+                  <div className={styles.chartSurface}>
+                    <TimeSeriesChart metricOptions={chartMetricOptions} />
+                  </div>
+                )}
+                <LazyChart className={styles.chartSurface}>
+                  <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
+                </LazyChart>
+                {!isFlatReport && (
+                  <LazyChart className={styles.chartSurface}>
+                    <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
+                  </LazyChart>
+                )}
+                <LazyChart className={styles.chartSurface}>
+                  <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
+                </LazyChart>
               </div>
-              <LazyChart className={styles.chartSurface}>
-                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
-              </LazyChart>
-              <LazyChart className={styles.chartSurface}>
-                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
-              </LazyChart>
-              <LazyChart className={styles.chartSurface}>
-                <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
-              </LazyChart>
-            </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'table' && visibleRows.length > 0 && (
             <ReportTable />

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ParsedReport } from '../lib/types';
+import { GROUPABLE_COLUMNS } from '../lib/types';
 import {
   PAGE_TYPES,
   PAGE_REPORT_TYPES,
   pageTypeForReport,
+  getReportSchema,
   type PageType,
 } from '../lib/report-schema';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
@@ -13,6 +15,7 @@ interface PageNavigationDeps {
   activeReport: ParsedReport | null;
   setActiveReport: (index: number) => void;
   setFilter: (column: string, values: string[]) => void;
+  setGroupByColumn: (column: string) => void;
   groupByColumn: string;
   timeBucket: string;
   periodKey: string;
@@ -31,6 +34,7 @@ export function usePageNavigation({
   activeReport,
   setActiveReport,
   setFilter,
+  setGroupByColumn,
   groupByColumn,
   timeBucket,
   periodKey,
@@ -39,19 +43,27 @@ export function usePageNavigation({
 }: PageNavigationDeps): PageNavigationReturn {
   const [activePage, setActivePageRaw] = useState<PageType>(() => {
     const urlState = readURLFilterState();
-    if (urlState.page === 'usage') return PAGE_TYPES.USAGE;
+    const page = urlState.page as PageType | undefined;
+    if (page && Object.values(PAGE_TYPES).includes(page)) return page;
     return PAGE_TYPES.COPILOT;
   });
 
   const setActivePage = useCallback((page: PageType) => {
     setActivePageRaw(page);
     setFilter('product', []);
+    // Reset groupBy to the new page's default if current is invalid
+    const targetReportType = PAGE_REPORT_TYPES[page][0];
+    const allowedCols = GROUPABLE_COLUMNS[targetReportType] as readonly string[];
+    if (!allowedCols.includes(groupByColumn)) {
+      const schema = getReportSchema(targetReportType);
+      setGroupByColumn(schema.defaultGroupBy);
+    }
     const allowedTypes = PAGE_REPORT_TYPES[page];
     const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
     if (matchIndex !== -1) {
       setActiveReport(matchIndex);
     }
-  }, [setFilter, reports, setActiveReport]);
+  }, [setFilter, setGroupByColumn, groupByColumn, reports, setActiveReport]);
 
   // Sync active page to URL
   useEffect(() => {

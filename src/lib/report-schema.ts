@@ -6,6 +6,9 @@ import {
   GraphIcon,
   ServerIcon,
   WorkflowIcon,
+  ShieldLockIcon,
+  PeopleIcon,
+  PersonIcon,
 } from '@primer/octicons-react';
 
 // Metric option displayed in TimeSeriesChart metric toggle
@@ -193,12 +196,111 @@ const USAGE_REPORT_SCHEMA: ReportSchema = {
   ],
 };
 
+const GHAS_ACTIVE_COMMITTERS_SCHEMA: ReportSchema = {
+  type: REPORT_TYPES.GHAS_ACTIVE_COMMITTERS,
+  label: 'GHAS Committers',
+  pluralLabel: 'GHAS Active Committer Reports',
+  icon: ShieldLockIcon,
+  description: 'GitHub Advanced Security active committer usage',
+  emptyStateTitle: 'GHAS Active Committers',
+  emptyStateText: 'Upload a GHAS active committers CSV to see which users are consuming Advanced Security licenses.',
+  primaryDimension: 'userLogin',
+  defaultGroupBy: 'userLogin',
+  metricOptions: [
+    { key: '_count', label: 'Repos', isCurrency: false },
+  ],
+  breakdownStackField: 'repository',
+  sankeyHierarchy: ['organization', 'userLogin', 'repository'],
+  heroCards: [
+    {
+      id: 'committers',
+      title: 'Active committers',
+      valueField: 'uniqueUsers',
+      format: 'number',
+    },
+    {
+      id: 'repos',
+      title: 'Repositories',
+      valueField: 'uniqueRepositories',
+      format: 'number',
+    },
+  ],
+  filterableFields: ['userLogin', 'organization', 'repository'],
+};
+
+const DORMANT_USERS_SCHEMA: ReportSchema = {
+  type: REPORT_TYPES.DORMANT_USERS,
+  label: 'Dormant Users',
+  pluralLabel: 'Dormant Users Reports',
+  icon: PeopleIcon,
+  description: 'Organization dormant users and security posture',
+  emptyStateTitle: 'Dormant Users Viewer',
+  emptyStateText: 'Upload a GitHub dormant users CSV to audit roles, 2FA status, and outside collaborators.',
+  primaryDimension: 'role',
+  defaultGroupBy: 'role',
+  metricOptions: [
+    { key: '_count', label: 'Members', isCurrency: false },
+  ],
+  breakdownStackField: 'role',
+  sankeyHierarchy: ['role', 'login'],
+  heroCards: [
+    {
+      id: 'total',
+      title: 'Total members',
+      valueField: 'totalMembers',
+      format: 'number',
+    },
+    {
+      id: '2fa',
+      title: '2FA enabled',
+      valueField: 'twoFactorCount',
+      format: 'number',
+    },
+  ],
+  filterableFields: ['login', 'role', 'twoFactorEnabled', 'outsideCollaborator'],
+};
+
+const COPILOT_SEAT_ACTIVITY_SCHEMA: ReportSchema = {
+  type: REPORT_TYPES.COPILOT_SEAT_ACTIVITY,
+  label: 'Seat Activity',
+  pluralLabel: 'Copilot Seat Activity Reports',
+  icon: PersonIcon,
+  description: 'Copilot seat assignment and activity tracking',
+  emptyStateTitle: 'Copilot Seat Activity',
+  emptyStateText: 'Upload a Copilot seat activity CSV to track seat utilization, last activity, and editor adoption.',
+  primaryDimension: 'login',
+  defaultGroupBy: 'organization',
+  metricOptions: [
+    { key: '_count', label: 'Seats', isCurrency: false },
+  ],
+  breakdownStackField: 'lastSurfaceUsed',
+  sankeyHierarchy: ['organization', 'login', 'lastSurfaceUsed'],
+  heroCards: [
+    {
+      id: 'seats',
+      title: 'Total seats',
+      valueField: 'totalSeats',
+      format: 'number',
+    },
+    {
+      id: 'active',
+      title: 'Active seats',
+      valueField: 'activeSeats',
+      format: 'number',
+    },
+  ],
+  filterableFields: ['login', 'lastSurfaceUsed', 'organization'],
+};
+
 // ─── Schema Registry ───────────────────────────────────────────────────────────
 
 const SCHEMA_REGISTRY: Record<string, ReportSchema> = {
   [REPORT_TYPES.PREMIUM_REQUEST]: PREMIUM_REQUEST_SCHEMA,
   [REPORT_TYPES.TOKEN_USAGE]: TOKEN_USAGE_SCHEMA,
   [REPORT_TYPES.USAGE_REPORT]: USAGE_REPORT_SCHEMA,
+  [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS]: GHAS_ACTIVE_COMMITTERS_SCHEMA,
+  [REPORT_TYPES.DORMANT_USERS]: DORMANT_USERS_SCHEMA,
+  [REPORT_TYPES.COPILOT_SEAT_ACTIVITY]: COPILOT_SEAT_ACTIVITY_SCHEMA,
 };
 
 /** Get the schema for a report type. Falls back to premium request for unknown types. */
@@ -215,6 +317,9 @@ export function getAllSchemas(): ReportSchema[] {
 export const PAGE_TYPES = {
   COPILOT: 'copilot',
   USAGE: 'usage',
+  GHAS: 'ghas',
+  MEMBERS: 'members',
+  SEAT_ACTIVITY: 'seat-activity',
 } as const;
 
 export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
@@ -223,6 +328,9 @@ export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 export const PAGE_REPORT_TYPES: Record<PageType, ReportType[]> = {
   [PAGE_TYPES.COPILOT]: [REPORT_TYPES.PREMIUM_REQUEST, REPORT_TYPES.TOKEN_USAGE],
   [PAGE_TYPES.USAGE]: [REPORT_TYPES.USAGE_REPORT],
+  [PAGE_TYPES.GHAS]: [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS],
+  [PAGE_TYPES.MEMBERS]: [REPORT_TYPES.DORMANT_USERS],
+  [PAGE_TYPES.SEAT_ACTIVITY]: [REPORT_TYPES.COPILOT_SEAT_ACTIVITY],
 };
 
 /** Sidebar nav configuration */
@@ -235,6 +343,9 @@ export interface NavPageConfig {
 export const NAV_PAGES: NavPageConfig[] = [
   { id: PAGE_TYPES.COPILOT, label: 'Copilot usage', icon: CopilotIcon },
   { id: PAGE_TYPES.USAGE, label: 'Metered usage', icon: GraphIcon },
+  { id: PAGE_TYPES.GHAS, label: 'GHAS committers', icon: ShieldLockIcon },
+  { id: PAGE_TYPES.SEAT_ACTIVITY, label: 'Seat activity', icon: PersonIcon },
+  { id: PAGE_TYPES.MEMBERS, label: 'Dormant users', icon: PeopleIcon },
 ];
 
 /** Infer the page type from a report type */

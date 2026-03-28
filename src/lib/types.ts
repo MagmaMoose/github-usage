@@ -167,6 +167,25 @@ export type GhasActiveCommittersCsvHeader =
   | 'Last pushed date'
   | 'Last pushed email';
 
+/** Raw CSV column headers for the Dormant Users report */
+export type DormantUsersCsvHeader =
+  | 'created_at'
+  | 'id'
+  | 'login'
+  | 'role'
+  | 'last_logged_ip'
+  | '2fa_enabled?'
+  | 'outside_collaborator';
+
+/** Raw CSV column headers for the Copilot Seat Activity report */
+export type CopilotSeatActivityCsvHeader =
+  | 'Report Time'
+  | 'Login'
+  | 'Last Authenticated At'
+  | 'Last Activity At'
+  | 'Last Surface Used'
+  | 'Organization';
+
 // ─── Parsed Row Interfaces ─────────────────────────────────────────────────────
 
 /** Shared columns across Premium Request and Token Usage reports */
@@ -254,14 +273,51 @@ export interface UsageReportRow {  /** ISO date string (YYYY-MM-DD), first of mo
 }
 
 /** GHAS Active Committers report row */
-export interface GhasActiveCommittersRow {  /** GitHub username */
+export interface GhasActiveCommittersRow {
+  /** GitHub username */
   userLogin: string;
-  /** Combined "org/repo" string that needs splitting for org vs repo */
-  organizationRepository: string;
+  /** GitHub organization */
+  organization: string;
+  /** Repository name (without org prefix) */
+  repository: string;
   /** ISO date string of last push */
   lastPushedDate: string;
   /** Email used for the push (noreply format: ID+username@users.noreply.github.com) */
   lastPushedEmail: string;
+}
+
+/** Dormant users report row (org member export with activity data) */
+export interface DormantUsersRow {
+  /** ISO datetime string when the member account was created */
+  createdAt: string;
+  /** GitHub user ID */
+  id: number;
+  /** GitHub username */
+  login: string;
+  /** Organization role: "user", "admin", or "billing_manager" */
+  role: string;
+  /** Last known IP address */
+  lastLoggedIp: string;
+  /** Whether the user has 2FA enabled */
+  twoFactorEnabled: boolean;
+  /** Whether the user is an outside collaborator (not a full org member) */
+  outsideCollaborator: boolean;
+}
+
+/** Copilot seat activity report row */
+export interface CopilotSeatActivityRow {
+  /** ISO datetime string when the report was generated */
+  reportTime: string;
+  /** GitHub username */
+  login: string;
+  /** ISO datetime of last authentication, empty if never */
+  lastAuthenticatedAt: string;
+  /** ISO datetime of last Copilot activity, empty if never */
+  lastActivityAt: string;
+  /** Last editor/surface used (e.g. "vscode/1.112.0-insider/copilot-chat/0.40.2026031702") or "None" */
+  lastSurfaceUsed: string;
+  /** GitHub organization name */
+  organization: string;
 }
 
 // ─── Report Types ──────────────────────────────────────────────────────────────
@@ -271,11 +327,13 @@ export const REPORT_TYPES = {
   TOKEN_USAGE: 'token_usage',
   USAGE_REPORT: 'usage_report',
   GHAS_ACTIVE_COMMITTERS: 'ghas_active_committers',
+  DORMANT_USERS: 'dormant_users',
+  COPILOT_SEAT_ACTIVITY: 'copilot_seat_activity',
 } as const;
 
 export type ReportType = (typeof REPORT_TYPES)[keyof typeof REPORT_TYPES];
 
-export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageReportRow | GhasActiveCommittersRow> {
+export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageReportRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow> {
   type: ReportType;
   rows: T[];
   fileName: string;
@@ -286,7 +344,7 @@ export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageRepor
 /** Report rows that have billing fields (date, grossAmount, netAmount, etc.) */
 export type BillingRow = PremiumRequestRow | TokenUsageRow | UsageReportRow;
 
-export type AnyReportRow = BillingRow | GhasActiveCommittersRow;
+export type AnyReportRow = BillingRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow;
 
 /** Groupable columns vary by report type */
 export const GROUPABLE_COLUMNS = {
@@ -301,7 +359,9 @@ export const GROUPABLE_COLUMNS = {
     'workflowPath',
     'costCenterName',
   ] as const,
-  ghas_active_committers: ['userLogin', 'organizationRepository'] as const,
+  ghas_active_committers: ['userLogin', 'organization', 'repository'] as const,
+  dormant_users: ['login', 'role', 'twoFactorEnabled', 'outsideCollaborator'] as const,
+  copilot_seat_activity: ['login', 'lastSurfaceUsed', 'organization'] as const,
 } as const;
 
 export type GroupableColumn<T extends ReportType> = (typeof GROUPABLE_COLUMNS)[T][number];
@@ -325,4 +385,9 @@ export interface ReportSummary {
   totalMinutes: number;
   totalStorageGBH: number;
   totalTokens: number;
+  // Flat report summaries
+  totalMembers: number;
+  twoFactorCount: number;
+  totalSeats: number;
+  activeSeats: number;
 }

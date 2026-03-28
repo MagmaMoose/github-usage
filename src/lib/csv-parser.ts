@@ -4,6 +4,8 @@ import type {
   TokenUsageRow,
   UsageReportRow,
   GhasActiveCommittersRow,
+  DormantUsersRow,
+  CopilotSeatActivityRow,
   ParsedReport,
   ReportType,
   CopilotProduct,
@@ -19,6 +21,8 @@ const HEADER_SIGNATURES: Record<ReportType, string[]> = {
   [REPORT_TYPES.PREMIUM_REQUEST]: ['aic_quantity', 'aic_gross_amount'],
   [REPORT_TYPES.USAGE_REPORT]: ['repository', 'workflow_path'],
   [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS]: ['user login', 'organization / repository', 'last pushed date'],
+  [REPORT_TYPES.COPILOT_SEAT_ACTIVITY]: ['report time', 'last authenticated at', 'last activity at', 'last surface used'],
+  [REPORT_TYPES.DORMANT_USERS]: ['login', 'role', '2fa_enabled?', 'outside_collaborator'],
 };
 
 /** Detect report type from CSV headers */
@@ -116,11 +120,39 @@ function mapUsageReportRow(raw: Record<string, string>): UsageReportRow {
 
 /** Map raw CSV row to GhasActiveCommittersRow */
 function mapGhasRow(raw: Record<string, string>): GhasActiveCommittersRow {
+  const orgRepo = raw['organization / repository'] ?? '';
+  const slashIdx = orgRepo.indexOf('/');
   return {
     userLogin: raw['user login'] ?? '',
-    organizationRepository: raw['organization / repository'] ?? '',
+    organization: slashIdx >= 0 ? orgRepo.slice(0, slashIdx) : orgRepo,
+    repository: slashIdx >= 0 ? orgRepo.slice(slashIdx + 1) : '',
     lastPushedDate: raw['last pushed date'] ?? '',
     lastPushedEmail: raw['last pushed email'] ?? '',
+  };
+}
+
+/** Map raw CSV row to DormantUsersRow */
+function mapDormantUsersRow(raw: Record<string, string>): DormantUsersRow {
+  return {
+    createdAt: raw['created_at'] ?? '',
+    id: parseNum(raw['id']),
+    login: raw['login'] ?? '',
+    role: raw['role'] ?? '',
+    lastLoggedIp: raw['last_logged_ip'] ?? '',
+    twoFactorEnabled: parseBool(raw['2fa_enabled?'] ?? 'false'),
+    outsideCollaborator: parseBool(raw['outside_collaborator'] ?? 'false'),
+  };
+}
+
+/** Map raw CSV row to CopilotSeatActivityRow */
+function mapCopilotSeatActivityRow(raw: Record<string, string>): CopilotSeatActivityRow {
+  return {
+    reportTime: raw['report time'] ?? '',
+    login: raw['login'] ?? '',
+    lastAuthenticatedAt: raw['last authenticated at'] ?? '',
+    lastActivityAt: raw['last activity at'] ?? '',
+    lastSurfaceUsed: raw['last surface used'] ?? '',
+    organization: raw['organization'] ?? '',
   };
 }
 
@@ -139,7 +171,7 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
   const headers = result.meta.fields ?? [];
   const type = detectReportType(headers);
 
-  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[] | GhasActiveCommittersRow[];
+  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[] | GhasActiveCommittersRow[] | DormantUsersRow[] | CopilotSeatActivityRow[];
 
   switch (type) {
     case REPORT_TYPES.PREMIUM_REQUEST:
@@ -154,10 +186,22 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
     case REPORT_TYPES.GHAS_ACTIVE_COMMITTERS:
       rows = result.data.map(mapGhasRow);
       break;
+    case REPORT_TYPES.DORMANT_USERS:
+      rows = result.data.map(mapDormantUsersRow);
+      break;
+    case REPORT_TYPES.COPILOT_SEAT_ACTIVITY:
+      rows = result.data.map(mapCopilotSeatActivityRow);
+      break;
   }
 
   const dates = rows
-    .map((r) => ('date' in r ? r.date : 'lastPushedDate' in r ? r.lastPushedDate : ''))
+    .map((r) => {
+      if ('date' in r) return r.date as string;
+      if ('lastPushedDate' in r) return r.lastPushedDate;
+      if ('lastActivityAt' in r) return (r.lastActivityAt as string).slice(0, 10);
+      if ('createdAt' in r) return (r.createdAt as string).slice(0, 10);
+      return '';
+    })
     .filter(Boolean)
     .sort();
   const dateRange = {

@@ -44,6 +44,7 @@ function AppContent() {
     activeReport,
     setActiveReport,
     setFilter,
+    setGroupByColumn,
     groupByColumn,
     timeBucket,
     periodKey,

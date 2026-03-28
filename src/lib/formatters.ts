@@ -36,6 +36,14 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** Format an ISO datetime string (e.g. 2026-03-28T06:54:33Z) to a compact display */
+export function formatDatetime(value: string): string {
+  if (!value || value === 'None') return '—';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 /** Format a date range */
 export function formatDateRange(start: string, end: string): string {
   if (!start || !end) return '';
@@ -145,6 +153,9 @@ const PRODUCT_DISPLAY_NAMES: Record<string, string> = {
  */
 export function formatDisplayValue(value: string, column?: string): string {
   if (!value) return value;
+  // Boolean-style field display
+  if (value === 'true') return 'Yes';
+  if (value === 'false') return 'No';
   if (column === 'sku') return SKU_DISPLAY_NAMES[value] ?? value;
   if (column === 'product') return PRODUCT_DISPLAY_NAMES[value] ?? value;
   if (column === 'workflowPath') return formatWorkflowPath(value);
@@ -178,6 +189,23 @@ export function humanizeColumn(column: string): string {
     workflowPath: 'Workflow',
     appliedCostPerQuantity: 'Unit Cost',
     date: 'Date',
+    // GHAS
+    userLogin: 'User',
+    lastPushedDate: 'Last Pushed',
+    lastPushedEmail: 'Email',
+    // Dormant users
+    login: 'Login',
+    role: 'Role',
+    createdAt: 'Created',
+    memberId: 'ID',
+    lastLoggedIp: 'Last IP',
+    twoFactorEnabled: '2FA',
+    outsideCollaborator: 'Outside Collab',
+    // Seat activity
+    reportTime: 'Report Time',
+    lastAuthenticatedAt: 'Last Authenticated',
+    lastActivityAt: 'Last Activity',
+    lastSurfaceUsed: 'Surface',
   };
   return MAP[column] ?? column.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 }

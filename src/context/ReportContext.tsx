@@ -436,14 +436,23 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const normalizedSearchQuery = state.searchQuery.trim().toLowerCase();
 
   const visibleRows = useMemo(() => {
+    // Resolve the date field used for period filtering per report type
+    const dateFieldMap: Record<string, string> = {
+      ghas_active_committers: 'lastPushedDate',
+      copilot_seat_activity: 'lastActivityAt',
+      dormant_users: 'createdAt',
+    };
+    const dateField = dateFieldMap[activeReport?.type ?? ''] ?? 'date';
+
     return (activeReport?.rows ?? []).filter((row) => {
       const rowRecord = row as unknown as Record<string, unknown>;
+      const dateValue = String(rowRecord[dateField] ?? '').slice(0, 10); // normalize ISO datetimes to YYYY-MM-DD
       const matchesPeriod =
         state.periodKey === 'all' ||
         (state.dateRange
-          ? String(rowRecord.date ?? '') >= state.dateRange.start &&
-            String(rowRecord.date ?? '') <= state.dateRange.end
-          : String(rowRecord.date ?? '').startsWith(state.periodKey));
+          ? dateValue >= state.dateRange.start &&
+            dateValue <= state.dateRange.end
+          : dateValue.startsWith(state.periodKey));
 
       const matchesAdvancedFilters = Object.entries(state.filters).every(([field, values]) => {
         if (values.length === 0) return true;
