@@ -3,6 +3,7 @@ import { Button, Dialog, Flash, FormControl, Text, TextInput } from '@primer/rea
 import { Blankslate } from '@primer/react/experimental';
 import { UploadIcon, LinkExternalIcon } from '@primer/octicons-react';
 import { parseCSV } from '../lib/csv-parser';
+import { extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
 import { useReport } from '../context/useReport';
 import { REPORT_TYPES, type ReportType } from '../lib/types';
 import styles from './FileDropzone.module.css';
@@ -120,19 +121,34 @@ export function FileDropzone({ forceShow, reportType = REPORT_TYPES.PREMIUM_REQU
     async (files: FileList | File[]) => {
       setError(null);
       for (const file of Array.from(files)) {
-        if (!file.name.endsWith('.csv')) {
-          setError(`"${file.name}" is not a CSV file.`);
-          continue;
-        }
         try {
+          if (isZipFile(file)) {
+            const csvFiles = await extractCsvsFromZip(file);
+            if (csvFiles.length === 0) {
+              setError(`"${file.name}" contains no CSV files.`);
+              continue;
+            }
+            for (const { name, content } of csvFiles) {
+              const report = parseCSV(content, name);
+              const dupeIndex = addReport(report, content);
+              if (dupeIndex >= 0) {
+                setError(`"${name}" is already loaded.`);
+              }
+            }
+            continue;
+          }
+          if (!file.name.endsWith('.csv')) {
+            setError(`"${file.name}" is not a CSV or ZIP file.`);
+            continue;
+          }
           const text = await file.text();
           const report = parseCSV(text, file.name);
           const dupeIndex = addReport(report, text);
           if (dupeIndex >= 0) {
-            setError(`"${file.name}" is already loaded — switched to that report.`);
+            setError(`"${file.name}" is already loaded.`);
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to parse CSV');
+          setError(err instanceof Error ? err.message : 'Failed to parse file');
         }
       }
     },
@@ -190,7 +206,7 @@ export function FileDropzone({ forceShow, reportType = REPORT_TYPES.PREMIUM_REQU
           <Blankslate.Visual>
             <UploadIcon size={48} />
           </Blankslate.Visual>
-          <Blankslate.Heading>Drop a CSV here</Blankslate.Heading>
+          <Blankslate.Heading>Drop a CSV or ZIP here</Blankslate.Heading>
           <Blankslate.Description>
             or click to browse
           </Blankslate.Description>
@@ -198,7 +214,7 @@ export function FileDropzone({ forceShow, reportType = REPORT_TYPES.PREMIUM_REQU
         <input
           ref={inputRef}
           type="file"
-          accept=".csv"
+          accept={ACCEPTED_FILE_TYPES}
           multiple
           className={styles.fileInput}
           onChange={(e) => {

@@ -59,6 +59,7 @@ import { REPORT_TYPES } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
+import { extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
@@ -254,6 +255,13 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   const handleAddFile = useCallback(
     async (files: FileList) => {
       for (const file of Array.from(files)) {
+        if (isZipFile(file)) {
+          const csvFiles = await extractCsvsFromZip(file);
+          for (const { name, content } of csvFiles) {
+            addReport(parseCSV(content, name), content);
+          }
+          continue;
+        }
         if (!file.name.endsWith('.csv')) continue;
         const text = await file.text();
         addReport(parseCSV(text, file.name), text);
@@ -502,7 +510,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept={ACCEPTED_FILE_TYPES}
             multiple
             className={styles.hiddenInput}
             onChange={(e) => {

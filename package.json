@@ -21,6 +21,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.23",
     "clsx": "^2.1.1",
+    "fflate": "^0.8.2",
     "highcharts": "^12.5.0",
     "highcharts-react-official": "^3.2.3",
     "lz-string": "^1.5.0",

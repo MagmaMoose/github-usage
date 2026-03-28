@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   ActionMenu,
   ActionList,
   Heading,
   IconButton,
   NavList,
+  Dialog,
+  Text,
+  Button,
+  Spinner,
+  Stack,
 } from '@primer/react';
 import {
   CopilotIcon,
@@ -28,6 +33,8 @@ import {
   type PageType,
 } from '../lib/report-schema';
 import type { ParsedReport, UsageReportRow } from '../lib/types';
+import { parseCSV } from '../lib/csv-parser';
+import { useReport } from '../context/useReport';
 import { formatDisplayValue } from '../lib/formatters';
 import { ACTIONS_STORAGE_SKUS, type ActionsSubView } from '../hooks/useProductNavigation';
 import styles from '../App.module.css';
@@ -63,6 +70,32 @@ export function InsightsSidebar({
 }: InsightsSidebarProps) {
   const { colorMode, setColorMode } = useColorMode();
   const onboarding = useOnboardingContext();
+  const { reports, addReport } = useReport();
+  const [showSamplePrompt, setShowSamplePrompt] = useState(false);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+
+  const handleTourRestart = useCallback(() => {
+    if (reports.length === 0) {
+      setShowSamplePrompt(true);
+    } else {
+      onboarding.restart();
+    }
+  }, [reports.length, onboarding]);
+
+  const handleLoadSamples = useCallback(async () => {
+    setLoadingSamples(true);
+    try {
+      const { loadSampleData } = await import('../lib/sample-data');
+      const samples = await loadSampleData();
+      for (const { name, content } of samples) {
+        addReport(parseCSV(content, name), content);
+      }
+      onboarding.restart();
+    } finally {
+      setLoadingSamples(false);
+      setShowSamplePrompt(false);
+    }
+  }, [addReport, onboarding]);
 
   return (
     <div className={styles.sidebarContent}>
@@ -232,10 +265,39 @@ export function InsightsSidebar({
           icon={QuestionIcon}
           variant="invisible"
           size="small"
-          onClick={onboarding.restart}
+          onClick={handleTourRestart}
         />
         </span>
       </div>
+
+      {showSamplePrompt && (
+        <Dialog
+          title="Load sample data?"
+          onClose={() => setShowSamplePrompt(false)}
+        >
+          <Text as="p">
+            No reports are loaded yet. Would you like to load sample CSV data so you can explore the feature tour with real charts and tables?
+          </Text>
+          <Stack direction="horizontal" justify="end" gap="condensed" style={{ marginTop: 16 }}>
+            <Button
+              onClick={() => {
+                setShowSamplePrompt(false);
+                onboarding.restart();
+              }}
+            >
+              No, just start tour
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleLoadSamples}
+              disabled={loadingSamples}
+              leadingVisual={loadingSamples ? Spinner : undefined}
+            >
+              {loadingSamples ? 'Loading...' : 'Yes, load sample data'}
+            </Button>
+          </Stack>
+        </Dialog>
+      )}
     </div>
   );
 }

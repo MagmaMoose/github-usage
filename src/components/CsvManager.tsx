@@ -10,6 +10,7 @@ import {
 import {
   DownloadIcon,
   FileIcon,
+  FileZipIcon,
   TrashIcon,
   UploadIcon,
 } from '@primer/octicons-react';
@@ -29,6 +30,7 @@ import { getReportSchema } from '../lib/report-schema';
 import { formatDateRange } from '../lib/formatters';
 import { FileDropzone } from './FileDropzone';
 import { parseCSV } from '../lib/csv-parser';
+import { createZipArchive, extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
 import styles from './CsvManager.module.css';
 import tableStyles from './ReportTable.module.css';
 
@@ -45,6 +47,24 @@ interface FileRow {
 }
 
 const columnHelper = createColumnHelper<FileRow>();
+
+function ZipInfo() {
+  return (
+    <div className={styles.zipInfo}>
+      <div className={styles.zipInfoIcon}>
+        <FileZipIcon size={24} />
+      </div>
+      <div>
+        <Text as="p" className={styles.zipInfoTitle}>ZIP backup &amp; restore</Text>
+        <Text as="p" className={styles.zipInfoDesc}>
+          <strong>Download all</strong> saves your reports as a single <code>github-reports-YYYY-MM-DD.zip</code> archive.
+          To restore, just drop the ZIP file here or click <strong>Add file</strong> and select it.
+          All CSVs inside the archive will be imported automatically.
+        </Text>
+      </div>
+    </div>
+  );
+}
 
 function SortIcon({ direction }: { direction: 'asc' | 'desc' | false }) {
   if (direction === 'asc') {
@@ -85,9 +105,15 @@ export function CsvManager() {
   const handleAddFile = useCallback(
     async (files: FileList) => {
       for (const file of Array.from(files)) {
-        const text = await file.text();
-        const parsed = parseCSV(text, file.name);
-        addReport(parsed, text);
+        if (isZipFile(file)) {
+          const csvFiles = await extractCsvsFromZip(file);
+          for (const { name, content } of csvFiles) {
+            addReport(parseCSV(content, name), content);
+          }
+        } else {
+          const text = await file.text();
+          addReport(parseCSV(text, file.name), text);
+        }
       }
     },
     [addReport],
@@ -110,10 +136,20 @@ export function CsvManager() {
   );
 
   const handleDownloadAll = useCallback(() => {
-    reports.forEach((_, i) => {
-      setTimeout(() => handleDownloadFile(i), i * 200);
+    const files: Record<string, string> = {};
+    reports.forEach((report, i) => {
+      const csv = rawCsvs[i];
+      if (csv) files[report.fileName] = csv;
     });
-  }, [reports, handleDownloadFile]);
+    const blob = createZipArchive(files);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `github-reports-${date}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [reports, rawCsvs]);
 
   const handleDeleteFile = useCallback(
     (index: number) => {
@@ -255,6 +291,7 @@ export function CsvManager() {
         <div className={styles.emptyState}>
           <FileDropzone forceShow reportType="usage_report" />
         </div>
+        <ZipInfo />
       </div>
     );
   }
@@ -297,7 +334,7 @@ export function CsvManager() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept={ACCEPTED_FILE_TYPES}
             multiple
             style={{ display: 'none' }}
             onChange={(e) => {
@@ -366,6 +403,8 @@ export function CsvManager() {
           </tbody>
         </table>
       </div>
+
+      <ZipInfo />
 
       {confirmDeleteAll && (
         <Dialog
