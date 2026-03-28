@@ -144,6 +144,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     clearFilters,
     visibleRows: contextVisibleRows,
     isHydrating,
+    combinedGroups: allCombinedGroups,
   } = useReport();
 
   // Filter reports to only those matching the current page's allowed types,
@@ -445,11 +446,10 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
       )}
 
       {reports.length > 1 && (() => {
-        const typeCounts = new Map<string, number>();
-        for (const r of reports) {
-          typeCounts.set(r.type, (typeCounts.get(r.type) ?? 0) + 1);
-        }
-        const hasMergeableReports = [...typeCounts.values()].some((c) => c >= 2);
+        // Filter combined groups to only those relevant to this page's allowed types
+        const combinedGroups = allowedReportTypes
+          ? allCombinedGroups.filter((g) => allowedReportTypes.includes(g.type))
+          : allCombinedGroups;
 
         return (
           <UnderlineNav
@@ -458,17 +458,17 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
             variant="flush"
             className={styles.reportTabs}
           >
-            {hasMergeableReports && (
+            {combinedGroups.map((group) => (
               <UnderlineNav.Item
-                key="__combined__"
+                key={`__combined_${group.index}__`}
                 href="#"
-                aria-current={activeReportIndex === -1 ? 'page' : undefined}
+                aria-current={activeReportIndex === group.index ? 'page' : undefined}
                 leadingVisual={<ColumnsIcon />}
-                onSelect={(event) => { event.preventDefault(); setActiveReport(-1); }}
+                onSelect={(event) => { event.preventDefault(); setActiveReport(group.index); }}
               >
-                Combined
+                {group.label}
               </UnderlineNav.Item>
-            )}
+            ))}
             {reports.map((report, i) => {
               const globalIdx = globalIndexMap[i];
               const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;

@@ -1,9 +1,11 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ParsedReport, TimeBucket } from '../lib/types';
 import { ReportContext } from './report-context';
-import type { DateRange } from './report-context';
+import type { CombinedGroup, DateRange } from './report-context';
 import { getCachedParsedReports, getCachedRawCSV, setCachedCSV, removeCachedCSV, clearCachedCSVs } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
+import { getReportSchema } from '../lib/report-schema';
+import { formatDateRangeCompact } from '../lib/formatters';
 
 /** Fast FNV-1a hash for dedup — not crypto-grade, just collision-resistant enough for CSV content */
 function simpleHash(str: string): string {
@@ -189,7 +191,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
       // If in combined view and only 0-1 reports remain, snap to index 0
       let nextIndex = prev.activeReportIndex;
-      if (nextIndex === -1 && reports.length <= 1) {
+      if (nextIndex < 0 && reports.length <= 1) {
         nextIndex = 0;
       } else if (nextIndex >= 0) {
         nextIndex = Math.min(nextIndex, Math.max(0, reports.length - 1));
@@ -218,10 +220,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
   const setActiveReport = useCallback((index: number) => {
     setState((prev) => {
-      // Combined view (-1) preserves filters so users can keep exploring
-      if (index === -1) {
-        return { ...prev, activeReportIndex: -1 };
-      }
+      // Reset period/filters when switching reports so the full date range is visible
       return {
         ...prev,
         activeReportIndex: index,
@@ -275,46 +274,155 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     startTransition(() => setState((prev) => ({ ...prev, filters: {} })));
   }, []);
 
-  // Build a synthetic merged report when activeReportIndex === -1
-  const activeReport = useMemo((): ParsedReport | null => {
-    if (state.activeReportIndex !== -1) {
-      return state.reports[state.activeReportIndex] ?? null;
-    }
+  // Compute enterprise-aware combined groups: group same-type reports that
+  // share ≥3 orgs (each org is unique per enterprise, so 3 matches = same enterprise).
+  const combinedGroups = useMemo((): CombinedGroup[] => {
+    if (state.reports.length < 2) return [];
 
-    if (state.reports.length < 2) return state.reports[0] ?? null;
+    const MIN_ORG_OVERLAP = 3;
 
-    // Find the most common report type
-    const typeCounts = new Map<string, number>();
-    for (const r of state.reports) {
-      typeCounts.set(r.type, (typeCounts.get(r.type) ?? 0) + 1);
-    }
-    let majorityType = state.reports[0].type;
-    let maxCount = 0;
-    for (const [type, count] of typeCounts) {
-      if (count > maxCount) {
-        majorityType = type as ParsedReport['type'];
-        maxCount = count;
+    // Extract org sets per report (cheap: just collect unique org strings)
+    const reportOrgSets = state.reports.map((report) => {
+      const orgs = new Set<string>();
+      for (const row of report.rows) {
+        const org = (row as unknown as Record<string, unknown>).organization;
+        if (org) orgs.add(String(org));
+      }
+      return orgs;
+    });
+
+    // Count overlapping orgs between two sets
+    const countOverlap = (a: Set<string>, b: Set<string>): number => {
+      let count = 0;
+      const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
+      for (const v of smaller) {
+        if (larger.has(v)) {
+          count++;
+          if (count >= MIN_ORG_OVERLAP) return count; // early exit
+        }
+      }
+      return count;
+    };
+
+    // Union-Find to cluster same-type reports with ≥3 shared orgs
+    const parent = state.reports.map((_, i) => i);
+    const find = (x: number): number => {
+      while (parent[x] !== x) {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+      }
+      return x;
+    };
+    const union = (a: number, b: number) => {
+      parent[find(a)] = find(b);
+    };
+
+    for (let i = 0; i < state.reports.length; i++) {
+      for (let j = i + 1; j < state.reports.length; j++) {
+        if (state.reports[i].type !== state.reports[j].type) continue;
+
+        const sizeA = reportOrgSets[i].size;
+        const sizeB = reportOrgSets[j].size;
+
+        // Both reports have no org data: combine freely (personal accounts, non-enterprise)
+        if (sizeA === 0 && sizeB === 0) {
+          union(i, j);
+          continue;
+        }
+
+        // One has orgs, the other doesn't: don't combine (likely different sources)
+        if (sizeA === 0 || sizeB === 0) continue;
+
+        // Both have orgs: require ≥3 shared (or all shared if fewer than 3 total)
+        const threshold = Math.min(MIN_ORG_OVERLAP, Math.min(sizeA, sizeB));
+        if (countOverlap(reportOrgSets[i], reportOrgSets[j]) >= threshold) {
+          union(i, j);
+        }
       }
     }
 
-    const matchingReports = state.reports.filter((r) => r.type === majorityType);
-    if (matchingReports.length < 2) return state.reports[0] ?? null;
+    // Collect clusters
+    const clusters = new Map<number, number[]>();
+    for (let i = 0; i < state.reports.length; i++) {
+      const root = find(i);
+      const existing = clusters.get(root);
+      if (existing) existing.push(i);
+      else clusters.set(root, [i]);
+    }
 
+    // Only create groups with 2+ reports
+    const groups: CombinedGroup[] = [];
+    let negativeIndex = -1;
+    for (const indices of clusters.values()) {
+      if (indices.length < 2) continue;
+      groups.push({
+        index: negativeIndex,
+        label: '', // finalized below
+        type: state.reports[indices[0]].type,
+        reportIndices: indices,
+      });
+      negativeIndex--;
+    }
+
+    // Finalize labels: use schema label + spanning date range (e.g. "Premium Requests (Feb–Mar 2026)")
+    for (const group of groups) {
+      const matchingReports = group.reportIndices.map((i) => state.reports[i]);
+      const starts = matchingReports.map((r) => r.dateRange.start).sort();
+      const ends = matchingReports.map((r) => r.dateRange.end).sort();
+      const typeLabel = getReportSchema(group.type).label;
+      const dateLabel = formatDateRangeCompact(starts[0], ends[ends.length - 1]);
+
+      if (groups.length > 1) {
+        // Multiple combined groups: add org context to disambiguate
+        const orgs = new Set<string>();
+        for (const idx of group.reportIndices) {
+          for (const row of state.reports[idx].rows) {
+            const org = (row as unknown as Record<string, unknown>).organization;
+            if (org) orgs.add(String(org));
+          }
+        }
+        const sortedOrgs = [...orgs].sort();
+        const orgSuffix = sortedOrgs.length <= 2
+          ? sortedOrgs.join(', ')
+          : `${sortedOrgs[0]} +${sortedOrgs.length - 1}`;
+        group.label = dateLabel ? `${typeLabel} (${dateLabel}) · ${orgSuffix}` : `${typeLabel} · ${orgSuffix}`;
+      } else {
+        group.label = dateLabel ? `${typeLabel} (${dateLabel})` : typeLabel;
+      }
+    }
+
+    return groups;
+  }, [state.reports]);
+
+  // Build a synthetic merged report for combined views (negative index)
+  const activeReport = useMemo((): ParsedReport | null => {
+    if (state.activeReportIndex >= 0) {
+      return state.reports[state.activeReportIndex] ?? null;
+    }
+
+    // Find the combined group matching this negative index
+    const group = combinedGroups.find((g) => g.index === state.activeReportIndex);
+    if (!group) {
+      // Fallback: if no group matches (e.g., stale index), show first report
+      return state.reports[0] ?? null;
+    }
+
+    const matchingReports = group.reportIndices.map((i) => state.reports[i]);
     const allRows = matchingReports.flatMap((r) => r.rows);
     const starts = matchingReports.map((r) => r.dateRange.start).sort();
     const ends = matchingReports.map((r) => r.dateRange.end).sort();
 
     return {
-      type: majorityType,
+      type: group.type,
       rows: allRows,
-      fileName: 'Combined View',
+      fileName: group.label,
       rowCount: allRows.length,
       dateRange: {
         start: starts[0],
         end: ends[ends.length - 1],
       },
     };
-  }, [state.reports, state.activeReportIndex]);
+  }, [state.reports, state.activeReportIndex, combinedGroups]);
 
   const activeReportType = activeReport?.type ?? null;
   const normalizedSearchQuery = state.searchQuery.trim().toLowerCase();
@@ -376,6 +484,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         activeReport,
         activeReportType,
         visibleRows,
+        combinedGroups,
       }}
     >
       {children}

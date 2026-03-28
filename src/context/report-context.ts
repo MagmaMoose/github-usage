@@ -17,6 +17,18 @@ interface ReportState {
   filters: Record<string, string[]>;
 }
 
+/** A group of same-type reports from the same enterprise (same org set) that can be combined */
+export interface CombinedGroup {
+  /** Negative index used as activeReportIndex: -1, -2, etc. */
+  index: number;
+  /** Tab label, e.g. "Combined" or "Combined (acme-corp, ...)", or the single shared org */
+  label: string;
+  /** Report type shared by all reports in this group */
+  type: ReportType;
+  /** Global indices into reports[] that belong to this group */
+  reportIndices: number[];
+}
+
 export interface ReportContextValue extends ReportState {
   /** Raw CSV content parallel to reports[], used for sharing */
   rawCsvs: string[];
@@ -37,6 +49,8 @@ export interface ReportContextValue extends ReportState {
   activeReport: ParsedReport | null;
   activeReportType: ReportType | null;
   visibleRows: ParsedReport['rows'];
+  /** Enterprise-aware combined groups (only groups with 2+ reports) */
+  combinedGroups: CombinedGroup[];
 }
 
 export const ReportContext = createContext<ReportContextValue | null>(null);
