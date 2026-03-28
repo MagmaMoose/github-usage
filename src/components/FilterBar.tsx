@@ -105,18 +105,20 @@ export function FilterBar({
     if (selectedCategory) {
       const fieldValues = valuesByField.get(selectedCategory) ?? [];
       const appliedValues = new Set(filters[selectedCategory] ?? []);
-      const query = inputValue.toLowerCase();
+      // Typing '!' prefix means the user wants to exclude
+      const negateMode = inputValue.startsWith('!');
+      const query = (negateMode ? inputValue.slice(1) : inputValue).toLowerCase();
 
       return fieldValues
-        .filter((v) => !appliedValues.has(v))
+        .filter((v) => !appliedValues.has(v) && !appliedValues.has(`!${v}`))
         .filter((v) => !query || v.toLowerCase().includes(query) || formatDisplayValue(v, selectedCategory).toLowerCase().includes(query))
         .slice(0, 20)
         .map((value) => ({
-          id: `${selectedCategory}:${value}`,
+          id: `${selectedCategory}:${negateMode ? '!' : ''}${value}`,
           type: 'value' as const,
           field: selectedCategory,
-          value,
-          text: formatDisplayValue(value, selectedCategory),
+          value: negateMode ? `!${value}` : value,
+          text: `${negateMode ? '≠ ' : ''}${formatDisplayValue(value, selectedCategory)}`,
           icon: fieldIcons[selectedCategory],
         }));
     }
@@ -305,15 +307,20 @@ export function FilterBar({
           <SearchIcon size={16} className={styles.searchIcon} />
 
           {/* Inline tokens for active filters */}
-          {activeFilters.map(({ field, value }) => (
-            <Token
-              key={`${field}:${value}`}
-              text={`${humanizeColumn(field)}:${formatDisplayValue(value, field)}`}
-              size="medium"
-              onRemove={() => onRemoveFilter(field, value)}
-              className={styles.inlineToken}
-            />
-          ))}
+          {activeFilters.map(({ field, value }) => {
+            const isNegated = value.startsWith('!');
+            const rawValue = isNegated ? value.slice(1) : value;
+            const label = `${humanizeColumn(field)}:${isNegated ? '≠ ' : ''}${formatDisplayValue(rawValue, field)}`;
+            return (
+              <Token
+                key={`${field}:${value}`}
+                text={label}
+                size="medium"
+                onRemove={() => onRemoveFilter(field, value)}
+                className={`${styles.inlineToken}${isNegated ? ` ${styles.negatedToken}` : ''}`}
+              />
+            );
+          })}
 
           {/* Category prefix badge */}
           {selectedCategory && (

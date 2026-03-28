@@ -248,8 +248,11 @@ function AppContent() {
   /** Detect sub-view: 'compute' | 'storage' | null */
   const actionsSubView = useMemo(() => {
     if (activeProductFilter !== 'actions' || activeSkuFilter.length === 0) return null;
+    // Storage: inclusive filter for storage SKUs
     if (ACTIONS_STORAGE_SKUS.some((s) => activeSkuFilter.includes(s))) return 'storage' as const;
-    return 'compute' as const;
+    // Compute: negated filter excluding storage SKUs
+    if (ACTIONS_STORAGE_SKUS.some((s) => activeSkuFilter.includes(`!${s}`))) return 'compute' as const;
+    return null;
   }, [activeProductFilter, activeSkuFilter]);
 
   // Compute effective metric options based on product filter
@@ -270,11 +273,8 @@ function AppContent() {
         if (product === 'actions' && subView === 'storage') {
           setFilter('sku', [...ACTIONS_STORAGE_SKUS]);
         } else if (product === 'actions' && subView === 'compute') {
-          const allActionSkus = activeReport
-            ? [...new Set((activeReport.rows as UsageReportRow[]).filter(r => r.product === 'actions').map(r => r.sku))]
-            : [];
-          const computeSkus = allActionSkus.filter(s => !(ACTIONS_STORAGE_SKUS as readonly string[]).includes(s));
-          setFilter('sku', computeSkus);
+          // Negate storage SKUs instead of enumerating all compute SKUs
+          setFilter('sku', ACTIONS_STORAGE_SKUS.map((s) => `!${s}`));
         } else {
           setFilter('sku', []);
         }
@@ -283,7 +283,7 @@ function AppContent() {
         setFilter('sku', []);
       }
     },
-    [setFilter, activeReport],
+    [setFilter],
   );
 
   const renderInsightsSidebar = () => (

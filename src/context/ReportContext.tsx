@@ -333,7 +333,17 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         if (values.length === 0) return true;
 
         const currentValue = String(rowRecord[field] ?? '').toLowerCase();
-        return values.some((value) => currentValue === value.toLowerCase());
+
+        // Separate include vs exclude (negated with '!' prefix) values
+        const excludes = values.filter((v) => v.startsWith('!')).map((v) => v.slice(1).toLowerCase());
+        const includes = values.filter((v) => !v.startsWith('!')).map((v) => v.toLowerCase());
+
+        // If any exclude matches, reject the row
+        if (excludes.length > 0 && excludes.includes(currentValue)) return false;
+        // If there are include values, the row must match one of them
+        if (includes.length > 0 && !includes.some((v) => currentValue === v)) return false;
+
+        return true;
       });
 
       if (!matchesPeriod || !matchesAdvancedFilters) return false;

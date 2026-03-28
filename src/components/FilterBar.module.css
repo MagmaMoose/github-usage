@@ -55,6 +55,12 @@
   flex-shrink: 0;
 }
 
+/* Negated (exclude) filter tokens */
+.negatedToken {
+  background-color: var(--bgColor-danger-muted, #ffebe9);
+  border-color: var(--borderColor-danger-muted, #ff818266);
+}
+
 /* Category prefix shown when a field is selected */
 .categoryPrefix {
   flex-shrink: 0;
