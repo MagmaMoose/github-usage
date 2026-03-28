@@ -142,13 +142,15 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
           lineWidth: 2.5,
           marker: { enabled: false },
         }),
-        tooltip: activeMetric.isCurrency
-          ? { valuePrefix: '$', valueDecimals: 2 }
-          : {
-              pointFormatter: function (this: Highcharts.Point) {
-                return `<span style="color:${this.color}">●</span> ${this.series.name}: <b>${formatCompact(this.y ?? 0)}</b><br/>`;
-              },
-            },
+        tooltip: {
+          pointFormatter: function (this: Highcharts.Point) {
+            const val = this.y ?? 0;
+            const formatted = activeMetric.isCurrency
+              ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : formatCompact(val);
+            return `<span style="color:${this.color}">●</span> ${this.series.name}: <b>${formatted}</b><br/>`;
+          },
+        },
       });
     }
 
