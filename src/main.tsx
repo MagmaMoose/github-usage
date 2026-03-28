@@ -36,7 +36,10 @@ export default function Root() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+// Guard against HMR re-executing createRoot on the same container
+const root = (container as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot ??= createRoot(container);
+root.render(
   <StrictMode>
     <Root />
   </StrictMode>,
