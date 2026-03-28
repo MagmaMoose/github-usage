@@ -53,6 +53,7 @@ import { formatDateRange, formatDateRangeCompact } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
+import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 import { copyShareToClipboard } from '../lib/share-state';
 import styles from '../App.module.css';
 
@@ -169,7 +170,14 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
 
   // Page-level metric toggle (Spend vs Quantity/Minutes/etc.)
   const showMetricToggle = effectiveMetrics.length > 1;
-  const [selectedMetricKey, setSelectedMetricKey] = useState('grossAmount');
+  const [selectedMetricKey, setSelectedMetricKeyRaw] = useState(() => {
+    const urlState = readURLFilterState();
+    return urlState.metric ?? 'grossAmount';
+  });
+  const setSelectedMetricKey = useCallback((key: string) => {
+    setSelectedMetricKeyRaw(key);
+    writeURLFilterState({ metric: key });
+  }, []);
   const activeMetric = effectiveMetrics.find((m) => m.key === selectedMetricKey) ?? effectiveMetrics[0];
   // Pass only the selected metric to charts so they don't render their own toggles
   const chartMetricOptions = showMetricToggle ? [activeMetric] : effectiveMetrics;
@@ -179,12 +187,14 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     [activeReport, contextVisibleRows],
   );
 
-  const [activeTab, setActiveTabRaw] = useState<ViewTab>(() =>
-    getStoredValue(STORAGE_KEYS.ACTIVE_TAB, 'charts') as ViewTab,
-  );
+  const [activeTab, setActiveTabRaw] = useState<ViewTab>(() => {
+    const urlState = readURLFilterState();
+    return (urlState.tab as ViewTab) ?? getStoredValue(STORAGE_KEYS.ACTIVE_TAB, 'charts') as ViewTab;
+  });
   const setActiveTab = useCallback((tab: ViewTab) => {
     setActiveTabRaw(tab);
     setStoredValue(STORAGE_KEYS.ACTIVE_TAB, tab);
+    writeURLFilterState({ tab });
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -7,6 +7,7 @@ export interface URLFilterState {
   period?: string;
   search?: string;
   tab?: string;
+  metric?: string;
   filters?: Record<string, string[]>;
 }
 
@@ -33,6 +34,9 @@ export function readURLFilterState(): URLFilterState {
   const tab = params.get('tab');
   if (tab) state.tab = tab;
 
+  const metric = params.get('metric');
+  if (metric) state.metric = metric;
+
   // Filters are encoded as repeated `filter.{field}={value}` params
   const filters: Record<string, string[]> = {};
   for (const [key, value] of params.entries()) {
@@ -47,35 +51,48 @@ export function readURLFilterState(): URLFilterState {
   return state;
 }
 
-/** Write filter state to URL search params without triggering navigation */
+/** Write filter state to URL search params without triggering navigation.
+ *  Merges with existing params so multiple callers don't clobber each other. */
 export function writeURLFilterState(state: URLFilterState): void {
-  const params = new URLSearchParams();
+  // Start from current URL params to preserve values set by other callers
+  const params = new URLSearchParams(window.location.search);
 
-  if (state.page && state.page !== 'copilot') {
-    params.set('page', state.page);
+  // Scalar params: set if provided, use defaults to omit default values
+  const SCALAR_DEFAULTS: Record<string, string> = {
+    page: 'copilot',
+    groupBy: 'username',
+    timeBucket: 'daily',
+    period: 'all',
+    tab: 'charts',
+    metric: 'grossAmount',
+  };
+
+  for (const [param, defaultVal] of Object.entries(SCALAR_DEFAULTS)) {
+    const value = state[param as keyof URLFilterState] as string | undefined;
+    if (value === undefined) continue; // not provided by this caller, leave existing
+    if (value && value !== defaultVal) {
+      params.set(param, value);
+    } else {
+      params.delete(param);
+    }
   }
 
-  if (state.groupBy && state.groupBy !== 'username') {
-    params.set('groupBy', state.groupBy);
+  // Search: set or clear
+  if (state.search !== undefined) {
+    if (state.search) {
+      params.set('search', state.search);
+    } else {
+      params.delete('search');
+    }
   }
 
-  if (state.timeBucket && state.timeBucket !== 'daily') {
-    params.set('timeBucket', state.timeBucket);
-  }
-
-  if (state.period && state.period !== 'all') {
-    params.set('period', state.period);
-  }
-
-  if (state.search) {
-    params.set('search', state.search);
-  }
-
-  if (state.tab && state.tab !== 'charts') {
-    params.set('tab', state.tab);
-  }
-
-  if (state.filters) {
+  // Filters: replace all filter.* params when filters object is provided
+  if (state.filters !== undefined) {
+    // Remove existing filter params
+    for (const key of [...params.keys()]) {
+      if (key.startsWith('filter.')) params.delete(key);
+    }
+    // Write new ones
     for (const [field, values] of Object.entries(state.filters)) {
       for (const value of values) {
         params.append(`filter.${field}`, value);
@@ -86,6 +103,5 @@ export function writeURLFilterState(state: URLFilterState): void {
   const search = params.toString();
   const newURL = search ? `${window.location.pathname}?${search}` : window.location.pathname;
 
-  // Replace state to avoid polluting browser history on every keystroke
   window.history.replaceState(null, '', newURL);
 }
