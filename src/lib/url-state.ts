@@ -127,7 +127,8 @@ export function writeURLFilterState(state: URLFilterState): void {
   }
 
   const search = params.toString();
-  const pagePath = buildPathForPage(state.page);
+  // If page is provided, navigate to that path. Otherwise preserve current path.
+  const pagePath = state.page !== undefined ? buildPathForPage(state.page) : window.location.pathname;
   const newURL = search ? `${pagePath}?${search}` : pagePath;
 
   window.history.replaceState(null, '', newURL);

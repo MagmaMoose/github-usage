@@ -101,7 +101,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
     const timestamps = categories.map(bucketKeyToTimestamp);
 
     // Build a deterministic color map from the ranked group names
-    const colorMap = buildColorMap(topGroups.map((g) => g.key));
+    const colorMap = buildColorMap(topGroups.map((g) => g.key), groupByColumn === 'model' || groupByColumn === 'sku');
     const series: Highcharts.SeriesOptionsType[] = [];
 
     for (let i = 0; i < topGroups.length; i++) {

@@ -42,7 +42,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    const colorMap = buildColorMap(rankedGroups.map((g) => g.group));
+    const colorMap = buildColorMap(rankedGroups.map((g) => g.group), stackField === 'model' || stackField === 'sku');
 
     const series: Highcharts.SeriesOptionsType[] = rankedGroups.map((groupInfo) => {
       const data = categories.map((bucketKey) => {

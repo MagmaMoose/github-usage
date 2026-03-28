@@ -87,11 +87,21 @@ function getBrandBase(name: string): { match: string; base: string } | null {
  * position among siblings in the list. Non-matching names fall back to the
  * GitHub data-viz palette. Returns a Map<name, color>.
  *
- * Call this ONCE per chart with the full list of series names, then look up
- * colors by name. This replaces the old mutable-counter approach.
+ * @param names - ordered list of series names
+ * @param useBranding - when true, apply model/SKU brand colors. When false, use
+ *   the standard differentiation palette for all series. Defaults to true for
+ *   backward compat but charts should pass false for non-model/SKU groupings.
  */
-export function buildColorMap(names: string[]): Map<string, string> {
+export function buildColorMap(names: string[], useBranding = true): Map<string, string> {
   const colorMap = new Map<string, string>();
+
+  if (!useBranding) {
+    for (let i = 0; i < names.length; i++) {
+      colorMap.set(names[i], GITHUB_COLORS_RESOLVED[i % GITHUB_COLORS_RESOLVED.length]);
+    }
+    return colorMap;
+  }
+
   // Count how many siblings each brand key has seen so far
   const brandCounters = new Map<string, number>();
   let fallbackIndex = 0;

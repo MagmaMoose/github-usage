@@ -188,9 +188,10 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
       const prefix = `L${i}:`;
       const topEntries = [...topSets[i]];
 
-      // Color map: use buildColorMap for the last level, GitHub palette for earlier levels
+      // Color map: use branded colors only for model/sku levels
+      const useBranding = field === 'model' || field === 'sku';
       const colorMap = i === filteredLevels.length - 1
-        ? buildColorMap(topEntries)
+        ? buildColorMap(topEntries, useBranding)
         : new Map<string, string>();
 
       for (let j = 0; j < topEntries.length; j++) {

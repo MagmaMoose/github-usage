@@ -64,7 +64,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       .slice(0, 10);
 
     // Build deterministic color map from ranked stack names
-    const colorMap = buildColorMap(rankedStacks.map((m) => m.stack));
+    const colorMap = buildColorMap(rankedStacks.map((m) => m.stack), stackField === 'model' || stackField === 'sku');
 
     // Only count from stacks that actually have a bar (in rankedStacks AND not hidden)
     const visibleStackNames = new Set(
