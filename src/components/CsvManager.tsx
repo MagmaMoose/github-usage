@@ -29,8 +29,8 @@ import { useReport } from '../context/useReport';
 import { getReportSchema } from '../lib/report-schema';
 import { formatDateRange } from '../lib/formatters';
 import { FileDropzone } from './FileDropzone';
-import { parseCSV } from '../lib/csv-parser';
-import { createZipArchive, extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
+import { importFiles } from '../lib/import';
+import { createZipArchive, ACCEPTED_FILE_TYPES } from '../lib/zip';
 import styles from './CsvManager.module.css';
 import tableStyles from './ReportTable.module.css';
 
@@ -103,17 +103,7 @@ export function CsvManager() {
 
   const handleAddFile = useCallback(
     async (files: FileList) => {
-      for (const file of Array.from(files)) {
-        if (isZipFile(file)) {
-          const csvFiles = await extractCsvsFromZip(file);
-          for (const { name, content } of csvFiles) {
-            addReport(parseCSV(content, name), content);
-          }
-        } else {
-          const text = await file.text();
-          addReport(parseCSV(text, file.name), text);
-        }
-      }
+      await importFiles(Array.from(files), addReport);
     },
     [addReport],
   );

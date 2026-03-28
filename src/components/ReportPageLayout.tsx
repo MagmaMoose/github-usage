@@ -63,8 +63,8 @@ import type { ReportType } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { formatDateRangeCompact, preloadBotAvatars, formatDate } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
-import { parseCSV } from '../lib/csv-parser';
-import { extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
+import { importFiles } from '../lib/import';
+import { ACCEPTED_FILE_TYPES } from '../lib/zip';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
 import { readURLFilterState, writeURLFilterState } from '../lib/url-state';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
@@ -259,18 +259,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleAddFile = useCallback(
     async (files: FileList) => {
-      for (const file of Array.from(files)) {
-        if (isZipFile(file)) {
-          const csvFiles = await extractCsvsFromZip(file);
-          for (const { name, content } of csvFiles) {
-            addReport(parseCSV(content, name), content);
-          }
-          continue;
-        }
-        if (!file.name.endsWith('.csv')) continue;
-        const text = await file.text();
-        addReport(parseCSV(text, file.name), text);
-      }
+      await importFiles(Array.from(files), addReport);
     },
     [addReport],
   );
@@ -280,14 +269,12 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     return computeSummary(visibleRows);
   }, [activeReport, visibleRows]);
 
-  const getReportTabLabel = useCallback(
-    (report: NonNullable<typeof activeReport>) => {
-      const typeLabel = getReportSchema(report.type).label;
-      const dateLabel = formatDateRangeCompact(report.dateRange.start, report.dateRange.end);
-      return dateLabel ? `${typeLabel} (${dateLabel})` : typeLabel;
-    },
-    [],
-  );
+  // Pure function: no deps needed, no memoization benefit
+  const getReportTabLabel = (report: NonNullable<typeof activeReport>) => {
+    const typeLabel = getReportSchema(report.type).label;
+    const dateLabel = formatDateRangeCompact(report.dateRange.start, report.dateRange.end);
+    return dateLabel ? `${typeLabel} (${dateLabel})` : typeLabel;
+  };
 
   const handleDownload = useCallback(() => {
     if (!activeReport) return;
@@ -297,8 +284,10 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   // Filter fields available for the current report data — derived from actual row keys.
   // schema.filterableFields controls ordering (preferred fields first).
   // Non-categorical fields (URLs, IPs, timestamps) are excluded unless explicitly preferred.
-  const availableFilterFields = useMemo(() => {
-    if (!activeReport || activeReport.rows.length === 0) return schema.filterableFields as FilterableField[];
+  // Derive available fields from row keys, with schema-preferred fields first.
+  // Used for both filter dropdowns and groupBy column selection.
+  const availableFields = useMemo(() => {
+    if (!activeReport || activeReport.rows.length === 0) return schema.filterableFields;
 
     const rowKeys = new Set(
       Object.keys(activeReport.rows[0] as unknown as Record<string, unknown>),
@@ -316,7 +305,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     const nextValues = new Map<FilterableField, string[]>();
     if (!activeReport) return nextValues;
 
-    for (const field of availableFilterFields) {
+    for (const field of availableFields) {
       const values = [
         ...new Set(
           activeReport.rows
@@ -327,7 +316,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
       nextValues.set(field, values);
     }
     return nextValues;
-  }, [activeReport, availableFilterFields]);
+  }, [activeReport, availableFields]);
 
   const applyAdvancedFilter = useCallback(
     (field: string, value: string) => {
@@ -350,21 +339,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     clearFilters();
     setSearchQuery('');
   }, [clearFilters, setSearchQuery]);
-
-  const groupableColumns = useMemo(() => {
-    if (!activeReport || activeReport.rows.length === 0) return schema.filterableFields;
-
-    const rowKeys = new Set(
-      Object.keys(activeReport.rows[0] as unknown as Record<string, unknown>),
-    );
-
-    const preferred = schema.filterableFields.filter((f) => rowKeys.has(f));
-    const preferredSet = new Set(preferred);
-    const rest = [...rowKeys]
-      .filter((k) => !preferredSet.has(k) && !isExcludedField(k))
-      .sort();
-    return [...preferred, ...rest];
-  }, [activeReport, schema.filterableFields]);
 
   const renderViewTabs = () => (
     <UnderlineNav aria-label="Usage viewer tabs" variant="flush" className={styles.primaryTabs}>
@@ -563,13 +537,13 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           <div className={styles.toolbarLeading}>
             <OnboardingBubble step={ONBOARDING_STEPS.FILTER_BAR}>
               <FilterBar
-                availableFields={availableFilterFields}
+                availableFields={availableFields}
                 valuesByField={filterValuesByField}
                 filters={filters}
                 searchQuery={searchQuery}
                 fieldIcons={FIELD_ICONS}
                 groupByColumn={groupByColumn}
-                groupableColumns={groupableColumns}
+                groupableColumns={availableFields}
                 onAddFilter={applyAdvancedFilter}
                 onRemoveFilter={removeAdvancedFilter}
                 onClearAll={clearAllToolbarFilters}

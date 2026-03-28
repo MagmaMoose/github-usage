@@ -14,10 +14,10 @@ import {
   PRODUCT_METRIC_OPTIONS,
   MIXED_METRIC_OPTIONS,
 } from './lib/report-schema';
+import { importRawCSVs } from './lib/import';
 import { useBrowserTitle } from './hooks/useBrowserTitle';
 import { usePeriodInference } from './hooks/usePeriodInference';
 import { useShareHydration } from './hooks/useShareHydration';
-import { parseCSV } from './lib/csv-parser';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { useProductNavigation } from './hooks/useProductNavigation';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
@@ -68,11 +68,7 @@ function AppContent() {
     try {
       const { loadSampleData } = await import('./lib/sample-data');
       const samples = await loadSampleData();
-      for (const { name, content } of samples) {
-        const report = parseCSV(content, name);
-        report.isSample = true;
-        addReport(report, content);
-      }
+      importRawCSVs(samples, addReport, { isSample: true });
       setActivePage(PAGE_TYPES.USAGE);
     } finally {
       setLoadingSamples(false);

@@ -34,7 +34,7 @@ import {
 } from '../lib/report-schema';
 import { buildPathForPage } from '../lib/url-state';
 import type { ParsedReport, UsageReportRow } from '../lib/types';
-import { parseCSV } from '../lib/csv-parser';
+import { importRawCSVs } from '../lib/import';
 import { useReport } from '../context/useReport';
 import { formatDisplayValue } from '../lib/formatters';
 import { ACTIONS_STORAGE_SKUS, type ActionsSubView } from '../hooks/useProductNavigation';
@@ -88,11 +88,7 @@ export function InsightsSidebar({
     try {
       const { loadSampleData } = await import('../lib/sample-data');
       const samples = await loadSampleData();
-      for (const { name, content } of samples) {
-        const report = parseCSV(content, name);
-        report.isSample = true;
-        addReport(report, content);
-      }
+      importRawCSVs(samples, addReport, { isSample: true });
       setActivePage(PAGE_TYPES.USAGE);
       onboarding.restart();
     } finally {
