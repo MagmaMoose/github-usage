@@ -7,6 +7,8 @@ import {
   type PropsWithChildren,
 } from 'react';
 import {
+  ActionList,
+  ActionMenu,
   Button,
   Heading,
   IconButton,
@@ -164,6 +166,14 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
 
   // Use override metricOptions if provided, otherwise fall back to schema
   const effectiveMetrics = metricOptions ?? schema.metricOptions;
+
+  // Page-level metric toggle (Spend vs Quantity/Minutes/etc.)
+  const showMetricToggle = effectiveMetrics.length > 1;
+  const [selectedMetricKey, setSelectedMetricKey] = useState('grossAmount');
+  const activeMetric = effectiveMetrics.find((m) => m.key === selectedMetricKey) ?? effectiveMetrics[0];
+  // Pass only the selected metric to charts so they don't render their own toggles
+  const chartMetricOptions = showMetricToggle ? [activeMetric] : effectiveMetrics;
+
   const visibleRows = useMemo(
     () => (activeReport ? contextVisibleRows : []),
     [activeReport, contextVisibleRows],
@@ -353,6 +363,24 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
         </PageHeader.TitleArea>
         <PageHeader.Actions>
           <Stack direction="horizontal" gap="condensed">
+            {showMetricToggle && (
+              <ActionMenu>
+                <ActionMenu.Button size="small">{activeMetric.label}</ActionMenu.Button>
+                <ActionMenu.Overlay>
+                  <ActionList selectionVariant="single">
+                    {effectiveMetrics.map((opt) => (
+                      <ActionList.Item
+                        key={opt.key}
+                        selected={activeMetric.key === opt.key}
+                        onSelect={() => setSelectedMetricKey(opt.key)}
+                      >
+                        {opt.label}
+                      </ActionList.Item>
+                    ))}
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
+            )}
             <PeriodSelector />
             <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
               Add file
@@ -488,13 +516,13 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           {activeTab === 'charts' && visibleRows.length > 0 && (
             <div className={styles.chartStack} key={activeReportIndex}>
               <div className={styles.chartSurface}>
-                <TimeSeriesChart metricOptions={effectiveMetrics} />
+                <TimeSeriesChart metricOptions={chartMetricOptions} />
               </div>
               <div className={styles.chartSurface}>
-                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={effectiveMetrics} />
+                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
               </div>
               <div className={styles.chartSurface}>
-                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={effectiveMetrics} />
+                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
               </div>
               <div className={styles.chartSurface}>
                 <SankeyChart hierarchy={schema.sankeyHierarchy} />
