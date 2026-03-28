@@ -182,13 +182,16 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   );
 
   // Pre-warm the avatar cache for any bot usernames in the current data
-  const [, forceAvatarUpdate] = useState(0);
+  const [avatarVersion, setAvatarVersion] = useState(0);
   useEffect(() => {
     const usernames = visibleRows
       .map((r) => (r as unknown as Record<string, unknown>).username as string)
       .filter(Boolean);
     if (usernames.length === 0) return;
-    preloadBotAvatars(usernames).then(() => forceAvatarUpdate((n) => n + 1));
+    preloadBotAvatars(usernames).then((resolved) => {
+      // Only bump version if new avatars were actually resolved
+      if (resolved) setAvatarVersion((n) => n + 1);
+    });
   }, [visibleRows]);
 
   const [activeTab, setActiveTabRaw] = useState<ViewTab>(() => {
@@ -521,7 +524,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           )}
 
           {activeTab === 'charts' && visibleRows.length > 0 && (
-            <div className={styles.chartStack} key={activeReportIndex}>
+            <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
               <div className={styles.chartSurface}>
                 <TimeSeriesChart metricOptions={chartMetricOptions} />
               </div>

@@ -229,6 +229,34 @@ const botAvatarCache = new Map<string, string>([
   ['trunk-io[bot]', 'https://avatars.githubusercontent.com/in/174498?v=4'],
 ]);
 
+// Hydrate runtime cache from localStorage (persisted API lookups survive reloads)
+const AVATAR_STORAGE_KEY = 'tbb:bot-avatars';
+try {
+  const stored = JSON.parse(localStorage.getItem(AVATAR_STORAGE_KEY) ?? '{}') as Record<string, string>;
+  for (const [k, v] of Object.entries(stored)) {
+    if (!botAvatarCache.has(k)) botAvatarCache.set(k, v);
+  }
+} catch { /* noop */ }
+
+/** Persist API-resolved avatars to localStorage */
+function persistAvatarCache(): void {
+  try {
+    // Only persist entries not in the hardcoded list (those are already in code)
+    const extras: Record<string, string> = {};
+    const stored = JSON.parse(localStorage.getItem(AVATAR_STORAGE_KEY) ?? '{}') as Record<string, string>;
+    for (const [k, v] of botAvatarCache.entries()) {
+      // Keep anything that was either previously stored or resolved at runtime
+      if (stored[k] || !HARDCODED_BOTS.has(k)) {
+        extras[k] = v;
+      }
+    }
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(extras));
+  } catch { /* storage full or unavailable */ }
+}
+
+/** Set of hardcoded bot names (skip persisting these) */
+const HARDCODED_BOTS = new Set(botAvatarCache.keys());
+
 /** In-flight fetch promises to avoid duplicate API calls */
 const pendingFetches = new Map<string, Promise<string | null>>();
 
@@ -251,7 +279,10 @@ export async function resolveBotAvatar(username: string): Promise<string | null>
     })
     .then((data) => {
       const url = data?.avatar_url ?? null;
-      if (url) botAvatarCache.set(username, url);
+      if (url) {
+        botAvatarCache.set(username, url);
+        persistAvatarCache();
+      }
       return url;
     })
     .catch(() => null)
@@ -263,18 +294,22 @@ export async function resolveBotAvatar(username: string): Promise<string | null>
 
 /**
  * Pre-warm the avatar cache for all bot usernames in a dataset.
- * Call this when reports load. Returns a promise that resolves
- * when all lookups are complete (for triggering re-renders).
+ * Returns true if any new avatars were resolved (for triggering re-renders).
  */
-export async function preloadBotAvatars(usernames: string[]): Promise<void> {
+export async function preloadBotAvatars(usernames: string[]): Promise<boolean> {
   const bots = usernames.filter((u) => isBot(u) && !botAvatarCache.has(u));
-  if (bots.length === 0) return;
-  await Promise.allSettled(bots.map(resolveBotAvatar));
+  if (bots.length === 0) return false;
+  const results = await Promise.allSettled(bots.map(resolveBotAvatar));
+  return results.some((r) => r.status === 'fulfilled' && r.value !== null);
 }
 
 /** Get the GitHub avatar URL for a username, handling bot accounts correctly.
  *  Returns cached bot URLs instantly; unknown bots get a best-effort URL. */
 export function getAvatarUrl(username: string, size = 40): string {
+  // Empty/missing usernames get the GitHub ghost (octocat silhouette)
+  if (!username || username === '(empty)') {
+    return `https://github.com/ghost.png?size=${size}`;
+  }
   // Check the cache first (covers hardcoded + API-resolved bots)
   const cached = botAvatarCache.get(username);
   if (cached) {
