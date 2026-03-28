@@ -46,6 +46,12 @@ describe('formatCompact', () => {
   it('formats zero', () => {
     expect(formatCompact(0)).toBe('0');
   });
+
+  it('formats fractional values with precision', () => {
+    expect(formatCompact(0.035714)).toBe('0.036');
+    expect(formatCompact(0.5)).toBe('0.50');
+    expect(formatCompact(0.001)).toBe('0.0010');
+  });
 });
 
 describe('formatNumber', () => {
