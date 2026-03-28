@@ -21,9 +21,11 @@ import {
 import { PageHeader } from '@primer/react/experimental';
 import type { IconProps } from '@primer/octicons-react';
 import {
+  AiModelIcon,
   ColumnsIcon,
   CopilotIcon,
   DownloadIcon,
+  FileIcon,
   GraphIcon,
   OrganizationIcon,
   PackageIcon,
@@ -33,7 +35,6 @@ import {
   TableIcon,
   UploadIcon,
   WorkflowIcon,
-  XIcon,
 } from '@primer/octicons-react';
 import { useReport } from '../context/useReport';
 import { FilterBar } from './FilterBar';
@@ -95,7 +96,7 @@ function isExcludedField(field: string): boolean {
 
 const FIELD_ICONS: Record<string, FunctionComponent<PropsWithChildren<IconProps>>> = {
   username: PersonIcon,
-  model: GraphIcon,
+  model: AiModelIcon,
   organization: OrganizationIcon,
   sku: ServerIcon,
   costCenterName: TableIcon,
@@ -157,7 +158,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     reports: allReports,
     activeReportIndex,
     setActiveReport,
-    clearAllReports,
     activeReport: contextActiveReport,
     addReport,
     groupByColumn,
@@ -246,10 +246,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleReset = useCallback(() => {
-    clearAllReports();
-  }, [clearAllReports]);
-
   const handleAddFile = useCallback(
     async (files: FileList) => {
       for (const file of Array.from(files)) {
@@ -425,7 +421,54 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           </PageHeader.Title>
         </PageHeader.TitleArea>
         <PageHeader.Actions>
-          <Stack direction="horizontal" gap="condensed">
+          <Stack direction="horizontal" gap="condensed" align="center">
+            {reports.length > 1 && (() => {
+              const combinedGroups = allowedReportTypes
+                ? allCombinedGroups.filter((g) => allowedReportTypes.includes(g.type))
+                : allCombinedGroups;
+
+              // Label for the current selection
+              const currentLabel = activeReport
+                ? getReportTabLabel(activeReport)
+                : 'Select report';
+
+              return (
+                <ActionMenu>
+                  <ActionMenu.Button size="small" leadingVisual={FileIcon}>
+                    {currentLabel}
+                  </ActionMenu.Button>
+                  <ActionMenu.Overlay width="auto">
+                    <ActionList selectionVariant="single">
+                      {combinedGroups.map((group) => (
+                        <ActionList.Item
+                          key={`__combined_${group.index}__`}
+                          selected={activeReportIndex === group.index}
+                          onSelect={() => setActiveReport(group.index)}
+                        >
+                          <ActionList.LeadingVisual><ColumnsIcon /></ActionList.LeadingVisual>
+                          {group.label}
+                        </ActionList.Item>
+                      ))}
+                      {combinedGroups.length > 0 && <ActionList.Divider />}
+                      {reports.map((report, i) => {
+                        const globalIdx = globalIndexMap[i];
+                        const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
+                        return (
+                          <ActionList.Item
+                            key={`${report.fileName}_${globalIdx}`}
+                            selected={globalIdx === activeReportIndex}
+                            onSelect={() => setActiveReport(globalIdx)}
+                          >
+                            <ActionList.LeadingVisual><Icon /></ActionList.LeadingVisual>
+                            {getReportTabLabel(report)}
+                          </ActionList.Item>
+                        );
+                      })}
+                    </ActionList>
+                  </ActionMenu.Overlay>
+                </ActionMenu>
+              );
+            })()}
             {showMetricToggle && (
               <ActionMenu>
                 <ActionMenu.Button size="small">{activeMetric.label}</ActionMenu.Button>
@@ -446,13 +489,10 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
             )}
             <PeriodSelector />
             <OnboardingBubble step={ONBOARDING_STEPS.ADD_FILE} alignRight>
-              <Button size="small" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
+              <Button size="small" variant="primary" leadingVisual={UploadIcon} onClick={() => fileInputRef.current?.click()}>
                 Add file
               </Button>
             </OnboardingBubble>
-            <Button size="small" variant="invisible" leadingVisual={XIcon} onClick={handleReset}>
-              Clear
-            </Button>
           </Stack>
           <input
             ref={fileInputRef}
@@ -484,49 +524,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           reportType={activeReport!.type}
         />
       )}
-
-      {reports.length > 1 && (() => {
-        // Filter combined groups to only those relevant to this page's allowed types
-        const combinedGroups = allowedReportTypes
-          ? allCombinedGroups.filter((g) => allowedReportTypes.includes(g.type))
-          : allCombinedGroups;
-
-        return (
-          <UnderlineNav
-            key={reports.length}
-            aria-label="Uploaded reports"
-            variant="flush"
-            className={styles.reportTabs}
-          >
-            {combinedGroups.map((group) => (
-              <UnderlineNav.Item
-                key={`__combined_${group.index}__`}
-                href="#"
-                aria-current={activeReportIndex === group.index ? 'page' : undefined}
-                leadingVisual={<ColumnsIcon />}
-                onSelect={(event) => { event.preventDefault(); setActiveReport(group.index); }}
-              >
-                {group.label}
-              </UnderlineNav.Item>
-            ))}
-            {reports.map((report, i) => {
-              const globalIdx = globalIndexMap[i];
-              const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
-              return (
-                <UnderlineNav.Item
-                  key={`${report.fileName}_${globalIdx}`}
-                  href="#"
-                  aria-current={globalIdx === activeReportIndex ? 'page' : undefined}
-                  leadingVisual={<Icon />}
-                  onSelect={(event) => { event.preventDefault(); setActiveReport(globalIdx); }}
-                >
-                  {getReportTabLabel(report)}
-                </UnderlineNav.Item>
-              );
-            })}
-          </UnderlineNav>
-        );
-      })()}
 
       <section className={styles.contentSurface} aria-label="Usage viewer content">
         <div className={styles.surfaceTabsRow}>

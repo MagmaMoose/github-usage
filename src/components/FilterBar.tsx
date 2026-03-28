@@ -278,6 +278,7 @@ export function FilterBar({
           <ActionMenu.Button
             size="medium"
             className={styles.filterButton}
+            leadingVisual={groupByColumn && fieldIcons[groupByColumn] ? fieldIcons[groupByColumn] : undefined}
           >
             {groupByColumn ? humanizeColumn(groupByColumn) : 'Group by'}
           </ActionMenu.Button>

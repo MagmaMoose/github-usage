@@ -589,6 +589,203 @@ function generateSeatActivityReport() {
   console.log(`✅ octodemo-seat-activity: ${rows.length} rows`);
 }
 
+// ── 7. Enterprise Members / License Export ──────────────────────
+
+function generateEnterpriseMembersExport() {
+  const header = [
+    'GitHub com login', 'GitHub com name', 'Enterprise server user ids',
+    'GitHub com user', 'Enterprise server user', 'Visual studio subscription user',
+    'License type', 'GitHub com profile', 'GitHub com member roles',
+    'GitHub com enterprise roles', 'GitHub com verified domain emails',
+    'GitHub com saml name', 'GitHub com orgs with pending invites',
+    'GitHub com two factor auth', 'GitHub com two factor auth required by date',
+    'GitHub com advanced security license user', 'Enterprise server primary emails',
+    'Enterprise server advanced security user ids',
+    'Visual studio license status', 'Visual studio subscription email',
+    'Total user accounts',
+  ].join(',');
+
+  const rows: string[] = [header];
+
+  const enterpriseRoles = ['Owner', 'Member'];
+  const memberRoles = ['Owner', 'Member'];
+
+  function randomDate(startYear: number, endYear: number): string {
+    const y = faker.number.int({ min: startYear, max: endYear });
+    const m = faker.number.int({ min: 1, max: 12 });
+    const d = faker.number.int({ min: 1, max: 28 });
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function buildOrgRoles(username: string, orgCount: number): string {
+    const assignments: string[] = [];
+    const userOrgs = faker.helpers.arrayElements(ORGS, orgCount);
+    for (const org of userOrgs) {
+      const role = faker.helpers.weightedArrayElement([
+        { value: 'Owner', weight: 0.3 },
+        { value: 'Member', weight: 0.7 },
+      ]);
+      assignments.push(`${org}:${role}`);
+    }
+    // Occasionally add repo-level collaborator entries
+    if (faker.number.float() < 0.15) {
+      const collabOrg = faker.helpers.arrayElement(ORGS);
+      const collabRepo = generateRepoName();
+      assignments.push(`${collabOrg}/${collabRepo}:Collaborator`);
+    }
+    return assignments.join(', ');
+  }
+
+  // ── GitHub.com users (the bulk) ──
+  const ghUsers = pickUsers(100);
+  for (const user of ghUsers) {
+    const fullName = faker.number.float() < 0.9
+      ? faker.person.fullName()
+      : ''; // some users have no display name
+
+    const hasGHES = faker.number.float() < 0.15;
+    const gheId = hasGHES
+      ? `${faker.number.int({ min: 100, max: 1500 })}:octodemo.com:Member`
+      : '';
+
+    const orgCount = faker.number.int({ min: 1, max: 6 });
+    const orgRoles = buildOrgRoles(user, orgCount);
+
+    const entRoleCount = faker.number.int({ min: 1, max: 2 });
+    const entRoles = faker.helpers.arrayElements(enterpriseRoles, entRoleCount).join(', ');
+
+    const hasPending = faker.number.float() < 0.2;
+    const pendingOrgs = hasPending
+      ? faker.helpers.arrayElements(ORGS, faker.number.int({ min: 1, max: 3 })).join(', ')
+      : '';
+
+    // Add "Pending invitation" to enterprise roles if they have pending orgs
+    const finalEntRoles = hasPending && !entRoles.includes('Pending invitation')
+      ? `${entRoles}, Pending invitation`
+      : entRoles;
+
+    const twoFa = faker.helpers.weightedArrayElement([
+      { value: 'true', weight: 0.85 },
+      { value: 'false', weight: 0.15 },
+    ]);
+
+    const twoFaDate = twoFa === 'true' ? randomDate(2023, 2025) : '';
+
+    const ghasSeat = faker.helpers.weightedArrayElement([
+      { value: 'false', weight: 0.7 },
+      { value: 'true', weight: 0.3 },
+    ]);
+
+    const samlName = faker.number.float() < 0.1
+      ? `${user}@${faker.helpers.arrayElement(['company.com', 'corp.dev'])}`
+      : '';
+
+    const verifiedEmail = faker.number.float() < 0.1
+      ? `${user}@octodemo.com`
+      : '';
+
+    const gheEmail = hasGHES ? `${user}@github.com` : '';
+
+    const totalAccounts = hasGHES ? 2 : 1;
+
+    rows.push([
+      user,
+      fullName,
+      `"${gheId}"`,
+      'true',
+      hasGHES ? 'true' : 'false',
+      'false',
+      'Enterprise',
+      `https://github.com/${user}`,
+      `"${orgRoles}"`,
+      `"${finalEntRoles}"`,
+      `"${verifiedEmail}"`,
+      samlName,
+      `"${pendingOrgs}"`,
+      twoFa,
+      twoFaDate,
+      ghasSeat,
+      `"${gheEmail}"`,
+      '""',
+      '',
+      '',
+      totalAccounts,
+    ].join(','));
+  }
+
+  // ── Enterprise Server-only users (no GitHub.com login) ──
+  const gheOnlyCount = faker.number.int({ min: 30, max: 60 });
+  for (let i = 0; i < gheOnlyCount; i++) {
+    const gheId = faker.number.int({ min: 3, max: 1500 });
+    const emailUser = faker.internet.username().toLowerCase();
+    const emailDomain = faker.helpers.arrayElement([
+      'github.com', 'company.dev', 'gmail.com',
+    ]);
+    const email = `${emailUser}@${emailDomain}`;
+
+    rows.push([
+      '""',
+      '',
+      `${gheId}:octodemo.com:Member`,
+      'false',
+      'true',
+      'false',
+      'Enterprise',
+      '',
+      '""',
+      '""',
+      '""',
+      '',
+      '""',
+      '',
+      '',
+      'false',
+      email,
+      '""',
+      '',
+      '',
+      1,
+    ].join(','));
+  }
+
+  // ── SAML-pending users (no GitHub.com login, pending invite) ──
+  const samlPendingCount = faker.number.int({ min: 1, max: 5 });
+  for (let i = 0; i < samlPendingCount; i++) {
+    const samlEmail = `${faker.internet.username().toLowerCase()}@${faker.helpers.arrayElement(['company.onmicrosoft.com', 'corp.okta.com'])}`;
+    const pendingOrg = faker.helpers.arrayElement(ORGS);
+
+    rows.push([
+      samlEmail,
+      '',
+      '""',
+      'false',
+      'false',
+      'false',
+      'Enterprise',
+      '',
+      '""',
+      'Pending invitation',
+      '""',
+      '',
+      pendingOrg,
+      '',
+      '',
+      'false',
+      '""',
+      '""',
+      '',
+      '',
+      0,
+    ].join(','));
+  }
+
+  writeFileSync(
+    join(EXAMPLES_DIR, 'export-octodemo-1774709193.csv'),
+    rows.join('\n') + '\n',
+  );
+  console.log(`✅ export-octodemo-members: ${rows.length} rows`);
+}
+
 // ── Run all ─────────────────────────────────────────────────────
 
 console.log('🎲 Generating fake example data...\n');
@@ -599,5 +796,6 @@ generatePremiumRequestReport();
 generateTokenUsageReport();
 generateGhasReport();
 generateSeatActivityReport();
+generateEnterpriseMembersExport();
 
 console.log('\n✨ Done! All example CSVs regenerated with fake data.');
