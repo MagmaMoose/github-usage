@@ -44,7 +44,7 @@ export function usePageNavigation({
     const urlState = readURLFilterState();
     const page = urlState.page as PageType | undefined;
     if (page && Object.values(PAGE_TYPES).includes(page)) return page;
-    return PAGE_TYPES.COPILOT;
+    return PAGE_TYPES.USAGE;
   });
 
   const setActivePage = useCallback((page: PageType) => {

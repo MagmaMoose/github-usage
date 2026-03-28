@@ -12,7 +12,7 @@ export interface URLFilterState {
 }
 
 const BASE_PATH = import.meta.env.BASE_URL || '/';
-const DEFAULT_PAGE = 'copilot';
+const DEFAULT_PAGE = 'usage';
 
 /** Extract the page segment from the pathname (after the base path) */
 function getPageFromPath(): string | undefined {
