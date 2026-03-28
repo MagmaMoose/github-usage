@@ -15,7 +15,7 @@ export function HeroCard({
   return (
     <div className={styles.heroCard}>
       <div className={styles.heroCardInner}>
-        <h3 className={styles.heroCardTitle}>{title}</h3>
+        <h2 className={styles.heroCardTitle}>{title}</h2>
         <div className={styles.heroCardValue}>{value}</div>
         {description && <p className={styles.heroCardDescription}>{description}</p>}
         {children}
