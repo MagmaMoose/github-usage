@@ -50,6 +50,7 @@ function AppContent() {
     reports,
     activeReport,
     addReport,
+    setActiveReport,
     setGroupByColumn,
     setTimeBucket,
     setPeriodKey,
@@ -72,7 +73,13 @@ function AppContent() {
     setActivePageRaw(page);
     // Clear product filter when switching pages
     setFilter('product', []);
-  }, [setFilter]);
+    // Auto-select the first report matching the new page type
+    const allowedTypes = PAGE_REPORT_TYPES[page];
+    const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
+    if (matchIndex !== -1) {
+      setActiveReport(matchIndex);
+    }
+  }, [setFilter, reports, setActiveReport]);
 
   // Sync active page to URL
   useEffect(() => {
@@ -85,6 +92,17 @@ function AppContent() {
       filters,
     });
   }, [activePage, groupByColumn, timeBucket, periodKey, searchQuery, filters]);
+
+  // Auto-select a report matching the current page when reports load or page changes
+  useEffect(() => {
+    if (reports.length === 0) return;
+    const allowedTypes = PAGE_REPORT_TYPES[activePage];
+    if (activeReport && allowedTypes.includes(activeReport.type)) return; // already valid
+    const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
+    if (matchIndex !== -1) {
+      setActiveReport(matchIndex);
+    }
+  }, [reports, activePage, activeReport, setActiveReport]);
 
   const [sidebarCollapsed, setSidebarCollapsedRaw] = useState(() =>
     getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, true),
