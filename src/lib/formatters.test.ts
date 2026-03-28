@@ -5,7 +5,16 @@ import {
   formatNumber,
   formatDate,
   formatDateRange,
+  formatDatetime,
+  formatBucketLabels,
+  bucketKeyToTimestamp,
+  formatDateRangeCompact,
+  formatDisplayValue,
   humanizeColumn,
+  isBot,
+  getAvatarUrl,
+  formatWorkflowPath,
+  classifyWorkflowPath,
 } from './formatters';
 
 describe('formatCurrency', () => {
@@ -109,5 +118,219 @@ describe('humanizeColumn', () => {
 
   it('falls back to title case for unknown columns', () => {
     expect(humanizeColumn('fooBarBaz')).toBe('Foo Bar Baz');
+  });
+});
+
+describe('formatDatetime', () => {
+  it('formats ISO datetime string', () => {
+    const result = formatDatetime('2026-03-28T06:54:33Z');
+    expect(result).toMatch(/Mar/);
+    expect(result).toMatch(/28/);
+    expect(result).toMatch(/2026/);
+  });
+
+  it('returns dash for None', () => {
+    expect(formatDatetime('None')).toBe('—');
+  });
+
+  it('returns dash for empty string', () => {
+    expect(formatDatetime('')).toBe('—');
+  });
+
+  it('returns raw value for invalid date', () => {
+    expect(formatDatetime('not-a-date')).toBe('not-a-date');
+  });
+});
+
+describe('formatBucketLabels', () => {
+  it('formats daily keys within same year', () => {
+    const labels = formatBucketLabels(['2026-03-01', '2026-03-15']);
+    expect(labels).toEqual(['3/1', '3/15']);
+  });
+
+  it('formats daily keys across years', () => {
+    const labels = formatBucketLabels(['2025-12-31', '2026-01-01']);
+    expect(labels).toEqual(['12/31/25', '1/1/26']);
+  });
+
+  it('formats monthly keys within same year', () => {
+    const labels = formatBucketLabels(['2026-02', '2026-03']);
+    expect(labels[0]).toMatch(/Feb/);
+    expect(labels[1]).toMatch(/Mar/);
+    expect(labels[0]).not.toMatch(/2026/);
+  });
+
+  it('formats monthly keys across years', () => {
+    const labels = formatBucketLabels(['2025-12', '2026-01']);
+    expect(labels[0]).toMatch(/Dec/);
+    expect(labels[0]).toMatch(/2025/);
+    expect(labels[1]).toMatch(/Jan/);
+    expect(labels[1]).toMatch(/2026/);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(formatBucketLabels([])).toEqual([]);
+  });
+});
+
+describe('bucketKeyToTimestamp', () => {
+  it('converts daily key to UTC timestamp', () => {
+    const ts = bucketKeyToTimestamp('2026-03-15');
+    const d = new Date(ts);
+    expect(d.getUTCFullYear()).toBe(2026);
+    expect(d.getUTCMonth()).toBe(2); // 0-indexed
+    expect(d.getUTCDate()).toBe(15);
+  });
+
+  it('converts monthly key to first of month', () => {
+    const ts = bucketKeyToTimestamp('2026-02');
+    const d = new Date(ts);
+    expect(d.getUTCFullYear()).toBe(2026);
+    expect(d.getUTCMonth()).toBe(1);
+    expect(d.getUTCDate()).toBe(1);
+  });
+});
+
+describe('formatDateRangeCompact', () => {
+  it('returns single month when same month', () => {
+    const result = formatDateRangeCompact('2026-03-01', '2026-03-28');
+    expect(result).toMatch(/Mar 2026/);
+    expect(result).not.toContain('–');
+  });
+
+  it('returns range when different months same year', () => {
+    const result = formatDateRangeCompact('2026-02-01', '2026-03-28');
+    expect(result).toContain('Feb');
+    expect(result).toContain('Mar');
+    expect(result).toContain('–');
+  });
+
+  it('returns range with years when different years', () => {
+    const result = formatDateRangeCompact('2025-12-01', '2026-03-01');
+    expect(result).toContain('2025');
+    expect(result).toContain('2026');
+  });
+
+  it('returns empty for empty inputs', () => {
+    expect(formatDateRangeCompact('', '')).toBe('');
+  });
+});
+
+describe('formatDisplayValue', () => {
+  it('formats SKU codes to human-readable names', () => {
+    expect(formatDisplayValue('copilot_premium_request', 'sku')).toBe('Copilot PRUs');
+    expect(formatDisplayValue('actions_linux', 'sku')).toBe('Actions Linux');
+    expect(formatDisplayValue('actions_macos', 'sku')).toBe('Actions macOS');
+  });
+
+  it('formats product codes to display names', () => {
+    expect(formatDisplayValue('copilot', 'product')).toBe('GitHub Copilot');
+    expect(formatDisplayValue('actions', 'product')).toBe('GitHub Actions');
+    expect(formatDisplayValue('git_lfs', 'product')).toBe('Git LFS');
+  });
+
+  it('passes through unknown values', () => {
+    expect(formatDisplayValue('unknown_sku', 'sku')).toBe('unknown_sku');
+    expect(formatDisplayValue('some-user', 'username')).toBe('some-user');
+  });
+
+  it('formats boolean values', () => {
+    expect(formatDisplayValue('true')).toBe('Yes');
+    expect(formatDisplayValue('false')).toBe('No');
+  });
+
+  it('returns empty for empty input', () => {
+    expect(formatDisplayValue('')).toBe('');
+  });
+
+  it('formats workflow paths when column is workflowPath', () => {
+    expect(formatDisplayValue('.github/workflows/ci.yml', 'workflowPath')).toBe('ci.yml');
+  });
+});
+
+describe('isBot', () => {
+  it('returns true for bot usernames', () => {
+    expect(isBot('dependabot[bot]')).toBe(true);
+    expect(isBot('github-actions[bot]')).toBe(true);
+    expect(isBot('custom-app[bot]')).toBe(true);
+  });
+
+  it('returns false for regular usernames', () => {
+    expect(isBot('jmarquez')).toBe(false);
+    expect(isBot('alex42')).toBe(false);
+    expect(isBot('')).toBe(false);
+  });
+});
+
+describe('getAvatarUrl', () => {
+  it('returns ghost avatar for empty username', () => {
+    expect(getAvatarUrl('')).toContain('ghost.png');
+    expect(getAvatarUrl('(empty)')).toContain('ghost.png');
+  });
+
+  it('returns cached URL for known bots', () => {
+    const url = getAvatarUrl('dependabot[bot]');
+    expect(url).toContain('avatars.githubusercontent.com');
+  });
+
+  it('returns .png shortcut for unknown bots', () => {
+    const url = getAvatarUrl('my-custom-app[bot]');
+    expect(url).toContain('github.com/my-custom-app.png');
+  });
+
+  it('returns github avatar URL for regular users', () => {
+    const url = getAvatarUrl('jmarquez');
+    expect(url).toContain('github.com/jmarquez.png');
+  });
+
+  it('includes size parameter', () => {
+    const url = getAvatarUrl('test-user', 80);
+    expect(url).toContain('size=80');
+  });
+});
+
+describe('formatWorkflowPath', () => {
+  it('extracts filename from standard workflow path', () => {
+    expect(formatWorkflowPath('.github/workflows/ci.yml')).toBe('ci.yml');
+    expect(formatWorkflowPath('.github/workflows/deploy.yml')).toBe('deploy.yml');
+  });
+
+  it('extracts name from dynamic paths', () => {
+    expect(formatWorkflowPath('dynamic/github-code-scanning/codeql')).toBe('codeql');
+    expect(formatWorkflowPath('dynamic/dependabot/dependabot-updates')).toBe('dependabot-updates');
+  });
+
+  it('extracts filename from required workflow paths', () => {
+    expect(formatWorkflowPath('required/123/.github/workflows/dependency-review.yml')).toBe('dependency-review.yml');
+  });
+
+  it('returns (empty) for empty path', () => {
+    expect(formatWorkflowPath('')).toBe('(empty)');
+  });
+
+  it('returns raw path for unrecognized format', () => {
+    expect(formatWorkflowPath('some/random/path')).toBe('some/random/path');
+  });
+});
+
+describe('classifyWorkflowPath', () => {
+  it('classifies standard workflow paths', () => {
+    expect(classifyWorkflowPath('.github/workflows/ci.yml')).toBe('standard');
+  });
+
+  it('classifies dynamic/managed paths', () => {
+    expect(classifyWorkflowPath('dynamic/github-code-scanning/codeql')).toBe('managed');
+  });
+
+  it('classifies required paths', () => {
+    expect(classifyWorkflowPath('required/123/.github/workflows/review.yml')).toBe('required');
+  });
+
+  it('returns null for empty path', () => {
+    expect(classifyWorkflowPath('')).toBeNull();
+  });
+
+  it('returns null for unrecognized path', () => {
+    expect(classifyWorkflowPath('something/else')).toBeNull();
   });
 });
