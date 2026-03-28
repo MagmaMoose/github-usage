@@ -12,6 +12,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOnboardingContext(): OnboardingState {
   const ctx = useContext(OnboardingContext);
   if (!ctx) throw new Error('useOnboardingContext must be used inside <OnboardingProvider>');

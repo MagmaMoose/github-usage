@@ -48,6 +48,7 @@ export function TeachingBubble({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when closing
       setClickOutsideReady(false);
       return;
     }
