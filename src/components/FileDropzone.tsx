@@ -6,7 +6,7 @@ import { parseCSV } from '../lib/csv-parser';
 import { useReport } from '../context/useReport';
 import styles from './FileDropzone.module.css';
 
-export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
+export function FileDropzone({ forceShow, variant = 'copilot' }: { forceShow?: boolean; variant?: 'copilot' | 'usage' }) {
   const { addReport, reports } = useReport();
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +130,7 @@ export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
               </a>
               {' '}on GitHub
             </li>
-            <li>Navigate to <strong>Billing &amp; Licensing</strong> → <strong>Usage</strong> → <strong>Premium request analytics</strong></li>
+            <li>Navigate to <strong>Billing &amp; Licensing</strong> → <strong>Usage</strong> → <strong>{variant === 'usage' ? 'Metered Usage' : 'Premium request analytics'}</strong></li>
           </ol>
           <div className={styles.skipRow}>
             <Button
@@ -145,9 +145,18 @@ export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
           </div>
         </div>
         <ol start={3} className={styles.stepsList}>
-          <li>Click <strong>Get usage report</strong></li>
-          <li>Select the date range and click <strong>Email me the report</strong></li>
-          <li>Download the CSV from the link in your email</li>
+          {variant === 'usage' ? (
+            <>
+              <li>Select the billing period and click <strong>Get report</strong></li>
+              <li>Download the CSV when ready</li>
+            </>
+          ) : (
+            <>
+              <li>Click <strong>Get usage report</strong></li>
+              <li>Select the date range and click <strong>Email me the report</strong></li>
+              <li>Download the CSV from the link in your email</li>
+            </>
+          )}
         </ol>
         <div className={styles.instructionsFooter}>
           <a
@@ -176,10 +185,10 @@ export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
               buttonType: 'primary',
               disabled: !slug.trim(),
               onClick: () => {
-                window.open(
-                  `https://github.com/enterprises/${slug.trim()}/billing/premium_requests_usage`,
-                  '_blank',
-                );
+                const url = variant === 'usage'
+                  ? `https://github.com/enterprises/${slug.trim()}/billing/usage`
+                  : `https://github.com/enterprises/${slug.trim()}/billing/premium_requests_usage`;
+                window.open(url, '_blank');
                 setSlugDialogOpen(false);
               },
             },
@@ -198,10 +207,10 @@ export function FileDropzone({ forceShow }: { forceShow?: boolean }) {
               block
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && slug.trim()) {
-                  window.open(
-                    `https://github.com/enterprises/${slug.trim()}/billing/premium_requests_usage`,
-                    '_blank',
-                  );
+                  const url = variant === 'usage'
+                    ? `https://github.com/enterprises/${slug.trim()}/billing/usage`
+                    : `https://github.com/enterprises/${slug.trim()}/billing/premium_requests_usage`;
+                  window.open(url, '_blank');
                   setSlugDialogOpen(false);
                 }
               }}

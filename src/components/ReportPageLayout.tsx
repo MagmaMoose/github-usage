@@ -352,7 +352,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               {schema.emptyStateText}
             </Text>
           </div>
-          <FileDropzone forceShow />
+          <FileDropzone forceShow variant={schema.type === 'usage_report' ? 'usage' : 'copilot'} />
         </section>
       </div>
     );
