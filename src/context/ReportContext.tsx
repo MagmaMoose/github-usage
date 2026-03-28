@@ -21,7 +21,7 @@ interface ReportState {
   reports: ParsedReport[];
   /** Raw CSV content parallel to reports[], used for localStorage caching */
   rawCsvs: string[];
-  /** SHA-256 hashes of raw CSV content for dedup */
+  /** FNV-1a hashes of raw CSV content for dedup */
   fileHashes: Set<string>;
   activeReportIndex: number;
   groupByColumn: string;

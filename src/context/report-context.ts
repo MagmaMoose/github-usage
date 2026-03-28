@@ -17,11 +17,11 @@ interface ReportState {
   filters: Record<string, string[]>;
 }
 
-/** A group of same-type reports from the same enterprise (same org set) that can be combined */
+/** A group of same-type reports from the same enterprise (shared orgs) that can be combined */
 export interface CombinedGroup {
   /** Negative index used as activeReportIndex: -1, -2, etc. */
   index: number;
-  /** Tab label, e.g. "Combined" or "Combined (acme-corp, ...)", or the single shared org */
+  /** Tab label, e.g. "Premium Requests (Feb–Mar 2026)" */
   label: string;
   /** Report type shared by all reports in this group */
   type: ReportType;
