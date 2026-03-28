@@ -28,7 +28,7 @@ function getField(row: AnyReportRow, field: string): string {
   return String(val);
 }
 
-export function SankeyChart({ hierarchy }: { hierarchy?: string[] }) {
+export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; metricLabel?: string }) {
   const { activeReport, visibleRows } = useReport();
 
   const result = useMemo((): { options: Highcharts.Options; title: string } | null => {
@@ -221,7 +221,8 @@ export function SankeyChart({ hierarchy }: { hierarchy?: string[] }) {
       return MAP[f] ?? f;
     });
     if (showTokenTypes) titleParts.push('Token Type');
-    const chartTitle = `Spend flow: ${titleParts.join(' → ')}`;
+    const flowLabel = metricLabel && metricLabel !== 'Spend' ? `${metricLabel} flow` : 'Spend flow';
+    const chartTitle = `${flowLabel}: ${titleParts.join(' → ')}`;
 
     const $ = (v: number) => `$${v.toFixed(2)}`;
     const pct = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(1)}%` : '0%';
@@ -322,7 +323,7 @@ export function SankeyChart({ hierarchy }: { hierarchy?: string[] }) {
         series: [
           {
             type: 'sankey' as const,
-            name: 'Spend flow',
+            name: flowLabel,
             keys: ['from', 'to', 'weight'],
             data: links,
             nodes,
