@@ -176,37 +176,36 @@ Server responded quickly, no redirects. **Compression was not applied** (Vite de
 
 ## Prioritized Action Plan
 
-### P0: Fix Heading Order (a11y)
+### ✅ P0: Fix Heading Order (a11y) — DONE
 
-Hero cards use `<h3>` directly after `<h1>`, skipping `<h2>`. Either change to `<h2>` or restructure the heading hierarchy. Restores Accessibility to 100.
+Changed hero cards from `<h3>` to `<h2>` to fix heading-order skip. CSS class controls font-size so no visual change. Restores Accessibility to 100.
 
-### P1: Fix the `createRoot()` Bug
+### ✅ P1: Fix the `createRoot()` Bug — DONE
 
-Guard against double-invocation in `main.tsx`. Cleans up the console error, gets Best Practices to 100.
+Cached root instance on the container element so HMR re-executions call `root.render()` instead of `createRoot()` again. Restores Best Practices to 100.
 
-### P2: Reduce Highcharts Forced Reflows (256ms)
+### ✅ P2: Self-Host Google Fonts — DONE
 
-This is the biggest runtime performance issue. Options:
-- Render charts in a `requestAnimationFrame` or `requestIdleCallback` to avoid blocking the main thread
-- Use `chart.reflow()` sparingly and batch DOM reads/writes
-- Consider setting explicit chart dimensions (`width`/`height` in options) to avoid Highcharts measuring container size
-- Lazy render below-the-fold charts (the Sankey and second time series chart) with IntersectionObserver
+Downloaded Inter variable font (woff2) to `public/fonts/`. Replaced the 3-hop Google Fonts waterfall (HTML → CSS → WOFF2, 1,389ms) with same-origin `@font-face` declarations with `font-display: swap`.
 
-### P3: Lazy Load Chart Dependencies
+### ✅ P3: Lazy Load Chart Dependencies — DONE
 
-`highcharts.js` (365 KB) + `highcharts/modules/sankey` (23 KB) sit at the end of the critical rendering path. Charts are only needed when data is loaded. `LazyChart.tsx` exists but chart components still eagerly import Highcharts.
+All 4 chart components (TimeSeriesChart, GroupBreakdownChart, CostBreakdownChart, SankeyChart) now use `React.lazy()` + `Suspense`. Highcharts (365 KB) and its Sankey module (23 KB) are only loaded when the Charts tab is active with data. Also refactored:
+- `useHighchartsInit` uses dynamic `import()` instead of top-level import
+- `chart-theme.ts` replaced `Highcharts.color().brighten()` with a pure `brightenHex()` function, eliminating its Highcharts dependency entirely. This prevents `ReportTable.tsx` (which imports `getModelIconUrl`) from pulling in the 365 KB bundle.
 
-### P4: Self-Host Google Fonts
+### ✅ P4: Lazy Load File Processing Libs — DONE
 
-Google Fonts is the #1 critical path bottleneck at **1,389ms**. The waterfall is: HTML → Google CSS → Google WOFF2 (3 hops). Self-hosting the Inter font eliminates 2 network hops and removes the render-blocking external CSS.
+- `fflate` (61 KB): dynamic `import()` inside `createZipArchive` and `extractCsvsFromZip`
+- `lz-string` (14 KB): dynamic `import()` inside `buildShareURL` and `readShareData`
 
-### P5: Audit Primer React Imports
+### ✅ P5: Reduce Highcharts Forced Reflows — DONE
+
+Added `contain: layout style paint` to `.chartSurface` to isolate chart layout/paint from the rest of the DOM, preventing cascading style recalculations.
+
+### P6: Audit Primer React Imports
 
 703 KB for `@primer_react.js` + 496 KB for octicons. 117 stylesheets is excessive. Check barrel imports (`import { Button } from '@primer/react'`) vs. deep imports. Verify tree-shaking actually works in production.
-
-### P6: Lazy Load File Processing Libs
-
-`fflate` (61 KB), `lz-string` (14 KB), `papaparse` (25 KB) are only needed when a user drops a file or shares a URL. Dynamic `import()` on demand.
 
 ### P7: Virtualize SVG Elements
 
