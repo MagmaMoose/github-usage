@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ParsedReport } from '../lib/types';
-import { GROUPABLE_COLUMNS } from '../lib/types';
 import {
   PAGE_TYPES,
   PAGE_REPORT_TYPES,
@@ -51,19 +50,16 @@ export function usePageNavigation({
   const setActivePage = useCallback((page: PageType) => {
     setActivePageRaw(page);
     setFilter('product', []);
-    // Reset groupBy to the new page's default if current is invalid
+    // Reset groupBy to the new page's default
     const targetReportType = PAGE_REPORT_TYPES[page][0];
-    const allowedCols = GROUPABLE_COLUMNS[targetReportType] as readonly string[];
-    if (!allowedCols.includes(groupByColumn)) {
-      const schema = getReportSchema(targetReportType);
-      setGroupByColumn(schema.defaultGroupBy);
-    }
+    const schema = getReportSchema(targetReportType);
+    setGroupByColumn(schema.defaultGroupBy);
     const allowedTypes = PAGE_REPORT_TYPES[page];
     const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
     if (matchIndex !== -1) {
       setActiveReport(matchIndex);
     }
-  }, [setFilter, setGroupByColumn, groupByColumn, reports, setActiveReport]);
+  }, [setFilter, setGroupByColumn, reports, setActiveReport]);
 
   // Sync active page to URL
   useEffect(() => {

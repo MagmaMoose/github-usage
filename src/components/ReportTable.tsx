@@ -20,7 +20,7 @@ import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
 import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime } from '../lib/formatters';
-import type { AnyReportRow, TokenUsageRow, UsageReportRow, CopilotSeatActivityRow, DormantUsersRow, GhasActiveCommittersRow } from '../lib/types';
+import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
@@ -59,25 +59,8 @@ interface TableRow {
   // Usage report columns
   totalMinutes: number;
   totalStorageGBH: number;
-  // Seat activity columns (flat rows)
-  reportTime: string;
-  login: string;
-  lastAuthenticatedAt: string;
-  lastActivityAt: string;
-  lastSurfaceUsed: string;
-  organization: string;
-  // Dormant users columns (flat rows)
-  role: string;
-  createdAt: string;
-  memberId: number;
-  lastLoggedIp: string;
-  twoFactorEnabled: string;
-  outsideCollaborator: string;
-  // GHAS columns (flat rows)
-  userLogin: string;
-  repository: string;
-  lastPushedDate: string;
-  lastPushedEmail: string;
+  // Dynamic flat-report fields are stored here
+  [key: string]: unknown;
 }
 
 const columnHelper = createColumnHelper<TableRow>();
@@ -194,10 +177,10 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
   const reportType = activeReport?.type;
   const isTokenReport = reportType === REPORT_TYPES.TOKEN_USAGE;
   const isUsageReport = reportType === REPORT_TYPES.USAGE_REPORT;
-  const isSeatActivity = reportType === REPORT_TYPES.COPILOT_SEAT_ACTIVITY;
-  const isDormantUsers = reportType === REPORT_TYPES.DORMANT_USERS;
-  const isGhas = reportType === REPORT_TYPES.GHAS_ACTIVE_COMMITTERS;
-  const isFlatReport = isSeatActivity || isDormantUsers || isGhas;
+  const isFlatReport = reportType != null
+    && reportType !== REPORT_TYPES.PREMIUM_REQUEST
+    && reportType !== REPORT_TYPES.TOKEN_USAGE
+    && reportType !== REPORT_TYPES.USAGE_REPORT;
 
   const [sorting, setSorting] = useState<SortingState>([{ id: isFlatReport ? 'count' : 'netAmount', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -222,13 +205,10 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     });
   }, []);
 
-  const emptyRow: Omit<TableRow, 'id' | 'group'> = {
+  const emptyRow: Partial<TableRow> = {
     count: 0, grossAmount: 0, discountAmount: 0, netAmount: 0, quantity: 0,
     totalInputTokens: 0, totalOutputTokens: 0, totalCacheCreationTokens: 0, totalCacheReadTokens: 0,
     totalMinutes: 0, totalStorageGBH: 0,
-    reportTime: '', login: '', lastAuthenticatedAt: '', lastActivityAt: '', lastSurfaceUsed: '', organization: '',
-    role: '', createdAt: '', memberId: 0, lastLoggedIp: '', twoFactorEnabled: '', outsideCollaborator: '',
-    userLogin: '', repository: '', lastPushedDate: '', lastPushedEmail: '',
   };
 
   const tableData = useMemo(() => {
@@ -259,14 +239,12 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
           group: key,
           count: rows.length,
         };
-        // Copy all string/number fields from the first row for display
+        // Copy all fields from the first row for display
         for (const [field, val] of Object.entries(first)) {
-          if (field in base) {
-            if (typeof val === 'boolean') {
-              (base as Record<string, unknown>)[field] = val ? 'Yes' : 'No';
-            } else if (typeof val === 'string' || typeof val === 'number') {
-              (base as Record<string, unknown>)[field] = val;
-            }
+          if (typeof val === 'boolean') {
+            (base as Record<string, unknown>)[field] = val ? 'Yes' : 'No';
+          } else if (typeof val === 'string' || typeof val === 'number') {
+            (base as Record<string, unknown>)[field] = val;
           }
         }
         return base;
@@ -310,7 +288,20 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
 
       return base;
     });
-  }, [activeReport, groupByColumn, visibleRows, isTokenReport, isUsageReport, isSeatActivity, isDormantUsers, isGhas]);
+  }, [activeReport, groupByColumn, visibleRows, isTokenReport, isUsageReport, isFlatReport]);
+
+  // For flat reports: detect which row fields have at least one non-empty value
+  const fieldsWithValues = useMemo(() => {
+    if (!activeReport || !isFlatReport) return new Set<string>();
+    const populated = new Set<string>();
+    for (const row of visibleRows) {
+      for (const [key, val] of Object.entries(row as unknown as Record<string, unknown>)) {
+        if (populated.has(key)) continue;
+        if (val !== '' && val !== null && val !== undefined) populated.add(key);
+      }
+    }
+    return populated;
+  }, [activeReport, isFlatReport, visibleRows]);
 
   const activeFilterValues = filters[groupByColumn] ?? [];
 
@@ -433,58 +424,48 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     );
     }
 
-    // Token columns (token usage reports only)
+    // Token columns (only if data has non-zero values)
     if (isTokenReport) {
-      cols.push(
-        columnHelper.accessor('totalInputTokens', {
-          header: 'Input tokens',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalOutputTokens', {
-          header: 'Output tokens',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalCacheCreationTokens', {
-          header: 'Cache create',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalCacheReadTokens', {
-          header: 'Cache read',
-          cell: (info) => formatCompact(info.getValue()),
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-      );
+      const hasInput = tableData.some((r) => r.totalInputTokens > 0);
+      const hasOutput = tableData.some((r) => r.totalOutputTokens > 0);
+      const hasCacheCreate = tableData.some((r) => r.totalCacheCreationTokens > 0);
+      const hasCacheRead = tableData.some((r) => r.totalCacheReadTokens > 0);
+
+      if (hasInput) cols.push(columnHelper.accessor('totalInputTokens', {
+        header: 'Input tokens', cell: (info) => formatCompact(info.getValue()), meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
+      if (hasOutput) cols.push(columnHelper.accessor('totalOutputTokens', {
+        header: 'Output tokens', cell: (info) => formatCompact(info.getValue()), meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
+      if (hasCacheCreate) cols.push(columnHelper.accessor('totalCacheCreationTokens', {
+        header: 'Cache create', cell: (info) => formatCompact(info.getValue()), meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
+      if (hasCacheRead) cols.push(columnHelper.accessor('totalCacheReadTokens', {
+        header: 'Cache read', cell: (info) => formatCompact(info.getValue()), meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
     }
 
-    // Usage report columns (metered usage only)
+    // Usage report columns (only if data has non-zero values)
     if (isUsageReport) {
-      cols.push(
-        columnHelper.accessor('totalMinutes', {
-          header: 'Minutes',
-          cell: (info) => {
-            const v = info.getValue();
-            return v > 0 ? formatCompact(v) : '—';
-          },
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-        columnHelper.accessor('totalStorageGBH', {
-          header: 'Storage (GB·h)',
-          cell: (info) => {
-            const v = info.getValue();
-            return v > 0 ? formatCompact(v) : '—';
-          },
-          meta: { align: 'end' },
-        }) as ColumnDef<TableRow, unknown>,
-      );
+      const hasMinutes = tableData.some((r) => r.totalMinutes > 0);
+      const hasStorage = tableData.some((r) => r.totalStorageGBH > 0);
+
+      if (hasMinutes) cols.push(columnHelper.accessor('totalMinutes', {
+        header: 'Minutes',
+        cell: (info) => { const v = info.getValue(); return v > 0 ? formatCompact(v) : '\u2014'; },
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
+      if (hasStorage) cols.push(columnHelper.accessor('totalStorageGBH', {
+        header: 'Storage (GB\u00B7h)',
+        cell: (info) => { const v = info.getValue(); return v > 0 ? formatCompact(v) : '\u2014'; },
+        meta: { align: 'end' },
+      }) as ColumnDef<TableRow, unknown>);
     }
 
     // Helper to build flat columns, skipping the one used as the group column
-    const flatCol = (key: keyof TableRow, header: string, fmt?: 'datetime' | 'end') => {
+    const flatCol = (key: string, header: string, fmt?: 'datetime' | 'end') => {
       if (key === groupByColumn) return null;
-      return columnHelper.accessor(key, {
+      return columnHelper.accessor(key as keyof TableRow, {
         header,
         cell: (info) => {
           const v = info.getValue();
@@ -495,44 +476,25 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
       }) as ColumnDef<TableRow, unknown>;
     };
 
-    // Seat activity columns
-    if (isSeatActivity) {
-      [
-        flatCol('login', 'Login'),
-        flatCol('reportTime', 'Report Time', 'datetime'),
-        flatCol('lastAuthenticatedAt', 'Last Authenticated', 'datetime'),
-        flatCol('lastActivityAt', 'Last Activity', 'datetime'),
-        flatCol('lastSurfaceUsed', 'Surface'),
-        flatCol('organization', 'Organization'),
-      ].forEach((c) => c && cols.push(c));
-    }
+    // Dynamic flat-report columns: enumerate all row keys that have at least one value
+    if (isFlatReport && activeReport && activeReport.rows.length > 0) {
+      const rowKeys = Object.keys(activeReport.rows[0] as unknown as Record<string, unknown>);
+      for (const key of rowKeys) {
+        if (key === groupByColumn) continue;
+        if (!fieldsWithValues.has(key)) continue;
 
-    // Dormant users columns
-    if (isDormantUsers) {
-      [
-        flatCol('login', 'Login'),
-        flatCol('memberId', 'ID', 'end'),
-        flatCol('role', 'Role'),
-        flatCol('createdAt', 'Created', 'datetime'),
-        flatCol('lastLoggedIp', 'Last IP'),
-        flatCol('twoFactorEnabled', '2FA'),
-        flatCol('outsideCollaborator', 'Outside Collab'),
-      ].forEach((c) => c && cols.push(c));
-    }
+        // Detect format from sample value
+        const sample = (activeReport.rows[0] as unknown as Record<string, unknown>)[key];
+        const isNumeric = typeof sample === 'number';
+        const isDatetime = typeof sample === 'string' && /^\d{4}-\d{2}-\d{2}[T ]/.test(sample);
 
-    // GHAS columns
-    if (isGhas) {
-      [
-        flatCol('userLogin', 'User'),
-        flatCol('organization', 'Organization'),
-        flatCol('repository', 'Repository'),
-        flatCol('lastPushedDate', 'Last Pushed'),
-        flatCol('lastPushedEmail', 'Email'),
-      ].forEach((c) => c && cols.push(c));
+        const col = flatCol(key, humanizeColumn(key), isDatetime ? 'datetime' : isNumeric ? 'end' : undefined);
+        if (col) cols.push(col);
+      }
     }
 
     return cols;
-  }, [groupByColumn, isTokenReport, isUsageReport, isFlatReport, isSeatActivity, isDormantUsers, isGhas, handleGroupClick]);
+  }, [groupByColumn, isTokenReport, isUsageReport, isFlatReport, activeReport, fieldsWithValues, tableData, handleGroupClick]);
 
   const table = useReactTable({
     data: tableData,
@@ -550,6 +512,21 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     },
     getRowId: (row) => row.id,
   });
+
+  // Compute totals across ALL table data (not just current page)
+  const totals = useMemo(() => {
+    if (tableData.length === 0) return null;
+    const sums: Record<string, number> = {};
+    const visibleCols = table.getVisibleLeafColumns();
+    for (const col of visibleCols) {
+      const key = col.id;
+      if (key === 'group') continue;
+      const firstVal = (tableData[0] as Record<string, unknown>)[key];
+      if (typeof firstVal !== 'number') continue;
+      sums[key] = tableData.reduce((acc, row) => acc + (Number((row as Record<string, unknown>)[key]) || 0), 0);
+    }
+    return sums;
+  }, [tableData, table]);
 
   if (!activeReport || tableData.length === 0) return null;
 
@@ -600,6 +577,33 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
             ))}
           </thead>
           <TableBody table={table} />
+          {totals && (
+            <tfoot className={styles.tfoot}>
+              <tr className={styles.tr}>
+                {table.getVisibleLeafColumns().map((col) => {
+                  const key = col.id;
+                  if (key === 'group') {
+                    return (
+                      <td key={key} className={styles.tfootCell}>
+                        Total
+                      </td>
+                    );
+                  }
+                  const val = totals[key];
+                  if (val === undefined) {
+                    return <td key={key} className={styles.tfootCell} data-align={col.columnDef.meta?.align} />;
+                  }
+                  // Format based on column type
+                  const isCurrency = key.toLowerCase().includes('amount') || key.toLowerCase().includes('gross') || key.toLowerCase().includes('net') || key.toLowerCase().includes('discount');
+                  return (
+                    <td key={key} className={styles.tfootCell} data-align={col.columnDef.meta?.align}>
+                      {isCurrency ? formatCurrency(val) : formatCompact(val)}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

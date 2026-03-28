@@ -9,6 +9,7 @@ import {
   ShieldLockIcon,
   PeopleIcon,
   PersonIcon,
+  OrganizationIcon,
 } from '@primer/octicons-react';
 
 // Metric option displayed in TimeSeriesChart metric toggle
@@ -292,6 +293,38 @@ const COPILOT_SEAT_ACTIVITY_SCHEMA: ReportSchema = {
   filterableFields: ['login', 'lastSurfaceUsed', 'organization'],
 };
 
+const ENTERPRISE_MEMBERS_SCHEMA: ReportSchema = {
+  type: REPORT_TYPES.ENTERPRISE_MEMBERS,
+  label: 'Enterprise Members',
+  pluralLabel: 'Enterprise Membership Reports',
+  icon: OrganizationIcon,
+  description: 'Enterprise licensing and membership overview',
+  emptyStateTitle: 'Enterprise Members',
+  emptyStateText: 'Upload an enterprise membership CSV to review licenses, roles, 2FA status, and Visual Studio subscriptions.',
+  primaryDimension: 'licenseType',
+  defaultGroupBy: 'licenseType',
+  metricOptions: [
+    { key: '_count', label: 'Members', isCurrency: false },
+  ],
+  breakdownStackField: 'licenseType',
+  sankeyHierarchy: ['licenseType', 'enterpriseRoles', 'login'],
+  heroCards: [
+    {
+      id: 'total',
+      title: 'Total licenses',
+      valueField: 'totalLicenses',
+      format: 'number',
+    },
+    {
+      id: 'ghas',
+      title: 'GHAS licensed',
+      valueField: 'ghasLicenseCount',
+      format: 'number',
+    },
+  ],
+  filterableFields: ['login', 'licenseType', 'enterpriseRoles', 'twoFactorAuth', 'advancedSecurityUser'],
+};
+
 // ─── Schema Registry ───────────────────────────────────────────────────────────
 
 const SCHEMA_REGISTRY: Record<string, ReportSchema> = {
@@ -301,6 +334,7 @@ const SCHEMA_REGISTRY: Record<string, ReportSchema> = {
   [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS]: GHAS_ACTIVE_COMMITTERS_SCHEMA,
   [REPORT_TYPES.DORMANT_USERS]: DORMANT_USERS_SCHEMA,
   [REPORT_TYPES.COPILOT_SEAT_ACTIVITY]: COPILOT_SEAT_ACTIVITY_SCHEMA,
+  [REPORT_TYPES.ENTERPRISE_MEMBERS]: ENTERPRISE_MEMBERS_SCHEMA,
 };
 
 /** Get the schema for a report type. Falls back to premium request for unknown types. */
@@ -320,6 +354,7 @@ export const PAGE_TYPES = {
   GHAS: 'ghas',
   MEMBERS: 'members',
   SEAT_ACTIVITY: 'seat-activity',
+  ENTERPRISE_MEMBERS: 'enterprise-members',
 } as const;
 
 export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
@@ -331,6 +366,7 @@ export const PAGE_REPORT_TYPES: Record<PageType, ReportType[]> = {
   [PAGE_TYPES.GHAS]: [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS],
   [PAGE_TYPES.MEMBERS]: [REPORT_TYPES.DORMANT_USERS],
   [PAGE_TYPES.SEAT_ACTIVITY]: [REPORT_TYPES.COPILOT_SEAT_ACTIVITY],
+  [PAGE_TYPES.ENTERPRISE_MEMBERS]: [REPORT_TYPES.ENTERPRISE_MEMBERS],
 };
 
 /** Sidebar nav configuration */
@@ -346,6 +382,7 @@ export const NAV_PAGES: NavPageConfig[] = [
   { id: PAGE_TYPES.GHAS, label: 'GHAS committers', icon: ShieldLockIcon },
   { id: PAGE_TYPES.SEAT_ACTIVITY, label: 'Seat activity', icon: PersonIcon },
   { id: PAGE_TYPES.MEMBERS, label: 'Dormant users', icon: PeopleIcon },
+  { id: PAGE_TYPES.ENTERPRISE_MEMBERS, label: 'Enterprise members', icon: OrganizationIcon },
 ];
 
 /** Infer the page type from a report type */

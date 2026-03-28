@@ -1,4 +1,4 @@
-import type { AnyReportRow, BillingRow, TimeBucket, ReportSummary, UsageReportRow, TokenUsageRow, DormantUsersRow, CopilotSeatActivityRow } from './types';
+import type { AnyReportRow, BillingRow, TimeBucket, ReportSummary, UsageReportRow, TokenUsageRow, DormantUsersRow, CopilotSeatActivityRow, EnterpriseMemberRow } from './types';
 
 /** Group rows by a column value, returning a map of group key → rows */
 export function groupBy<T extends AnyReportRow>(
@@ -170,6 +170,8 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
   let twoFactorCount = 0;
   let totalSeats = 0;
   let activeSeats = 0;
+  let totalLicenses = 0;
+  let ghasLicenseCount = 0;
 
   for (const row of rows) {
     if (isBillingRow(row)) continue;
@@ -184,6 +186,11 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
       if ((row as CopilotSeatActivityRow).lastActivityAt && (row as CopilotSeatActivityRow).lastActivityAt !== 'None') {
         activeSeats++;
       }
+    }
+    // Enterprise members
+    if ('licenseType' in row) {
+      totalLicenses++;
+      if ((row as EnterpriseMemberRow).advancedSecurityUser) ghasLicenseCount++;
     }
   }
 
@@ -204,6 +211,8 @@ export function computeSummary(rows: AnyReportRow[]): ReportSummary {
     twoFactorCount,
     totalSeats,
     activeSeats,
+    totalLicenses,
+    ghasLicenseCount,
     dateRange: {
       start: allDates[0] ?? '',
       end: allDates[allDates.length - 1] ?? '',

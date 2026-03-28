@@ -70,7 +70,7 @@
 .pageStack {
   display: flex;
   flex-direction: column;
-  gap: var(--stack-gap-spacious, 24px);
+  gap: var(--stack-gap-condensed, 12px);
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--stack-padding-spacious, 24px);

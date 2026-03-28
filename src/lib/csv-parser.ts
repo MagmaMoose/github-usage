@@ -6,6 +6,7 @@ import type {
   GhasActiveCommittersRow,
   DormantUsersRow,
   CopilotSeatActivityRow,
+  EnterpriseMemberRow,
   ParsedReport,
   ReportType,
   CopilotProduct,
@@ -22,6 +23,7 @@ const HEADER_SIGNATURES: Record<ReportType, string[]> = {
   [REPORT_TYPES.USAGE_REPORT]: ['repository', 'workflow_path'],
   [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS]: ['user login', 'organization / repository', 'last pushed date'],
   [REPORT_TYPES.COPILOT_SEAT_ACTIVITY]: ['report time', 'last authenticated at', 'last activity at', 'last surface used'],
+  [REPORT_TYPES.ENTERPRISE_MEMBERS]: ['github com login', 'license type', 'github com enterprise roles', 'total user accounts'],
   [REPORT_TYPES.DORMANT_USERS]: ['login', 'role', '2fa_enabled?', 'outside_collaborator'],
 };
 
@@ -156,6 +158,25 @@ function mapCopilotSeatActivityRow(raw: Record<string, string>): CopilotSeatActi
   };
 }
 
+/** Map raw CSV row to EnterpriseMemberRow */
+function mapEnterpriseMemberRow(raw: Record<string, string>): EnterpriseMemberRow {
+  return {
+    login: raw['github com login'] ?? '',
+    name: raw['github com name'] ?? '',
+    githubComUser: parseBool(raw['github com user'] ?? 'false'),
+    enterpriseServerUser: parseBool(raw['enterprise server user'] ?? 'false'),
+    visualStudioSubscriptionUser: parseBool(raw['visual studio subscription user'] ?? 'false'),
+    licenseType: raw['license type'] ?? '',
+    profileUrl: raw['github com profile'] ?? '',
+    memberRoles: raw['github com member roles'] ?? '',
+    enterpriseRoles: raw['github com enterprise roles'] ?? '',
+    twoFactorAuth: parseBool(raw['github com two factor auth'] ?? 'false'),
+    advancedSecurityUser: parseBool(raw['github com advanced security license user'] ?? 'false'),
+    vsLicenseStatus: raw['visual studio license status'] ?? '',
+    totalUserAccounts: parseNum(raw['total user accounts']),
+  };
+}
+
 /** Parse CSV text into a typed report */
 export function parseCSV(csvText: string, fileName: string): ParsedReport {
   const result = Papa.parse<Record<string, string>>(csvText, {
@@ -171,7 +192,7 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
   const headers = result.meta.fields ?? [];
   const type = detectReportType(headers);
 
-  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[] | GhasActiveCommittersRow[] | DormantUsersRow[] | CopilotSeatActivityRow[];
+  let rows: PremiumRequestRow[] | TokenUsageRow[] | UsageReportRow[] | GhasActiveCommittersRow[] | DormantUsersRow[] | CopilotSeatActivityRow[] | EnterpriseMemberRow[];
 
   switch (type) {
     case REPORT_TYPES.PREMIUM_REQUEST:
@@ -191,6 +212,9 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
       break;
     case REPORT_TYPES.COPILOT_SEAT_ACTIVITY:
       rows = result.data.map(mapCopilotSeatActivityRow);
+      break;
+    case REPORT_TYPES.ENTERPRISE_MEMBERS:
+      rows = result.data.map(mapEnterpriseMemberRow);
       break;
   }
 

@@ -49,7 +49,7 @@ import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
 import { getReportSchema, type ReportSchema, type MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
-import { GROUPABLE_COLUMNS, REPORT_TYPES } from '../lib/types';
+import { REPORT_TYPES } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
@@ -60,21 +60,40 @@ import styles from '../App.module.css';
 
 type ViewTab = 'charts' | 'table';
 
-type FilterableField =
-  | 'username'
-  | 'model'
-  | 'organization'
-  | 'sku'
-  | 'costCenterName'
-  | 'product'
-  | 'repository'
-  | 'workflowPath';
+type FilterableField = string;
 
-const ALL_FILTERABLE_FIELDS: FilterableField[] = [
-  'username', 'model', 'organization', 'sku', 'costCenterName', 'product', 'repository', 'workflowPath',
+/** Fields excluded from groupBy/filter dropdowns (high-cardinality or numeric/metric values) */
+const EXCLUDED_FIELD_PATTERNS = [
+  // Unique/high-cardinality identifiers
+  /url$/i,           // profileUrl
+  /email$/i,         // lastPushedEmail, visualStudioSubscriptionEmail
+  /^id$/i,           // numeric IDs
+  /ip$/i,            // lastLoggedIp
+  /path$/i,          // workflowPath (keep in preferred if schema says so)
+  // Timestamps
+  /^date$/i,         // raw date column
+  /^created/i,       // createdAt
+  /^report\s*time/i, // reportTime
+  /^last.*at$/i,     // lastAuthenticatedAt, lastActivityAt
+  /^last.*date$/i,   // lastPushedDate
+  // Numeric/metric fields
+  /amount$/i,        // grossAmount, netAmount, discountAmount, aicGrossAmount
+  /quantity$/i,      // quantity, aicQuantity
+  /quota$/i,         // totalMonthlyQuota
+  /cost/i,           // appliedCostPerQuantity, aicGrossAmount
+  /^total/i,         // totalInputTokens, totalOutputTokens, totalUserAccounts, etc.
+  /tokens?$/i,       // totalInputTokens, totalOutputTokens
+  /^exceeds/i,       // exceedsQuota
+  /^unitType$/i,     // unitType (minutes, requests, etc.)
+  /^count$/i,        // count fields
 ];
 
-const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<IconProps>>> = {
+/** Returns true if a field should be excluded from filter/groupBy (unless it's in the schema's preferred list) */
+function isExcludedField(field: string): boolean {
+  return EXCLUDED_FIELD_PATTERNS.some((p) => p.test(field));
+}
+
+const FIELD_ICONS: Record<string, FunctionComponent<PropsWithChildren<IconProps>>> = {
   username: PersonIcon,
   model: GraphIcon,
   organization: OrganizationIcon,
@@ -83,6 +102,12 @@ const FIELD_ICONS: Record<FilterableField, FunctionComponent<PropsWithChildren<I
   product: PackageIcon,
   repository: RepoIcon,
   workflowPath: WorkflowIcon,
+  login: PersonIcon,
+  userLogin: PersonIcon,
+  licenseType: PackageIcon,
+  enterpriseRoles: OrganizationIcon,
+  role: PersonIcon,
+  lastSurfaceUsed: ServerIcon,
 };
 
 const REPORT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -255,17 +280,22 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     downloadReportAsCsv(activeReport);
   }, [activeReport]);
 
-  // Filter fields available for the current report data
+  // Filter fields available for the current report data — derived from actual row keys.
+  // schema.filterableFields controls ordering (preferred fields first).
+  // Non-categorical fields (URLs, IPs, timestamps) are excluded unless explicitly preferred.
   const availableFilterFields = useMemo(() => {
-    if (!activeReport) return schema.filterableFields as FilterableField[];
+    if (!activeReport || activeReport.rows.length === 0) return schema.filterableFields as FilterableField[];
 
     const rowKeys = new Set(
-      activeReport.rows.flatMap((row) => Object.keys(row as unknown as Record<string, unknown>)),
+      Object.keys(activeReport.rows[0] as unknown as Record<string, unknown>),
     );
 
-    return ALL_FILTERABLE_FIELDS.filter(
-      (field) => rowKeys.has(field) && schema.filterableFields.includes(field),
-    );
+    const preferred = schema.filterableFields.filter((f) => rowKeys.has(f));
+    const preferredSet = new Set(preferred);
+    const rest = [...rowKeys]
+      .filter((k) => !preferredSet.has(k) && !isExcludedField(k))
+      .sort();
+    return [...preferred, ...rest];
   }, [activeReport, schema.filterableFields]);
 
   const filterValuesByField = useMemo(() => {
@@ -308,8 +338,18 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   }, [clearFilters, setSearchQuery]);
 
   const groupableColumns = useMemo(() => {
-    if (!activeReport) return schema.filterableFields;
-    return [...(GROUPABLE_COLUMNS[activeReport.type] ?? schema.filterableFields)];
+    if (!activeReport || activeReport.rows.length === 0) return schema.filterableFields;
+
+    const rowKeys = new Set(
+      Object.keys(activeReport.rows[0] as unknown as Record<string, unknown>),
+    );
+
+    const preferred = schema.filterableFields.filter((f) => rowKeys.has(f));
+    const preferredSet = new Set(preferred);
+    const rest = [...rowKeys]
+      .filter((k) => !preferredSet.has(k) && !isExcludedField(k))
+      .sort();
+    return [...preferred, ...rest];
   }, [activeReport, schema.filterableFields]);
 
   const renderViewTabs = () => (
@@ -365,7 +405,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               {schema.emptyStateText}
             </Text>
           </div>
-          <FileDropzone forceShow variant={schema.type === 'usage_report' ? 'usage' : 'copilot'} />
+          <FileDropzone forceShow reportType={schema.type} />
         </section>
       </div>
     );
@@ -474,7 +514,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
               return (
                 <UnderlineNav.Item
-                  key={report.fileName}
+                  key={`${report.fileName}_${globalIdx}`}
                   href="#"
                   aria-current={globalIdx === activeReportIndex ? 'page' : undefined}
                   leadingVisual={<Icon />}
@@ -540,7 +580,8 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
           {activeTab === 'charts' && visibleRows.length > 0 && (() => {
             const isFlatReport = activeReport?.type === REPORT_TYPES.GHAS_ACTIVE_COMMITTERS
               || activeReport?.type === REPORT_TYPES.DORMANT_USERS
-              || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY;
+              || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY
+              || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
               <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
                 {!isFlatReport && (

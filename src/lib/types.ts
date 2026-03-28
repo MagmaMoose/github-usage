@@ -320,6 +320,36 @@ export interface CopilotSeatActivityRow {
   organization: string;
 }
 
+/** Enterprise membership (licensing) report row */
+export interface EnterpriseMemberRow {
+  /** GitHub.com username */
+  login: string;
+  /** Display name */
+  name: string;
+  /** Whether the user has a GitHub.com account */
+  githubComUser: boolean;
+  /** Whether the user has an Enterprise Server account */
+  enterpriseServerUser: boolean;
+  /** Whether the user has a Visual Studio subscription */
+  visualStudioSubscriptionUser: boolean;
+  /** License type: "Enterprise", "Visual Studio", etc. */
+  licenseType: string;
+  /** GitHub.com profile URL */
+  profileUrl: string;
+  /** Comma-separated org:role pairs (e.g. "octodemo:Owner, my-org:Member") */
+  memberRoles: string;
+  /** Enterprise-level roles (e.g. "Owner, Member") */
+  enterpriseRoles: string;
+  /** Whether 2FA is enabled */
+  twoFactorAuth: boolean;
+  /** Whether the user holds a GHAS license */
+  advancedSecurityUser: boolean;
+  /** Visual Studio license status */
+  vsLicenseStatus: string;
+  /** Total number of user accounts across all surfaces */
+  totalUserAccounts: number;
+}
+
 // ─── Report Types ──────────────────────────────────────────────────────────────
 
 export const REPORT_TYPES = {
@@ -329,11 +359,12 @@ export const REPORT_TYPES = {
   GHAS_ACTIVE_COMMITTERS: 'ghas_active_committers',
   DORMANT_USERS: 'dormant_users',
   COPILOT_SEAT_ACTIVITY: 'copilot_seat_activity',
+  ENTERPRISE_MEMBERS: 'enterprise_members',
 } as const;
 
 export type ReportType = (typeof REPORT_TYPES)[keyof typeof REPORT_TYPES];
 
-export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageReportRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow> {
+export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageReportRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow | EnterpriseMemberRow> {
   type: ReportType;
   rows: T[];
   fileName: string;
@@ -344,7 +375,7 @@ export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageRepor
 /** Report rows that have billing fields (date, grossAmount, netAmount, etc.) */
 export type BillingRow = PremiumRequestRow | TokenUsageRow | UsageReportRow;
 
-export type AnyReportRow = BillingRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow;
+export type AnyReportRow = BillingRow | GhasActiveCommittersRow | DormantUsersRow | CopilotSeatActivityRow | EnterpriseMemberRow;
 
 /** Groupable columns vary by report type */
 export const GROUPABLE_COLUMNS = {
@@ -362,6 +393,7 @@ export const GROUPABLE_COLUMNS = {
   ghas_active_committers: ['userLogin', 'organization', 'repository'] as const,
   dormant_users: ['login', 'role', 'twoFactorEnabled', 'outsideCollaborator'] as const,
   copilot_seat_activity: ['login', 'lastSurfaceUsed', 'organization'] as const,
+  enterprise_members: ['login', 'licenseType', 'enterpriseRoles', 'twoFactorAuth', 'advancedSecurityUser'] as const,
 } as const;
 
 export type GroupableColumn<T extends ReportType> = (typeof GROUPABLE_COLUMNS)[T][number];
@@ -390,4 +422,7 @@ export interface ReportSummary {
   twoFactorCount: number;
   totalSeats: number;
   activeSeats: number;
+  // Enterprise members specific
+  totalLicenses: number;
+  ghasLicenseCount: number;
 }

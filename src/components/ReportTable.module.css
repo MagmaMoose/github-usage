@@ -182,6 +182,28 @@
   border-bottom: none;
 }
 
+/* Totals footer row */
+.tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+
+.tfootCell {
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  font-weight: var(--base-text-weight-semibold, 600);
+  font-size: var(--text-body-size-small, 12px);
+  white-space: nowrap;
+  background: var(--bgColor-muted, #f6f8fa);
+  border-top: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  color: var(--fgColor-default, #1f2328);
+  font-variant-numeric: tabular-nums;
+}
+
+.tfootCell[data-align="end"] {
+  text-align: right;
+}
+
 /* Global filter */
 .filterInput {
   width: 100%;
