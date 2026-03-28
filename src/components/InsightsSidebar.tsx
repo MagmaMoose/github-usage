@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ActionMenu,
   ActionList,
@@ -96,6 +96,25 @@ export function InsightsSidebar({
       setShowSamplePrompt(false);
     }
   }, [addReport, onboarding]);
+
+  // Auto-trigger sample data prompt via ?demo URL param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('demo')) return;
+    if (reports.length > 0) return;
+
+    // ?demo=auto skips the prompt and loads immediately
+    if (params.get('demo') === 'auto') {
+      handleLoadSamples();
+    } else {
+      setShowSamplePrompt(true);
+    }
+    // Clean the param from URL so refresh doesn't re-trigger
+    params.delete('demo');
+    const clean = params.toString();
+    const url = window.location.pathname + (clean ? `?${clean}` : '');
+    window.history.replaceState({}, '', url);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={styles.sidebarContent}>
