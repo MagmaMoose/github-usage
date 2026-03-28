@@ -4,6 +4,7 @@ import { SidebarCollapseIcon } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
 import { ReportPageLayout } from './components/ReportPageLayout';
+import { CsvManager } from './components/CsvManager';
 import { InsightsSidebar } from './components/InsightsSidebar';
 import { OnboardingProvider } from './components/onboarding';
 import {
@@ -64,6 +65,9 @@ function AppContent() {
   // Schema and metric derivation stay here: they cascade from page + product + sub-view
   const activeSchema = useMemo(() => {
     const pageReportTypes = PAGE_REPORT_TYPES[activePage];
+    if (!pageReportTypes || pageReportTypes.length === 0) {
+      return getReportSchema('usage_report');
+    }
     if (activeReport && pageReportTypes.includes(activeReport.type)) {
       return getReportSchema(activeReport.type);
     }
@@ -114,11 +118,15 @@ function AppContent() {
             />
           </div>
         )}
-        <ReportPageLayout
-          schema={activeSchema}
-          allowedReportTypes={PAGE_REPORT_TYPES[activePage]}
-          metricOptions={effectiveMetricOptions}
-        />
+        {activePage === PAGE_TYPES.FILES ? (
+          <CsvManager />
+        ) : (
+          <ReportPageLayout
+            schema={activeSchema}
+            allowedReportTypes={PAGE_REPORT_TYPES[activePage]}
+            metricOptions={effectiveMetricOptions}
+          />
+        )}
       </PageLayout.Content>
     </PageLayout>
   );

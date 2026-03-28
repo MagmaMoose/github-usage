@@ -23,6 +23,7 @@ import { useColorMode } from '../context/theme-context';
 import { useOnboardingContext } from './onboarding';
 import {
   NAV_PAGES,
+  UTILITY_NAV_PAGES,
   PAGE_TYPES,
   type PageType,
 } from '../lib/report-schema';
@@ -172,6 +173,23 @@ export function InsightsSidebar({
             </NavList.Item>
           );
         })}
+        <NavList.Divider />
+        {UTILITY_NAV_PAGES.map(({ id, label, icon: Icon }) => (
+          <NavList.Item
+            key={id}
+            href="#"
+            aria-current={activePage === id ? 'page' : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              setActivePage(id);
+            }}
+          >
+            <NavList.LeadingVisual>
+              <Icon />
+            </NavList.LeadingVisual>
+            {label}
+          </NavList.Item>
+        ))}
       </NavList>
       <div className={styles.sidebarFooter}>
         <ActionMenu>

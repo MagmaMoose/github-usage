@@ -4,6 +4,7 @@ import { REPORT_TYPES } from './types';
 import {
   CopilotIcon,
   CpuIcon,
+  FileIcon,
   GraphIcon,
   ShieldLockIcon,
   PeopleIcon,
@@ -354,12 +355,13 @@ export const PAGE_TYPES = {
   MEMBERS: 'members',
   SEAT_ACTIVITY: 'seat-activity',
   ENTERPRISE_MEMBERS: 'enterprise-members',
+  FILES: 'files',
 } as const;
 
 export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 
 /** Map page type to matching report types */
-export const PAGE_REPORT_TYPES: Record<PageType, ReportType[]> = {
+export const PAGE_REPORT_TYPES: Partial<Record<PageType, ReportType[]>> = {
   [PAGE_TYPES.COPILOT]: [REPORT_TYPES.PREMIUM_REQUEST, REPORT_TYPES.TOKEN_USAGE],
   [PAGE_TYPES.USAGE]: [REPORT_TYPES.USAGE_REPORT],
   [PAGE_TYPES.GHAS]: [REPORT_TYPES.GHAS_ACTIVE_COMMITTERS],
@@ -382,6 +384,10 @@ export const NAV_PAGES: NavPageConfig[] = [
   { id: PAGE_TYPES.SEAT_ACTIVITY, label: 'Seat activity', icon: PersonIcon },
   { id: PAGE_TYPES.MEMBERS, label: 'Dormant users', icon: PeopleIcon },
   { id: PAGE_TYPES.ENTERPRISE_MEMBERS, label: 'Enterprise members', icon: OrganizationIcon },
+];
+
+export const UTILITY_NAV_PAGES: NavPageConfig[] = [
+  { id: PAGE_TYPES.FILES, label: 'Manage files', icon: FileIcon },
 ];
 
 /** Infer the page type from a report type */

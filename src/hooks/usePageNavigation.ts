@@ -50,12 +50,13 @@ export function usePageNavigation({
   const setActivePage = useCallback((page: PageType) => {
     setActivePageRaw(page);
     setFilter('product', []);
-    // Reset groupBy to the new page's default
-    const targetReportType = PAGE_REPORT_TYPES[page][0];
+    // Files page has no report types
+    const reportTypes = PAGE_REPORT_TYPES[page];
+    if (!reportTypes || reportTypes.length === 0) return;
+    const targetReportType = reportTypes[0];
     const schema = getReportSchema(targetReportType);
     setGroupByColumn(schema.defaultGroupBy);
-    const allowedTypes = PAGE_REPORT_TYPES[page];
-    const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
+    const matchIndex = reports.findIndex((r) => reportTypes.includes(r.type));
     if (matchIndex !== -1) {
       setActiveReport(matchIndex);
     }
@@ -77,6 +78,7 @@ export function usePageNavigation({
   useEffect(() => {
     if (reports.length === 0) return;
     const allowedTypes = PAGE_REPORT_TYPES[activePage];
+    if (!allowedTypes) return;
     if (activeReport && allowedTypes.includes(activeReport.type)) return;
     const matchIndex = reports.findIndex((r) => allowedTypes.includes(r.type));
     if (matchIndex !== -1) {

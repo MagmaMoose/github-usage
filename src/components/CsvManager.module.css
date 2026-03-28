@@ -1,0 +1,54 @@
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap-condensed, 12px);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
+  padding-bottom: var(--stack-gap-normal, 16px);
+}
+
+.emptyState {
+  padding: var(--stack-padding-normal, 16px);
+}
+
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  background: transparent;
+}
+
+.resizer:hover,
+.isResizing {
+  background: var(--borderColor-accent-emphasis, #0969da);
+  opacity: 0.5;
+}
