@@ -189,11 +189,44 @@ export function isBot(username: string): boolean {
 
 /** Runtime cache of resolved bot avatar URLs (seeded with known bots, filled by API) */
 const botAvatarCache = new Map<string, string>([
+  // GitHub native bots
   ['dependabot[bot]', 'https://avatars.githubusercontent.com/in/29110?v=4'],
   ['github-actions[bot]', 'https://avatars.githubusercontent.com/in/65916?v=4'],
-  ['renovate[bot]', 'https://avatars.githubusercontent.com/in/29139?v=4'],
   ['github-advanced-security[bot]', 'https://avatars.githubusercontent.com/in/37929?v=4'],
+  ['github-pages[bot]', 'https://avatars.githubusercontent.com/in/23105?v=4'],
+  ['stale[bot]', 'https://avatars.githubusercontent.com/in/1724?v=4'],
+  // AI coding agents
   ['copilot-swe-agent[bot]', 'https://avatars.githubusercontent.com/in/198982?v=4'],
+  ['copilot-workspace[bot]', 'https://avatars.githubusercontent.com/in/406526?v=4'],
+  ['anthropic-code-agent[bot]', 'https://avatars.githubusercontent.com/in/2246796?v=4'],
+  ['devin-ai-integration[bot]', 'https://avatars.githubusercontent.com/in/878771?v=4'],
+  ['coderabbitai[bot]', 'https://avatars.githubusercontent.com/in/480007?v=4'],
+  // CI/CD & deployment
+  ['vercel[bot]', 'https://avatars.githubusercontent.com/in/8546?v=4'],
+  ['netlify[bot]', 'https://avatars.githubusercontent.com/in/13473?v=4'],
+  ['azure-pipelines[bot]', 'https://avatars.githubusercontent.com/in/36174?v=4'],
+  ['percy[bot]', 'https://avatars.githubusercontent.com/in/6400?v=4'],
+  // Code quality & security
+  ['codecov[bot]', 'https://avatars.githubusercontent.com/in/254?v=4'],
+  ['sonarcloud[bot]', 'https://avatars.githubusercontent.com/in/12168?v=4'],
+  ['socket-security[bot]', 'https://avatars.githubusercontent.com/in/206747?v=4'],
+  ['sentry-io[bot]', 'https://avatars.githubusercontent.com/in/4141?v=4'],
+  ['deepsource-autofix[bot]', 'https://avatars.githubusercontent.com/in/57168?v=4'],
+  ['pre-commit-ci[bot]', 'https://avatars.githubusercontent.com/in/68672?v=4'],
+  ['allstar-app[bot]', 'https://avatars.githubusercontent.com/in/119816?v=4'],
+  // Dependency management
+  ['renovate[bot]', 'https://avatars.githubusercontent.com/in/29139?v=4'],
+  ['mend-bolt-for-github[bot]', 'https://avatars.githubusercontent.com/in/16809?v=4'],
+  ['depfu[bot]', 'https://avatars.githubusercontent.com/in/7046?v=4'],
+  // PR & workflow automation
+  ['mergify[bot]', 'https://avatars.githubusercontent.com/in/10562?v=4'],
+  ['kodiakhq[bot]', 'https://avatars.githubusercontent.com/in/29196?v=4'],
+  ['imgbot[bot]', 'https://avatars.githubusercontent.com/in/4706?v=4'],
+  ['changeset-bot[bot]', 'https://avatars.githubusercontent.com/in/43218?v=4'],
+  ['linear[bot]', 'https://avatars.githubusercontent.com/in/60376?v=4'],
+  ['graphite-app[bot]', 'https://avatars.githubusercontent.com/in/168040?v=4'],
+  ['gitpod-io[bot]', 'https://avatars.githubusercontent.com/in/23396?v=4'],
+  ['trunk-io[bot]', 'https://avatars.githubusercontent.com/in/174498?v=4'],
 ]);
 
 /** In-flight fetch promises to avoid duplicate API calls */
