@@ -9,7 +9,7 @@ export const STEP_CONTENT: Record<OnboardingStep, { heading: string; body: strin
   'add-file': {
     heading: 'Add files',
     body: 'Drop multiple CSVs. Same-type reports auto-combine.',
-    caret: 'bottom',
+    caret: 'top-right',
   },
   'view-tabs': {
     heading: 'Charts or table',
