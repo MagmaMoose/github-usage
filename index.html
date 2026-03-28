@@ -97,6 +97,17 @@
         -moz-osx-font-smoothing: grayscale;
       }
     </style>
+
+    <!-- SPA redirect restore: GitHub Pages 404.html saves the original path -->
+    <script>
+      (function() {
+        var redirect = sessionStorage.getItem('spa-redirect');
+        if (redirect) {
+          sessionStorage.removeItem('spa-redirect');
+          history.replaceState(null, '', redirect);
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>

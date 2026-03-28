@@ -32,6 +32,7 @@ import {
   PAGE_TYPES,
   type PageType,
 } from '../lib/report-schema';
+import { buildPathForPage } from '../lib/url-state';
 import type { ParsedReport, UsageReportRow } from '../lib/types';
 import { parseCSV } from '../lib/csv-parser';
 import { useReport } from '../context/useReport';
@@ -138,7 +139,7 @@ export function InsightsSidebar({
           return (
             <NavList.Item
               key={id}
-              href="#"
+              href={buildPathForPage(id)}
               aria-current={activePage === id && !activeProductFilter ? 'page' : undefined}
               defaultOpen={isUsagePage && activePage === PAGE_TYPES.USAGE}
               onClick={(event) => {
@@ -229,7 +230,7 @@ export function InsightsSidebar({
         {UTILITY_NAV_PAGES.map(({ id, label, icon: Icon }) => (
           <NavList.Item
             key={id}
-            href="#"
+            href={buildPathForPage(id)}
             aria-current={activePage === id ? 'page' : undefined}
             onClick={(event) => {
               event.preventDefault();

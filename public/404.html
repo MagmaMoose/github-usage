@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting...</title>
+    <script>
+      // GitHub Pages SPA fallback: save the path so index.html can restore it
+      sessionStorage.setItem('spa-redirect', window.location.pathname + window.location.search + window.location.hash);
+      // Redirect to the app root — BASE_PATH is injected at build time, but since
+      // this is a static file we derive it from the repo path (first two segments)
+      var segments = window.location.pathname.split('/');
+      var base = '/' + (segments[1] || '') + '/';
+      window.location.replace(base);
+    </script>
+  </head>
+  <body>
+    <p>Redirecting&hellip;</p>
+  </body>
+</html>

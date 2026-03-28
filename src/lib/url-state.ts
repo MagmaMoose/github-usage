@@ -1,4 +1,4 @@
-/** Read/write filter state to URL search params */
+/** Read/write filter state to URL search params + path-based page routing */
 
 export interface URLFilterState {
   page?: string;
@@ -11,13 +11,38 @@ export interface URLFilterState {
   filters?: Record<string, string[]>;
 }
 
-/** Parse filter state from current URL search params */
+const BASE_PATH = import.meta.env.BASE_URL || '/';
+const DEFAULT_PAGE = 'copilot';
+
+/** Extract the page segment from the pathname (after the base path) */
+function getPageFromPath(): string | undefined {
+  const path = window.location.pathname;
+  const afterBase = path.startsWith(BASE_PATH)
+    ? path.slice(BASE_PATH.length)
+    : path.slice(1);
+  const segment = afterBase.replace(/\/$/, '');
+  return segment || undefined;
+}
+
+/** Build the pathname for a given page */
+export function buildPathForPage(page: string | undefined): string {
+  if (!page || page === DEFAULT_PAGE) return BASE_PATH;
+  return `${BASE_PATH}${page}`;
+}
+
+/** Parse filter state from current URL path + search params */
 export function readURLFilterState(): URLFilterState {
   const params = new URLSearchParams(window.location.search);
   const state: URLFilterState = {};
 
-  const page = params.get('page');
-  if (page) state.page = page;
+  // Read page from path first, fall back to ?page= for backward compat
+  const pathPage = getPageFromPath();
+  const queryPage = params.get('page');
+  if (pathPage) {
+    state.page = pathPage;
+  } else if (queryPage) {
+    state.page = queryPage;
+  }
 
   const groupBy = params.get('groupBy');
   if (groupBy) state.groupBy = groupBy;
@@ -51,15 +76,16 @@ export function readURLFilterState(): URLFilterState {
   return state;
 }
 
-/** Write filter state to URL search params without triggering navigation.
- *  Merges with existing params so multiple callers don't clobber each other. */
+/** Write filter state to URL path + search params without triggering navigation.
+ *  Page goes in the path, everything else in query params. */
 export function writeURLFilterState(state: URLFilterState): void {
-  // Start from current URL params to preserve values set by other callers
   const params = new URLSearchParams(window.location.search);
 
-  // Scalar params: set if provided, use defaults to omit default values
+  // Remove legacy ?page= param if present
+  params.delete('page');
+
+  // Scalar params (excluding page, which goes in the path)
   const SCALAR_DEFAULTS: Record<string, string> = {
-    page: 'copilot',
     groupBy: 'username',
     timeBucket: 'daily',
     period: 'all',
@@ -101,7 +127,8 @@ export function writeURLFilterState(state: URLFilterState): void {
   }
 
   const search = params.toString();
-  const newURL = search ? `${window.location.pathname}?${search}` : window.location.pathname;
+  const pagePath = buildPathForPage(state.page);
+  const newURL = search ? `${pagePath}?${search}` : pagePath;
 
   window.history.replaceState(null, '', newURL);
 }
