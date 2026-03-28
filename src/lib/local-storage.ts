@@ -39,13 +39,6 @@ export const STORAGE_KEYS = {
 /** Cached CSV entry stored in IndexedDB */
 import type { ParsedReport } from './types';
 
-export interface CachedCSV {
-  fileName: string;
-  content: string;
-  parsed: ParsedReport;
-  cachedAt: string;
-}
-
 const IDB_NAME = 'tbb-cache';
 const IDB_VERSION = 3;
 const STORE_PARSED = 'parsed';
@@ -97,40 +90,6 @@ export async function removeCachedCSV(fileName: string): Promise<void> {
     });
   } catch {
     // noop
-  }
-}
-
-/** Get all cached reports (parsed only, fast) */
-export async function getCachedCSVs(): Promise<CachedCSV[]> {
-  try {
-    const db = await openDB();
-    // Read parsed entries (small, fast)
-    const parsedTx = db.transaction(STORE_PARSED, 'readonly');
-    const parsedReq = parsedTx.objectStore(STORE_PARSED).getAll();
-    const parsedEntries: { fileName: string; parsed: ParsedReport; cachedAt: string }[] = await new Promise((resolve, reject) => {
-      parsedReq.onsuccess = () => resolve(parsedReq.result);
-      parsedReq.onerror = () => reject(parsedReq.error);
-    });
-
-    // Lazy-load raw content per entry
-    const rawTx = db.transaction(STORE_RAW, 'readonly');
-    const results: CachedCSV[] = await Promise.all(
-      parsedEntries.map((entry) =>
-        new Promise<CachedCSV>((resolve, reject) => {
-          const req = rawTx.objectStore(STORE_RAW).get(entry.fileName);
-          req.onsuccess = () => resolve({
-            fileName: entry.fileName,
-            content: req.result?.content ?? '',
-            parsed: entry.parsed,
-            cachedAt: entry.cachedAt,
-          });
-          req.onerror = () => reject(req.error);
-        }),
-      ),
-    );
-    return results;
-  } catch {
-    return [];
   }
 }
 

@@ -112,11 +112,24 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       const rawCsvs = await Promise.all(
         cached.map(async (e) => (await getCachedRawCSV(e.fileName)) ?? ''),
       );
-      setState((prev) => ({
-        ...prev,
-        rawCsvs,
-        fileHashes: new Set(rawCsvs.map((c) => simpleHash(c))),
-      }));
+      setState((prev) => {
+        // Guard: if user added reports while we were fetching raw CSVs,
+        // only backfill the original hydrated slots (don't clobber new ones)
+        const hydratedCount = restoredReports.length;
+        if (prev.reports.length > hydratedCount) {
+          const merged = [...rawCsvs, ...prev.rawCsvs.slice(hydratedCount)];
+          return {
+            ...prev,
+            rawCsvs: merged,
+            fileHashes: new Set(merged.map((c) => simpleHash(c))),
+          };
+        }
+        return {
+          ...prev,
+          rawCsvs,
+          fileHashes: new Set(rawCsvs.map((c) => simpleHash(c))),
+        };
+      });
     });
   }, []);
 
@@ -306,13 +319,8 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
     // Union-Find to cluster same-type reports with ≥3 shared orgs
     const parent = state.reports.map((_, i) => i);
-    const find = (x: number): number => {
-      while (parent[x] !== x) {
-        parent[x] = parent[parent[x]];
-        x = parent[x];
-      }
-      return x;
-    };
+    const find = (x: number): number =>
+      parent[x] === x ? x : (parent[x] = find(parent[x]));
     const union = (a: number, b: number) => {
       parent[find(a)] = find(b);
     };

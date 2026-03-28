@@ -113,33 +113,6 @@ export function buildColorMap(names: string[]): Map<string, string> {
 }
 
 /**
- * @deprecated Use `buildColorMap` instead for deterministic, stateless coloring.
- * Kept temporarily for any callers that haven't migrated yet.
- */
-// Track how many models we've seen per brand family so we can shade each one differently
-const brandCounters = new Map<string, number>();
-
-export function getModelColor(modelName: string, index: number): string {
-  const lower = modelName.toLowerCase();
-
-  for (const { match, base } of MODEL_BRAND_BASES) {
-    if (lower.includes(match)) {
-      const count = brandCounters.get(match) ?? 0;
-      brandCounters.set(match, count + 1);
-      const brightenAmount = -0.15 + count * 0.10;
-      return Highcharts.color(base).brighten(brightenAmount).get() as string;
-    }
-  }
-
-  return GITHUB_COLORS_RESOLVED[index % GITHUB_COLORS_RESOLVED.length];
-}
-
-/** Reset brand shade counters (call before building a new chart) */
-export function resetModelColors(): void {
-  brandCounters.clear();
-}
-
-/**
  * Model brand icon mapping — Simple Icons CDN for most providers,
  * local SVGs for OpenAI (not available on Simple Icons).
  */
