@@ -61,7 +61,7 @@ import { useHighchartsInit } from './charts/useHighchartsInit';
 import { getReportSchema, type ReportSchema, type MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
-import { formatDateRange, formatDateRangeCompact, preloadBotAvatars, formatDate } from '../lib/formatters';
+import { formatDateRangeCompact, preloadBotAvatars, formatDate } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
 import { extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
