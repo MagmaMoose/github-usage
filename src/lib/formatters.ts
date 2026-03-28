@@ -288,6 +288,39 @@ const HARDCODED_BOTS = new Set(botAvatarCache.keys());
 /** In-flight fetch promises to avoid duplicate API calls */
 const pendingFetches = new Map<string, Promise<string | null>>();
 
+/** Simple throttle: max concurrent GitHub API requests */
+const MAX_CONCURRENT_FETCHES = 3;
+let activeFetchCount = 0;
+const fetchQueue: Array<() => void> = [];
+
+function runNextFetch(): void {
+  if (fetchQueue.length > 0 && activeFetchCount < MAX_CONCURRENT_FETCHES) {
+    activeFetchCount++;
+    const next = fetchQueue.shift()!;
+    next();
+  }
+}
+
+function throttledFetch(url: string): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const execute = () => {
+      fetch(url)
+        .then(resolve, reject)
+        .finally(() => {
+          activeFetchCount--;
+          runNextFetch();
+        });
+    };
+
+    if (activeFetchCount < MAX_CONCURRENT_FETCHES) {
+      activeFetchCount++;
+      execute();
+    } else {
+      fetchQueue.push(execute);
+    }
+  });
+}
+
 /**
  * Resolve a bot's avatar URL from the GitHub API and cache it.
  * Returns the avatar_url or null if the lookup fails.
@@ -300,7 +333,7 @@ export async function resolveBotAvatar(username: string): Promise<string | null>
   const existing = pendingFetches.get(username);
   if (existing) return existing;
 
-  const promise = fetch(`https://api.github.com/users/${encodeURIComponent(username)}`)
+  const promise = throttledFetch(`https://api.github.com/users/${encodeURIComponent(username)}`)
     .then((res) => {
       if (!res.ok) return null;
       return res.json() as Promise<{ avatar_url?: string }>;
@@ -323,11 +356,14 @@ export async function resolveBotAvatar(username: string): Promise<string | null>
 /**
  * Pre-warm the avatar cache for all bot usernames in a dataset.
  * Returns true if any new avatars were resolved (for triggering re-renders).
+ * Caps at 10 API lookups per batch to avoid rate limits.
  */
 export async function preloadBotAvatars(usernames: string[]): Promise<boolean> {
   const bots = usernames.filter((u) => isBot(u) && !botAvatarCache.has(u));
   if (bots.length === 0) return false;
-  const results = await Promise.allSettled(bots.map(resolveBotAvatar));
+  // Cap lookups to avoid hammering the API with many unknown bots
+  const batch = bots.slice(0, 10);
+  const results = await Promise.allSettled(batch.map(resolveBotAvatar));
   return results.some((r) => r.status === 'fulfilled' && r.value !== null);
 }
 
