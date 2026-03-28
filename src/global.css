@@ -1,3 +1,8 @@
+/* Prevent macOS elastic/rubber-band overscroll */
+html, body {
+  overscroll-behavior-y: none;
+}
+
 /* Apply theme background/color to the full page.
  * BaseStyles in Primer v38 does NOT set background-color — it only sets color + font.
  * On GitHub.com the body bg comes from global styles. For standalone apps we need this. */
