@@ -141,7 +141,7 @@ export function InsightsSidebar({
               key={id}
               href={buildPathForPage(id)}
               aria-current={activePage === id && !activeProductFilter ? 'page' : undefined}
-              defaultOpen={isUsagePage && activePage === PAGE_TYPES.USAGE}
+              {...(showSubNav ? { defaultOpen: activePage === PAGE_TYPES.USAGE } : {})}
               onClick={(event) => {
                 event.preventDefault();
                 setActivePage(id);

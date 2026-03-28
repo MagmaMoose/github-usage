@@ -5,7 +5,8 @@
   text-align: center;
   cursor: pointer;
   background-color: var(--bgColor-default, #ffffff);
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition: border-color var(--base-duration-200, 200ms) var(--base-easing-ease, ease),
+    background-color var(--base-duration-200, 200ms) var(--base-easing-ease, ease);
 }
 
 .dropzone:hover,

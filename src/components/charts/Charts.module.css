@@ -11,7 +11,7 @@
 .chartTitle {
   margin: 0;
   font-size: var(--text-body-size-medium, 14px);
-  font-weight: 600;
+  font-weight: var(--base-text-weight-semibold, 600);
   color: var(--fgColor-default, #1f2328);
 }
 

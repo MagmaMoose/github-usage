@@ -159,7 +159,7 @@
 
 /* Rows */
 .tr {
-  transition: background-color 0.1s;
+  transition: background-color var(--base-duration-100, 100ms) var(--base-easing-ease, ease);
 }
 
 .tr:hover {
@@ -216,12 +216,14 @@
   border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
   border-radius: var(--borderRadius-medium, 6px);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--base-duration-100, 100ms) var(--base-easing-ease, ease);
 }
 
-.filterInput:focus {
+.filterInput:focus-visible {
   border-color: var(--focus-outlineColor, #0969da);
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.3);
+  outline: var(--focus-outline, 2px solid #0969da);
+  outline-offset: -1px;
+  box-shadow: none;
 }
 
 .filterInput::placeholder {
@@ -325,4 +327,11 @@
   border-radius: var(--borderRadius-medium, 6px);
   outline: none;
   cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr,
+  .filterInput {
+    transition: none;
+  }
 }
