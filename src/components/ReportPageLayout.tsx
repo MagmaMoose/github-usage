@@ -47,7 +47,7 @@ import { LazyChart } from './charts/LazyChart';
 import { PeriodSelector } from './PeriodSelector';
 import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
-import type { ReportSchema, MetricOption } from '../lib/report-schema';
+import { getReportSchema, type ReportSchema, type MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
 import { GROUPABLE_COLUMNS } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
@@ -146,10 +146,25 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     isHydrating,
   } = useReport();
 
-  // Filter reports to only those matching the current page's allowed types
-  const reports = useMemo(() => {
-    if (!allowedReportTypes) return allReports;
-    return allReports.filter((r) => allowedReportTypes.includes(r.type));
+  // Filter reports to only those matching the current page's allowed types,
+  // preserving a mapping from filtered index → global index so tab clicks
+  // activate the correct report in the context.
+  const { reports, globalIndexMap } = useMemo(() => {
+    if (!allowedReportTypes) {
+      return {
+        reports: allReports,
+        globalIndexMap: allReports.map((_, i) => i),
+      };
+    }
+    const filtered: typeof allReports = [];
+    const indexMap: number[] = [];
+    for (let i = 0; i < allReports.length; i++) {
+      if (allowedReportTypes.includes(allReports[i].type)) {
+        filtered.push(allReports[i]);
+        indexMap.push(i);
+      }
+    }
+    return { reports: filtered, globalIndexMap: indexMap };
   }, [allReports, allowedReportTypes]);
 
   // Active report is only valid if it matches this page's types
@@ -227,11 +242,11 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
 
   const getReportTabLabel = useCallback(
     (report: NonNullable<typeof activeReport>) => {
-      const typeLabel = schema.label;
+      const typeLabel = getReportSchema(report.type).label;
       const dateLabel = formatDateRangeCompact(report.dateRange.start, report.dateRange.end);
       return dateLabel ? `${typeLabel} (${dateLabel})` : typeLabel;
     },
-    [schema.label],
+    [],
   );
 
   const handleDownload = useCallback(() => {
@@ -455,14 +470,15 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               </UnderlineNav.Item>
             )}
             {reports.map((report, i) => {
+              const globalIdx = globalIndexMap[i];
               const Icon = REPORT_TYPE_ICONS[report.type] ?? WorkflowIcon;
               return (
                 <UnderlineNav.Item
                   key={report.fileName}
                   href="#"
-                  aria-current={i === activeReportIndex ? 'page' : undefined}
+                  aria-current={globalIdx === activeReportIndex ? 'page' : undefined}
                   leadingVisual={<Icon />}
-                  onSelect={(event) => { event.preventDefault(); setActiveReport(i); }}
+                  onSelect={(event) => { event.preventDefault(); setActiveReport(globalIdx); }}
                 >
                   {getReportTabLabel(report)}
                 </UnderlineNav.Item>
