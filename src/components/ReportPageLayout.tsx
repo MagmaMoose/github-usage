@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -49,7 +50,7 @@ import { useHighchartsInit } from './charts/useHighchartsInit';
 import type { ReportSchema, MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
 import { GROUPABLE_COLUMNS } from '../lib/types';
-import { formatDateRange, formatDateRangeCompact } from '../lib/formatters';
+import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../lib/local-storage';
@@ -186,6 +187,16 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
     () => (activeReport ? contextVisibleRows : []),
     [activeReport, contextVisibleRows],
   );
+
+  // Pre-warm the avatar cache for any bot usernames in the current data
+  const [, forceAvatarUpdate] = useState(0);
+  useEffect(() => {
+    const usernames = visibleRows
+      .map((r) => (r as unknown as Record<string, unknown>).username as string)
+      .filter(Boolean);
+    if (usernames.length === 0) return;
+    preloadBotAvatars(usernames).then(() => forceAvatarUpdate((n) => n + 1));
+  }, [visibleRows]);
 
   const [activeTab, setActiveTabRaw] = useState<ViewTab>(() => {
     const urlState = readURLFilterState();

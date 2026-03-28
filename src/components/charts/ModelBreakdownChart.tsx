@@ -119,7 +119,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
             const isModel = groupByColumn === 'model';
             if (isAvatar && name) {
-              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
+              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" onerror="this.style.display='none'" /></span>`;
             }
             if (isModel && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;

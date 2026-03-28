@@ -187,23 +187,68 @@ export function isBot(username: string): boolean {
   return username.endsWith('[bot]');
 }
 
-/** Known GitHub App installation IDs for bot avatars */
-const BOT_APP_IDS: Record<string, number> = {
-  'dependabot[bot]': 29110,
-  'github-actions[bot]': 65916,
-  'renovate[bot]': 29139,
-  'github-advanced-security[bot]': 37929,
-  'copilot-swe-agent[bot]': 198982,
-};
+/** Runtime cache of resolved bot avatar URLs (seeded with known bots, filled by API) */
+const botAvatarCache = new Map<string, string>([
+  ['dependabot[bot]', 'https://avatars.githubusercontent.com/in/29110?v=4'],
+  ['github-actions[bot]', 'https://avatars.githubusercontent.com/in/65916?v=4'],
+  ['renovate[bot]', 'https://avatars.githubusercontent.com/in/29139?v=4'],
+  ['github-advanced-security[bot]', 'https://avatars.githubusercontent.com/in/37929?v=4'],
+  ['copilot-swe-agent[bot]', 'https://avatars.githubusercontent.com/in/198982?v=4'],
+]);
 
-/** Get the GitHub avatar URL for a username, handling bot accounts correctly */
+/** In-flight fetch promises to avoid duplicate API calls */
+const pendingFetches = new Map<string, Promise<string | null>>();
+
+/**
+ * Resolve a bot's avatar URL from the GitHub API and cache it.
+ * Returns the avatar_url or null if the lookup fails.
+ */
+export async function resolveBotAvatar(username: string): Promise<string | null> {
+  if (botAvatarCache.has(username)) return botAvatarCache.get(username)!;
+  if (!isBot(username)) return null;
+
+  // Deduplicate in-flight requests
+  const existing = pendingFetches.get(username);
+  if (existing) return existing;
+
+  const promise = fetch(`https://api.github.com/users/${encodeURIComponent(username)}`)
+    .then((res) => {
+      if (!res.ok) return null;
+      return res.json() as Promise<{ avatar_url?: string }>;
+    })
+    .then((data) => {
+      const url = data?.avatar_url ?? null;
+      if (url) botAvatarCache.set(username, url);
+      return url;
+    })
+    .catch(() => null)
+    .finally(() => pendingFetches.delete(username));
+
+  pendingFetches.set(username, promise);
+  return promise;
+}
+
+/**
+ * Pre-warm the avatar cache for all bot usernames in a dataset.
+ * Call this when reports load. Returns a promise that resolves
+ * when all lookups are complete (for triggering re-renders).
+ */
+export async function preloadBotAvatars(usernames: string[]): Promise<void> {
+  const bots = usernames.filter((u) => isBot(u) && !botAvatarCache.has(u));
+  if (bots.length === 0) return;
+  await Promise.allSettled(bots.map(resolveBotAvatar));
+}
+
+/** Get the GitHub avatar URL for a username, handling bot accounts correctly.
+ *  Returns cached bot URLs instantly; unknown bots get a best-effort URL. */
 export function getAvatarUrl(username: string, size = 40): string {
-  const appId = BOT_APP_IDS[username];
-  if (appId) {
-    return `https://avatars.githubusercontent.com/in/${appId}?s=${size}&v=4`;
+  // Check the cache first (covers hardcoded + API-resolved bots)
+  const cached = botAvatarCache.get(username);
+  if (cached) {
+    return cached + (cached.includes('?') ? `&s=${size}` : `?s=${size}`);
   }
   if (isBot(username)) {
-    // Unknown bot: strip [bot] suffix and try as a regular user
+    // Unknown bot not yet resolved: strip [bot] and try the .png shortcut
     const base = username.replace('[bot]', '');
     return `https://github.com/${encodeURIComponent(base)}.png?size=${size}`;
   }
