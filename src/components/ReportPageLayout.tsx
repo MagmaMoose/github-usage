@@ -523,7 +523,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
         <PageHeader.Description>
           <span className={styles.pageDescription}>
             Showing data from{' '}
-            {activeReport && (
+            {activeReport && activeReport.dateRange.start && activeReport.dateRange.end && (
               <>
                 {formatDate(activeReport.dateRange.start)} —{' '}
                 <RelativeTime
