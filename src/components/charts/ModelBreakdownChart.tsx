@@ -45,7 +45,10 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
   const spendOptions = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const rows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as AnyReportRow[];
+    const rows = activeMetric.rowFilter
+      ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
+      : allRows;
 
     // Get top users/groups by total metric
     const top = topN(rows, groupByColumn as keyof AnyReportRow & string, effectiveMetricKey as keyof AnyReportRow & string, 15);

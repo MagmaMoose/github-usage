@@ -79,7 +79,10 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const rows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as AnyReportRow[];
+    const rows = activeMetric.rowFilter
+      ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
+      : allRows;
     const groups = groupBy(rows, groupByColumn as keyof AnyReportRow & string);
 
     // Top 10 groups by total metric

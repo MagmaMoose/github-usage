@@ -38,7 +38,10 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
   const result = useMemo((): { options: Highcharts.Options; title: string } | null => {
     if (!activeReport) return null;
 
-    const rows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as AnyReportRow[];
+    const rows = activeMetric.rowFilter
+      ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
+      : allRows;
     if (rows.length === 0) return null;
 
     const isTokenReport = activeReport.type === REPORT_TYPES.TOKEN_USAGE;

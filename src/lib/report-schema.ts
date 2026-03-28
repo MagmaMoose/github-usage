@@ -13,6 +13,8 @@ export interface MetricOption {
   key: string;
   label: string;
   isCurrency: boolean;
+  /** Optional row filter applied before aggregation (e.g. filter to seat-only rows) */
+  rowFilter?: (row: Record<string, unknown>) => boolean;
 }
 
 // Hero card configuration — drives what cards render per report type
@@ -252,7 +254,8 @@ export const PRODUCT_METRIC_OPTIONS: Record<string, MetricOption[]> = {
   ],
   copilot: [
     { key: 'grossAmount', label: 'Spend', isCurrency: true },
-    { key: 'quantity', label: 'Seats / Requests', isCurrency: false },
+    { key: 'quantity', label: 'Seats', isCurrency: false, rowFilter: (r) => r.unitType === 'user-months' },
+    { key: 'quantity', label: 'Usage (PRUs)', isCurrency: false, rowFilter: (r) => r.unitType === 'requests' },
   ],
   spark: [
     { key: 'grossAmount', label: 'Spend', isCurrency: true },

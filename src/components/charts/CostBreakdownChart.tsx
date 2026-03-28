@@ -27,7 +27,10 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
 
-    const rows = visibleRows as AnyReportRow[];
+    const allRows = visibleRows as AnyReportRow[];
+    const rows = activeMetric.rowFilter
+      ? allRows.filter((r) => activeMetric.rowFilter!(r as unknown as Record<string, unknown>))
+      : allRows;
     const buckets = bucketRows(rows, timeBucket);
     const categories = [...buckets.keys()];
 
