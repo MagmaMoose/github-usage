@@ -7,6 +7,7 @@ import { buildColorMap, GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
 import { formatCompact, formatDisplayValue } from '../../lib/formatters';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
+import type { MetricOption } from '../../lib/report-schema';
 import styles from './Charts.module.css';
 
 if (typeof HighchartsSankey === 'function') (HighchartsSankey as (hc: typeof Highcharts) => void)(Highcharts);
@@ -28,8 +29,11 @@ function getField(row: AnyReportRow, field: string): string {
   return String(val);
 }
 
-export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; metricLabel?: string }) {
+const DEFAULT_METRIC: MetricOption = { key: 'grossAmount', label: 'Spend', isCurrency: true };
+
+export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metric?: MetricOption }) {
   const { activeReport, visibleRows } = useReport();
+  const activeMetric = metric ?? DEFAULT_METRIC;
 
   const result = useMemo((): { options: Highcharts.Options; title: string } | null => {
     if (!activeReport) return null;
@@ -71,7 +75,8 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
     const levelChildren: Array<Map<string, Set<string>>> = [];
     for (let i = 0; i < filteredLevels.length - 1; i++) levelChildren.push(new Map());
 
-    let grandTotalSpend = 0;
+    let grandTotal = 0;
+    const valueKey = activeMetric.key;
 
     // Token-specific tracking (only when hierarchy ends at 'model' and report is token type)
     type TokenBucket = { input: number; output: number; cacheRead: number; cacheWrite: number };
@@ -82,10 +87,10 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
 
     for (const row of rows) {
       const rowRecord = row as unknown as Record<string, unknown>;
-      const amount = typeof rowRecord.grossAmount === 'number' ? rowRecord.grossAmount as number : 0;
+      const amount = typeof rowRecord[valueKey] === 'number' ? rowRecord[valueKey] as number : 0;
       if (amount <= 0) continue;
 
-      grandTotalSpend += amount;
+      grandTotal += amount;
 
       const values = filteredLevels.map((field) => getField(row, field));
 
@@ -221,10 +226,12 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
       return MAP[f] ?? f;
     });
     if (showTokenTypes) titleParts.push('Token Type');
-    const flowLabel = metricLabel && metricLabel !== 'Spend' ? `${metricLabel} flow` : 'Spend flow';
-    const chartTitle = `${flowLabel}: ${titleParts.join(' → ')}`;
+    const flowLabel = activeMetric.key !== 'grossAmount' ? `${activeMetric.label} flow` : 'Spend flow';
+    const chartTitle = `${flowLabel}: ${titleParts.join(' \u2192 ')}`;
 
-    const $ = (v: number) => `$${v.toFixed(2)}`;
+    const fmtVal = activeMetric.isCurrency
+      ? (v: number) => `$${v.toFixed(2)}`
+      : (v: number) => formatCompact(v);
     const pct = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(1)}%` : '0%';
 
     return {
@@ -260,7 +267,7 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
             if (point.isNode) {
               const id = point.id ?? '';
               const spend = point.sum ?? 0;
-              const spendPct = pct(spend, grandTotalSpend);
+              const spendPct = pct(spend, grandTotal);
 
               // Find the level index for this node
               const levelMatch = id.match(/^L(\d+):/);
@@ -275,7 +282,7 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
                 const childLabel = childField ? titleParts[levelIdx + 1]?.toLowerCase() + 's' : '';
 
                 const topLinks = (point.linksFrom ?? []).sort((a, b) => b.weight - a.weight).slice(0, 5);
-                let html = `<b>${point.name}</b><br/>${$(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
+                let html = `<b>${point.name}</b><br/>${fmtVal(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
 
                 if (childCount > 0) {
                   html += `<br/><span style="color:#9198a1">${childCount} ${childLabel}</span>`;
@@ -283,7 +290,7 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
 
                 if (topLinks.length > 0 && childField) {
                   html += `<br/><br/><span style="color:#9198a1;font-size:10px">Top ${childLabel}:</span>`;
-                  for (const l of topLinks) html += `<br/>  ${l.toNode.name}: ${$(l.weight)}`;
+                  for (const l of topLinks) html += `<br/>  ${l.toNode.name}: ${fmtVal(l.weight)}`;
                 }
 
                 // Token breakdown for model nodes
@@ -306,18 +313,18 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
 
               // Token type node
               if (id.startsWith('tokentype:')) {
-                return `<b>${point.name}</b><br/>${$(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
+                return `<b>${point.name}</b><br/>${fmtVal(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
               }
 
-              return `<b>${point.name}</b>: ${$(spend)}`;
+              return `<b>${point.name}</b>: ${fmtVal(spend)}`;
             }
 
             // Link tooltip
             const from = point.fromNode?.name ?? '';
             const to = point.toNode?.name ?? '';
             const weight = point.weight ?? 0;
-            const linkPct = pct(weight, grandTotalSpend);
-            return `${from} → ${to}<br/><b>${$(weight)}</b> <span style="color:#9198a1">(${linkPct})</span>`;
+            const linkPct = pct(weight, grandTotal);
+            return `${from} \u2192 ${to}<br/><b>${fmtVal(weight)}</b> <span style="color:#9198a1">(${linkPct})</span>`;
           },
         },
         series: [
@@ -345,7 +352,7 @@ export function SankeyChart({ hierarchy, metricLabel }: { hierarchy?: string[]; 
         ],
       },
     };
-  }, [activeReport, visibleRows, hierarchy]);
+  }, [activeReport, visibleRows, hierarchy, activeMetric]);
 
   if (!result) return null;
 

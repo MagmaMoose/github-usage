@@ -525,7 +525,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
                 <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={chartMetricOptions} />
               </div>
               <div className={styles.chartSurface}>
-                <SankeyChart hierarchy={schema.sankeyHierarchy} metricLabel={activeMetric.label} />
+                <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
               </div>
             </div>
           )}
