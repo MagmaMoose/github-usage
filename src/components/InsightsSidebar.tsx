@@ -14,7 +14,7 @@ import {
   MoonIcon,
   PackageIcon,
   QuestionIcon,
-  SidebarCollapseIcon,
+  SidebarExpandIcon,
   SparkleIcon,
   SunIcon,
   ZapIcon,
@@ -67,17 +67,17 @@ export function InsightsSidebar({
     <div className={styles.sidebarContent}>
       <div className={styles.sidebarHeader}>
         <Heading as="h2" className={styles.sidebarHeading}>
-          Insights
+          Reports
         </Heading>
         <IconButton
           aria-label="Collapse sidebar"
-          icon={SidebarCollapseIcon}
+          icon={SidebarExpandIcon}
           variant="invisible"
           size="small"
           onClick={onCollapse}
         />
       </div>
-      <NavList aria-label="Insights navigation">
+      <NavList aria-label="Reports navigation">
         {NAV_PAGES.map(({ id, label, icon: Icon }) => {
           const isUsagePage = id === PAGE_TYPES.USAGE;
           const showSubNav = isUsagePage && availableProducts.length > 1;

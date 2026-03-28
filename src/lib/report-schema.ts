@@ -3,9 +3,8 @@ import type { ReportType } from './types';
 import { REPORT_TYPES } from './types';
 import {
   CopilotIcon,
+  CpuIcon,
   GraphIcon,
-  ServerIcon,
-  WorkflowIcon,
   ShieldLockIcon,
   PeopleIcon,
   PersonIcon,
@@ -134,7 +133,7 @@ const TOKEN_USAGE_SCHEMA: ReportSchema = {
   type: REPORT_TYPES.TOKEN_USAGE,
   label: 'Token Usage',
   pluralLabel: 'Token Usage Reports',
-  icon: ServerIcon,
+  icon: CpuIcon,
   description: 'Token-Based Billing Report Explorer',
   emptyStateTitle: 'Copilot Usage Viewer',
   emptyStateText: 'Upload a GitHub billing CSV to visualize Copilot spend, premium requests, and token usage.',
@@ -151,7 +150,7 @@ const USAGE_REPORT_SCHEMA: ReportSchema = {
   type: REPORT_TYPES.USAGE_REPORT,
   label: 'Usage Report',
   pluralLabel: 'Metered Usage Reports',
-  icon: WorkflowIcon,
+  icon: GraphIcon,
   description: 'GitHub Actions, Packages, LFS & Copilot Seats',
   emptyStateTitle: 'Metered Usage Viewer',
   emptyStateText: 'Upload a GitHub metered usage CSV to visualize Actions minutes, storage, and product spend.',
@@ -377,8 +376,8 @@ export interface NavPageConfig {
 }
 
 export const NAV_PAGES: NavPageConfig[] = [
-  { id: PAGE_TYPES.COPILOT, label: 'Copilot usage', icon: CopilotIcon },
   { id: PAGE_TYPES.USAGE, label: 'Metered usage', icon: GraphIcon },
+  { id: PAGE_TYPES.COPILOT, label: 'Copilot usage', icon: CopilotIcon },
   { id: PAGE_TYPES.GHAS, label: 'GHAS committers', icon: ShieldLockIcon },
   { id: PAGE_TYPES.SEAT_ACTIVITY, label: 'Seat activity', icon: PersonIcon },
   { id: PAGE_TYPES.MEMBERS, label: 'Dormant users', icon: PeopleIcon },

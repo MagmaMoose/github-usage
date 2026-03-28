@@ -14,7 +14,7 @@ import {
 } from '@tanstack/react-table';
 import { Avatar, Button, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
-import { ColumnsIcon, CreditCardIcon, PackageIcon, RepoIcon, WorkflowIcon } from '@primer/octicons-react';
+import { AppsIcon, ColumnsIcon, CreditCardIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
@@ -28,8 +28,8 @@ import styles from './ReportTable.module.css';
 
 /** Icon to show next to non-avatar, non-model group values */
 const COLUMN_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  sku: PackageIcon,
-  product: PackageIcon,
+  sku: TagIcon,
+  product: AppsIcon,
   costCenterName: CreditCardIcon,
   repository: RepoIcon,
   workflowPath: WorkflowIcon,

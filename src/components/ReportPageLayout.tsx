@@ -22,17 +22,22 @@ import { PageHeader } from '@primer/react/experimental';
 import type { IconProps } from '@primer/octicons-react';
 import {
   AiModelIcon,
+  AppsIcon,
   ColumnsIcon,
   CopilotIcon,
+  CpuIcon,
+  CreditCardIcon,
+  DeviceDesktopIcon,
   DownloadIcon,
   FileIcon,
   GraphIcon,
+  IdBadgeIcon,
   OrganizationIcon,
-  PackageIcon,
   PersonIcon,
   RepoIcon,
-  ServerIcon,
+  ShieldIcon,
   TableIcon,
+  TagIcon,
   UploadIcon,
   WorkflowIcon,
 } from '@primer/octicons-react';
@@ -98,23 +103,23 @@ const FIELD_ICONS: Record<string, FunctionComponent<PropsWithChildren<IconProps>
   username: PersonIcon,
   model: AiModelIcon,
   organization: OrganizationIcon,
-  sku: ServerIcon,
-  costCenterName: TableIcon,
-  product: PackageIcon,
+  sku: TagIcon,
+  costCenterName: CreditCardIcon,
+  product: AppsIcon,
   repository: RepoIcon,
   workflowPath: WorkflowIcon,
   login: PersonIcon,
   userLogin: PersonIcon,
-  licenseType: PackageIcon,
-  enterpriseRoles: OrganizationIcon,
-  role: PersonIcon,
-  lastSurfaceUsed: ServerIcon,
+  licenseType: IdBadgeIcon,
+  enterpriseRoles: ShieldIcon,
+  role: ShieldIcon,
+  lastSurfaceUsed: DeviceDesktopIcon,
 };
 
 const REPORT_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   premium_request: CopilotIcon,
-  token_usage: ServerIcon,
-  usage_report: WorkflowIcon,
+  token_usage: CpuIcon,
+  usage_report: GraphIcon,
 };
 
 function downloadReportAsCsv(report: NonNullable<ReturnType<typeof useReport>['activeReport']>) {

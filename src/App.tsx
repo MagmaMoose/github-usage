@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { IconButton, PageLayout } from '@primer/react';
-import { SidebarExpandIcon } from '@primer/octicons-react';
+import { SidebarCollapseIcon } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
 import { ReportPageLayout } from './components/ReportPageLayout';
@@ -107,7 +107,7 @@ function AppContent() {
           <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 1 }}>
             <IconButton
               aria-label="Expand sidebar"
-              icon={SidebarExpandIcon}
+              icon={SidebarCollapseIcon}
               variant="invisible"
               size="small"
               onClick={() => setSidebarCollapsed(false)}
