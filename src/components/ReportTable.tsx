@@ -171,16 +171,18 @@ interface ReportTableProps {
 
 export function ReportTable({ onGroupClick }: ReportTableProps) {
   const { activeReport, groupByColumn, visibleRows, setFilter, filters } = useReport();
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'quantity', desc: true }]);
-  const [globalFilter, setGlobalFilter] = useState('');
   const reportType = activeReport?.type;
   const isTokenReport = reportType === REPORT_TYPES.TOKEN_USAGE;
   const isUsageReport = reportType === REPORT_TYPES.USAGE_REPORT;
+
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'netAmount', desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const defaultVisibility: VisibilityState = {
     grossAmount: false,
     discountAmount: false,
     count: false,
+    ...(isUsageReport && { quantity: false }),
   };
   const [columnVisibility, setColumnVisibilityRaw] = useState<VisibilityState>(() =>
     getStoredValue(STORAGE_KEYS.COLUMN_VISIBILITY, defaultVisibility),
