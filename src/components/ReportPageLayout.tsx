@@ -4,6 +4,8 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type FunctionComponent,
   type PropsWithChildren,
 } from 'react';
@@ -46,10 +48,12 @@ import { useReport } from '../context/useReport';
 import { FilterBar } from './FilterBar';
 import { FileDropzone } from './FileDropzone';
 import { ReportTable } from './ReportTable';
-import { TimeSeriesChart } from './charts/TimeSeriesChart';
-import { GroupBreakdownChart } from './charts/ModelBreakdownChart';
-import { CostBreakdownChart } from './charts/CostBreakdownChart';
-import { SankeyChart } from './charts/SankeyChart';
+// Lazy-load chart components: Highcharts (365 KB) + Sankey module (23 KB) are
+// only needed when data is loaded AND the Charts tab is active.
+const TimeSeriesChart = lazy(() => import('./charts/TimeSeriesChart').then(m => ({ default: m.TimeSeriesChart })));
+const GroupBreakdownChart = lazy(() => import('./charts/ModelBreakdownChart').then(m => ({ default: m.GroupBreakdownChart })));
+const CostBreakdownChart = lazy(() => import('./charts/CostBreakdownChart').then(m => ({ default: m.CostBreakdownChart })));
+const SankeyChart = lazy(() => import('./charts/SankeyChart').then(m => ({ default: m.SankeyChart })));
 import { LazyChart } from './charts/LazyChart';
 import { PeriodSelector } from './PeriodSelector';
 import { HeroCardsGrid } from './HeroCardsGrid';
@@ -603,6 +607,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY
               || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
+              <Suspense fallback={null}>
               <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
                 {!isFlatReport && (
                   <div className={styles.chartSurface}>
@@ -621,6 +626,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
                   <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
                 </LazyChart>
               </div>
+              </Suspense>
             );
           })()}
 

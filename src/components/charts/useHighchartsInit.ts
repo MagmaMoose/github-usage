@@ -1,14 +1,19 @@
 import { useEffect } from 'react';
-import Highcharts from 'highcharts';
-import { buildGitHubChartTheme } from '../../lib/chart-theme';
 
-/** Allow data: URIs in Highcharts HTML labels (AST sanitizer blocks them by default) */
-if (!Highcharts.AST.allowedReferences.includes('data:')) {
-  Highcharts.AST.allowedReferences.push('data:');
-}
+let initialized = false;
 
 /** Apply the GitHub Highcharts theme using live CSS variable values */
-function applyTheme() {
+async function initAndApplyTheme() {
+  const [{ default: Highcharts }, { buildGitHubChartTheme }] = await Promise.all([
+    import('highcharts'),
+    import('../../lib/chart-theme'),
+  ]);
+
+  // Allow data: URIs in Highcharts HTML labels (AST sanitizer blocks them by default)
+  if (!Highcharts.AST.allowedReferences.includes('data:')) {
+    Highcharts.AST.allowedReferences.push('data:');
+  }
+
   const theme = buildGitHubChartTheme();
   Highcharts.setOptions(theme);
 
@@ -33,20 +38,22 @@ function applyTheme() {
  *  Also watches for color scheme changes and re-applies the theme. */
 export function useHighchartsInit() {
   useEffect(() => {
-    // Apply theme initially
-    applyTheme();
+    if (!initialized) {
+      initialized = true;
+      initAndApplyTheme();
+    }
 
     // Watch for OS color scheme changes (light ↔ dark)
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
       // Small delay to let Primer's theme CSS vars update first
-      setTimeout(applyTheme, 50);
+      setTimeout(() => { initAndApplyTheme(); }, 50);
     };
     mediaQuery.addEventListener('change', handleChange);
 
     // Also watch for Primer's data-color-mode attribute changes
     const observer = new MutationObserver(() => {
-      setTimeout(applyTheme, 50);
+      setTimeout(() => { initAndApplyTheme(); }, 50);
     });
     const primerRoot = document.querySelector('[data-color-mode]');
     if (primerRoot) {

@@ -1,11 +1,22 @@
-import Highcharts from 'highcharts';
-
 /**
  * GitHub's internal Highcharts theme — adapted from github/github-ui chart-card.
  *
  * CSS var() strings DON'T work in Highcharts because it renders to SVG attributes,
  * not CSS properties. We resolve vars at runtime by reading computed styles from the DOM.
+ *
+ * NOTE: No top-level `import Highcharts` here! chart-theme is imported by ReportTable
+ * for getModelIconUrl(). Pulling in Highcharts (365 KB) eagerly for a helper that
+ * doesn't need it would bloat the initial bundle.
  */
+
+/** Brighten a hex color by a factor (-1 to 1). Positive = lighter, negative = darker. */
+function brightenHex(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const adjust = (c: number) => Math.min(255, Math.max(0, Math.round(c + 255 * amount)));
+  return `#${adjust(r).toString(16).padStart(2, '0')}${adjust(g).toString(16).padStart(2, '0')}${adjust(b).toString(16).padStart(2, '0')}`;
+}
 
 /** Resolved fallback colors for Highcharts (used in chart components for series colors) */
 export const GITHUB_COLORS_RESOLVED = [
@@ -18,7 +29,7 @@ export const GITHUB_COLORS_RESOLVED = [
 /**
  * Brand base colors for AI model families used in GitHub Copilot.
  * Each brand gets a base hue, then individual models within a ranked list
- * are shaded via Highcharts.color() based on their position among siblings.
+ * are shaded via brightenHex() based on their position among siblings.
  */
 const MODEL_BRAND_BASES: Array<{ match: string; base: string }> = [
   // Anthropic Claude — terracotta
@@ -80,7 +91,7 @@ export function buildColorMap(names: string[], useBranding = true): Map<string, 
       const count = brandCounters.get(brand.match) ?? 0;
       brandCounters.set(brand.match, count + 1);
       const brightenAmount = -0.15 + count * 0.10;
-      colorMap.set(name, Highcharts.color(brand.base).brighten(brightenAmount).get() as string);
+      colorMap.set(name, brightenHex(brand.base, brightenAmount));
     } else {
       colorMap.set(name, GITHUB_COLORS_RESOLVED[fallbackIndex % GITHUB_COLORS_RESOLVED.length]);
       fallbackIndex++;
@@ -150,7 +161,7 @@ function resolveDataColors(): string[] {
 }
 
 /** Build the Highcharts theme using live CSS variable values from the current Primer theme */
-export function buildGitHubChartTheme(): Highcharts.Options {
+export function buildGitHubChartTheme(): Record<string, unknown> {
   const bgDefault = getCSSVar('--bgColor-default', '#ffffff');
   const fgDefault = getCSSVar('--fgColor-default', '#1f2328');
   const fgMuted = getCSSVar('--fgColor-muted', '#656d76');
