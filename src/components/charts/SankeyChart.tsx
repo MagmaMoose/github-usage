@@ -20,11 +20,11 @@ interface SankeyNode {
   offset?: number;
 }
 
-/** Safely read a string field from a row, falling back to '(no org)' / '(empty)' */
+/** Safely read a string field from a row, falling back to '(no org)' / blank */
 function getField(row: AnyReportRow, field: string): string {
   const val = (row as unknown as Record<string, unknown>)[field];
   if (val === '' || val === null || val === undefined) {
-    return field === 'organization' ? '(no org)' : '(empty)';
+    return field === 'organization' ? '(no org)' : ' ';
   }
   return String(val);
 }

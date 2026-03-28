@@ -81,7 +81,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       })
       .sort((a, b) => b.visibleSpend - a.visibleSpend);
 
-    const categories = sorted.map((item) => formatDisplayValue(item.key, groupByColumn) || '(empty)');
+    const categories = sorted.map((item) => formatDisplayValue(item.key, groupByColumn) || ' ');
 
     // Build a stacked series per stack group
     const series: Highcharts.SeriesOptionsType[] = rankedStacks.map((stackInfo) => {
@@ -93,7 +93,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
 
       return {
         type: 'bar' as const,
-        name: formatDisplayValue(stackInfo.stack, stackField) || '(empty)',
+        name: formatDisplayValue(stackInfo.stack, stackField) || ' ',
         data,
         color: colorMap.get(stackInfo.stack) ?? '#808fa3',
         visible: !isHidden,
@@ -124,7 +124,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             if (isModel && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
             }
-            return name || '(empty)';
+            return name || ' ';
           },
         },
       },
@@ -170,7 +170,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       })
       .sort((a, b) => b.total - a.total);
 
-    const categories = enriched.map((item) => formatDisplayValue(item.key, groupByColumn) || '(empty)');
+    const categories = enriched.map((item) => formatDisplayValue(item.key, groupByColumn) || ' ');
 
     return {
       chart: { type: 'bar', height: Math.max(350, enriched.length * 40) },

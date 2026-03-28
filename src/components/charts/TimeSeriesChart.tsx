@@ -135,7 +135,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
 
       series.push({
         type: 'line' as const,
-        name: formatDisplayValue(group.key, groupByColumn) || '(empty)',
+        name: formatDisplayValue(group.key, groupByColumn) || ' ',
         data: timestamps.map((t, j) => [t, chartData[j]] as [number, number]),
         color,
         ...(smoothed && {

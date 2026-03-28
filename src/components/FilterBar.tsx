@@ -277,7 +277,7 @@ export function FilterBar({
           >
             {groupByColumn ? humanizeColumn(groupByColumn) : 'Group by'}
           </ActionMenu.Button>
-          <ActionMenu.Overlay width="auto">
+          <ActionMenu.Overlay width="auto" side="outside-bottom" align="start">
             <ActionList selectionVariant="single">
               {groupableColumns.map((col) => {
                 const Icon = fieldIcons[col];

@@ -27,7 +27,7 @@ export function TokenBreakdownChart() {
       return { key: item.key, input, output, cacheCreate, cacheRead, total: input + output + cacheCreate + cacheRead };
     }).sort((a, b) => b.total - a.total);
 
-    const categories = enriched.map((item) => item.key || '(empty)');
+    const categories = enriched.map((item) => item.key || ' ');
     const inputData = enriched.map((item) => item.input);
     const outputData = enriched.map((item) => item.output);
     const cacheCreateData = enriched.map((item) => item.cacheCreate);

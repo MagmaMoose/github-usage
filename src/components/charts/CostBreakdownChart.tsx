@@ -53,7 +53,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
 
       return {
         type: 'column' as const,
-        name: formatDisplayValue(groupInfo.group, stackField) || '(empty)',
+        name: formatDisplayValue(groupInfo.group, stackField) || ' ',
         data,
         color: colorMap.get(groupInfo.group) ?? '#808fa3',
       };

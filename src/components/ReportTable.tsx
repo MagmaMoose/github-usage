@@ -315,10 +315,10 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
               type="button"
               className={styles.cellClickable}
               onClick={(e) => handleGroupClick(value, e)}
-              title={`Filter to ${displayValue || '(empty)'}`}
+              title={`Filter to ${displayValue || ''}`}
             >
               {ColumnIcon && <ColumnIcon size={16} className={styles.columnIcon} />}
-              {displayValue || '(empty)'}
+              {displayValue || ''}
             </button>
           );
         },
