@@ -79,7 +79,7 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
     for (let i = 0; i < filteredLevels.length - 1; i++) levelChildren.push(new Map());
 
     let grandTotal = 0;
-    const valueKey = activeMetric.key;
+    const valueKey = activeMetric.valueField ?? activeMetric.key;
 
     // Token-specific tracking (only when hierarchy ends at 'model' and report is token type)
     type TokenBucket = { input: number; output: number; cacheRead: number; cacheWrite: number };

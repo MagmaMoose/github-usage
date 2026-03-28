@@ -71,6 +71,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
   // Reset to spend when metric key is not available in current options
   const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
   const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
+  const dataField = activeMetric.valueField ?? activeMetric.key;
   const setMetricKey = useCallback((key: MetricKey) => setMetricKeyRaw(key), []);
 
   // Window size adapts to the bucket granularity
@@ -89,7 +90,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
     const topGroups = [...groups.entries()]
       .map(([key, groupRows]) => ({
         key,
-        total: sumBy(groupRows, effectiveMetricKey as keyof AnyReportRow & string),
+        total: sumBy(groupRows, dataField as keyof AnyReportRow & string),
       }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
@@ -112,7 +113,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
         const groupRows = bucketRowsForKey.filter(
           (r) => String(r[groupByColumn as keyof AnyReportRow]) === group.key,
         );
-        return sumBy(groupRows, effectiveMetricKey as keyof AnyReportRow & string);
+        return sumBy(groupRows, dataField as keyof AnyReportRow & string);
       });
 
       let chartData: number[];
@@ -171,7 +172,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
       series,
       chart: { height: 400 },
     };
-  }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, effectiveMetricKey, activeMetric]);
+  }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, dataField, activeMetric]);
 
   const metricLabel = activeMetric.isCurrency ? 'Spend' : activeMetric.label;
   const windowLabel = timeBucket === 'daily' ? '7-day' : timeBucket === 'weekly' ? '4-week' : '3-month';

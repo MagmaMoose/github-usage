@@ -23,6 +23,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
   const [metricKey, setMetricKey] = useState('grossAmount');
   const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
   const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
+  const dataField = activeMetric.valueField ?? activeMetric.key;
 
   const options = useMemo((): Highcharts.Options | null => {
     if (!activeReport) return null;
@@ -37,7 +38,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
     // Find top groups by total metric across all buckets
     const stackGroups = groupBy(rows, stackField as keyof AnyReportRow & string);
     const rankedGroups = [...stackGroups.entries()]
-      .map(([group, groupRows]) => ({ group, total: sumBy(groupRows, effectiveMetricKey as keyof AnyReportRow & string) }))
+      .map(([group, groupRows]) => ({ group, total: sumBy(groupRows, dataField as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
@@ -47,7 +48,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       const data = categories.map((bucketKey) => {
         const bucketRowList = buckets.get(bucketKey) ?? [];
         const matchingRows = bucketRowList.filter((r) => String(r[stackField as keyof AnyReportRow]) === groupInfo.group);
-        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100] as [number, number];
+        return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, dataField as keyof AnyReportRow & string) * 100) / 100] as [number, number];
       });
 
       return {

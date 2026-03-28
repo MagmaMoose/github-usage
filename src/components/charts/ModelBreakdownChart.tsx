@@ -32,6 +32,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
   const showMetricToggle = resolvedMetrics.length > 1 && !showTokensView;
   const effectiveMetricKey = resolvedMetrics.some((m) => m.key === metricKey) ? metricKey : resolvedMetrics[0].key;
   const activeMetric = resolvedMetrics.find((m) => m.key === effectiveMetricKey) ?? resolvedMetrics[0];
+  const dataField = activeMetric.valueField ?? activeMetric.key;
 
   const toggleGroup = useCallback((groupName: string) => {
     setHiddenGroups((prev) => {
@@ -51,14 +52,14 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       : allRows;
 
     // Get top users/groups by total metric
-    const top = topN(rows, groupByColumn as keyof AnyReportRow & string, effectiveMetricKey as keyof AnyReportRow & string, 15);
+    const top = topN(rows, groupByColumn as keyof AnyReportRow & string, dataField as keyof AnyReportRow & string, 15);
     if (top.length === 0) return null;
 
     // Collect all stack groups across those top groups, ranked by total metric
     const allTopRows = top.flatMap((item) => item.rows);
     const stackGroups = groupBy(allTopRows, stackField as keyof AnyReportRow & string);
     const rankedStacks = [...stackGroups.entries()]
-      .map(([stack, stackRows]) => ({ stack, total: sumBy(stackRows, effectiveMetricKey as keyof AnyReportRow & string) }))
+      .map(([stack, stackRows]) => ({ stack, total: sumBy(stackRows, dataField as keyof AnyReportRow & string) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
@@ -75,7 +76,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       .map((item) => {
         const chartRows = item.rows
           .filter((r) => visibleStackNames.has(String(r[stackField as keyof AnyReportRow])));
-        const visibleMetric = Math.round(sumBy(chartRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100;
+        const visibleMetric = Math.round(sumBy(chartRows, dataField as keyof AnyReportRow & string) * 100) / 100;
         return { ...item, visibleSpend: visibleMetric };
       })
       .sort((a, b) => b.visibleSpend - a.visibleSpend);
@@ -87,7 +88,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       const isHidden = hiddenGroups.has(stackInfo.stack);
       const data = sorted.map((item) => {
         const stackRows = item.rows.filter((r) => String(r[stackField as keyof AnyReportRow]) === stackInfo.stack);
-        return Math.round(sumBy(stackRows, effectiveMetricKey as keyof AnyReportRow & string) * 100) / 100;
+        return Math.round(sumBy(stackRows, dataField as keyof AnyReportRow & string) * 100) / 100;
       });
 
       return {

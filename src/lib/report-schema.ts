@@ -13,6 +13,8 @@ export interface MetricOption {
   key: string;
   label: string;
   isCurrency: boolean;
+  /** When key differs from the actual row field (e.g. key='seats' but data lives in 'quantity') */
+  valueField?: string;
   /** Optional row filter applied before aggregation (e.g. filter to seat-only rows) */
   rowFilter?: (row: Record<string, unknown>) => boolean;
 }
@@ -254,8 +256,8 @@ export const PRODUCT_METRIC_OPTIONS: Record<string, MetricOption[]> = {
   ],
   copilot: [
     { key: 'grossAmount', label: 'Spend', isCurrency: true },
-    { key: 'quantity', label: 'Seats', isCurrency: false, rowFilter: (r) => r.unitType === 'user-months' },
-    { key: 'quantity', label: 'Usage (PRUs)', isCurrency: false, rowFilter: (r) => r.unitType === 'requests' },
+    { key: 'seats', label: 'Seats', isCurrency: false, valueField: 'quantity', rowFilter: (r) => r.unitType === 'user-months' },
+    { key: 'usage', label: 'Usage (PRUs)', isCurrency: false, valueField: 'quantity', rowFilter: (r) => r.unitType === 'requests' },
   ],
   spark: [
     { key: 'grossAmount', label: 'Spend', isCurrency: true },
