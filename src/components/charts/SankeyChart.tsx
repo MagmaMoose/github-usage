@@ -189,7 +189,7 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
       const topEntries = [...topSets[i]];
 
       // Color map: use branded colors only for model/sku levels
-      const useBranding = field === 'model' || field === 'sku';
+      const useBranding = field === 'model';
       const colorMap = i === filteredLevels.length - 1
         ? buildColorMap(topEntries, useBranding)
         : new Map<string, string>();

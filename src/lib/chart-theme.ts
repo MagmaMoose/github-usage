@@ -38,44 +38,12 @@ const MODEL_BRAND_BASES: Array<{ match: string; base: string }> = [
 ];
 
 /**
- * Brand base colors for SKU families in the metered usage report.
- * Pattern: SKU name prefix → base color, shaded by sibling position.
- */
-const SKU_BRAND_BASES: Array<{ match: string; base: string }> = [
-  // Linux runners — green
-  { match: 'actions_linux',           base: '#30a147' },
-  // Linux ARM — orange
-  { match: 'actions_linux_arm',       base: '#eb670f' },
-  // Windows runners — blue
-  { match: 'actions_windows',         base: '#006edb' },
-  // macOS runners — gray/silver
-  { match: 'actions_macos',           base: '#808fa3' },
-  // Self-hosted — teal
-  { match: 'actions_self_hosted',     base: '#179b9b' },
-  // Storage — purple
-  { match: 'actions_storage',         base: '#894ceb' },
-  { match: 'actions_custom_image',    base: '#894ceb' },
-  // Git LFS — auburn
-  { match: 'git_lfs',                 base: '#9d615c' },
-  // Packages — pink
-  { match: 'packages',                base: '#ce2c85' },
-  // Copilot seats — copilot purple
-  { match: 'copilot',                 base: '#8250df' },
-  // Spark — yellow
-  { match: 'spark',                   base: '#b88700' },
-];
-
-/**
  * Get the brand base color for a model name, or null if no brand matches.
+ * Only AI model families get branded colors.
  */
 function getBrandBase(name: string): { match: string; base: string } | null {
   const lower = name.toLowerCase();
-  // Check model brands first (higher specificity), then SKU brands
   for (const brand of MODEL_BRAND_BASES) {
-    if (lower.includes(brand.match)) return brand;
-  }
-  // SKU brands: match against the raw snake_case SKU name
-  for (const brand of SKU_BRAND_BASES) {
     if (lower.includes(brand.match)) return brand;
   }
   return null;
