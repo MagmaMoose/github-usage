@@ -145,18 +145,9 @@ export function FileDropzone({ forceShow, variant = 'copilot' }: { forceShow?: b
           </div>
         </div>
         <ol start={3} className={styles.stepsList}>
-          {variant === 'usage' ? (
-            <>
-              <li>Select the billing period and click <strong>Get report</strong></li>
-              <li>Download the CSV when ready</li>
-            </>
-          ) : (
-            <>
-              <li>Click <strong>Get usage report</strong></li>
-              <li>Select the date range and click <strong>Email me the report</strong></li>
-              <li>Download the CSV from the link in your email</li>
-            </>
-          )}
+          <li>Click <strong>Get usage report</strong></li>
+          <li>Select the date range and click <strong>Email me the report</strong></li>
+          <li>Download the CSV from the link in your email</li>
         </ol>
         <div className={styles.instructionsFooter}>
           <a
