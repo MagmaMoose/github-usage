@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { IconButton, PageLayout } from '@primer/react';
 import { SidebarCollapseIcon } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
@@ -17,6 +17,7 @@ import {
 import { useBrowserTitle } from './hooks/useBrowserTitle';
 import { usePeriodInference } from './hooks/usePeriodInference';
 import { useShareHydration } from './hooks/useShareHydration';
+import { parseCSV } from './lib/csv-parser';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { useProductNavigation } from './hooks/useProductNavigation';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
@@ -57,6 +58,38 @@ function AppContent() {
     useProductNavigation({ activePage, activeReport, filters, setFilter });
 
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebarCollapse();
+
+  // Handle ?demo URL param at the app level so it works even when sidebar
+  // is collapsed (default state). For demo=auto we load directly; for plain
+  // ?demo we force-open the sidebar so its prompt dialog can mount.
+  const handleLoadSamplesDirect = useCallback(async () => {
+    const { loadSampleData } = await import('./lib/sample-data');
+    const samples = await loadSampleData();
+    for (const { name, content } of samples) {
+      const report = parseCSV(content, name);
+      report.isSample = true;
+      addReport(report, content);
+    }
+    setActivePage(PAGE_TYPES.USAGE);
+  }, [addReport, setActivePage]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('demo')) return;
+    if (reports.length > 0) return;
+
+    if (params.get('demo') === 'auto') {
+      handleLoadSamplesDirect();
+      // Clean the param from URL so refresh doesn't re-trigger
+      params.delete('demo');
+      const clean = params.toString();
+      const url = window.location.pathname + (clean ? `?${clean}` : '');
+      window.history.replaceState({}, '', url);
+    } else {
+      // Force sidebar open so InsightsSidebar's prompt dialog can render
+      setSidebarCollapsed(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useShareHydration({ addReport, setGroupByColumn, setTimeBucket, setPeriodKey, setSearchQuery, setFilter });
   useBrowserTitle(activeReport);

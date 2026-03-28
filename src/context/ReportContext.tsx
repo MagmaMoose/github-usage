@@ -171,9 +171,27 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           filters: {},
         };
       }
-      const nextReports = [...prev.reports, report];
-      const nextRawCsvs = [...prev.rawCsvs, rawCsv];
-      const nextHashes = new Set(prev.fileHashes);
+
+      // Auto-remove sample/demo data when real data is imported
+      let baseReports = prev.reports;
+      let baseRawCsvs = prev.rawCsvs;
+      let baseHashes = prev.fileHashes;
+      if (!report.isSample && prev.reports.some((r) => r.isSample)) {
+        const realIndices = prev.reports
+          .map((r, i) => (r.isSample ? -1 : i))
+          .filter((i) => i >= 0);
+        baseReports = realIndices.map((i) => prev.reports[i]);
+        baseRawCsvs = realIndices.map((i) => prev.rawCsvs[i]);
+        baseHashes = new Set(baseRawCsvs.map((csv) => simpleHash(csv)));
+        // Clean up IndexedDB for removed sample reports
+        for (const r of prev.reports) {
+          if (r.isSample) removeCachedCSV(r.fileName);
+        }
+      }
+
+      const nextReports = [...baseReports, report];
+      const nextRawCsvs = [...baseRawCsvs, rawCsv];
+      const nextHashes = new Set(baseHashes);
       nextHashes.add(hash);
 
       // Persist raw + parsed to IndexedDB by filename

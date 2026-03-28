@@ -370,6 +370,8 @@ export interface ParsedReport<T = PremiumRequestRow | TokenUsageRow | UsageRepor
   fileName: string;
   rowCount: number;
   dateRange: { start: string; end: string };
+  /** True when this report was loaded from built-in sample/demo data */
+  isSample?: boolean;
 }
 
 /** Report rows that have billing fields (date, grossAmount, netAmount, etc.) */

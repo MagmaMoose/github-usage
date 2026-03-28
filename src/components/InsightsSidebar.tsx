@@ -89,14 +89,17 @@ export function InsightsSidebar({
       const { loadSampleData } = await import('../lib/sample-data');
       const samples = await loadSampleData();
       for (const { name, content } of samples) {
-        addReport(parseCSV(content, name), content);
+        const report = parseCSV(content, name);
+        report.isSample = true;
+        addReport(report, content);
       }
+      setActivePage(PAGE_TYPES.USAGE);
       onboarding.restart();
     } finally {
       setLoadingSamples(false);
       setShowSamplePrompt(false);
     }
-  }, [addReport, onboarding]);
+  }, [addReport, setActivePage, onboarding]);
 
   // Auto-trigger sample data prompt via ?demo URL param
   useEffect(() => {

@@ -9,7 +9,7 @@ interface SidebarCollapseReturn {
 /** Sidebar collapse state persisted to localStorage */
 export function useSidebarCollapse(): SidebarCollapseReturn {
   const [sidebarCollapsed, setSidebarCollapsedRaw] = useState(() =>
-    getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, true),
+    getStoredValue(STORAGE_KEYS.SIDEBAR_COLLAPSED, false),
   );
 
   const setSidebarCollapsed = useCallback((collapsed: boolean) => {
