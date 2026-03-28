@@ -608,7 +608,6 @@ function generateEnterpriseMembersExport() {
   const rows: string[] = [header];
 
   const enterpriseRoles = ['Owner', 'Member'];
-  const memberRoles = ['Owner', 'Member'];
 
   function randomDate(startYear: number, endYear: number): string {
     const y = faker.number.int({ min: startYear, max: endYear });
