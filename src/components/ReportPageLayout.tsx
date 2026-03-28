@@ -44,7 +44,7 @@ import { SankeyChart } from './charts/SankeyChart';
 import { PeriodSelector } from './PeriodSelector';
 import { HeroCardsGrid } from './HeroCardsGrid';
 import { useHighchartsInit } from './charts/useHighchartsInit';
-import type { ReportSchema } from '../lib/report-schema';
+import type { ReportSchema, MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
 import { GROUPABLE_COLUMNS } from '../lib/types';
 import { formatDateRange, formatDateRangeCompact } from '../lib/formatters';
@@ -118,9 +118,11 @@ interface ReportPageLayoutProps {
   schema: ReportSchema;
   /** Only show reports whose type is in this list. Others are hidden for this page. */
   allowedReportTypes?: ReportType[];
+  /** Override schema metricOptions (e.g., per-product metrics for usage reports) */
+  metricOptions?: MetricOption[];
 }
 
-export function ReportPageLayout({ schema, allowedReportTypes }: ReportPageLayoutProps) {
+export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: ReportPageLayoutProps) {
   useHighchartsInit();
   const {
     reports: allReports,
@@ -160,7 +162,8 @@ export function ReportPageLayout({ schema, allowedReportTypes }: ReportPageLayou
     return contextActiveReport;
   }, [contextActiveReport, allowedReportTypes]);
 
-  // Use context visible rows only when active report matches this page
+  // Use override metricOptions if provided, otherwise fall back to schema
+  const effectiveMetrics = metricOptions ?? schema.metricOptions;
   const visibleRows = useMemo(
     () => (activeReport ? contextVisibleRows : []),
     [activeReport, contextVisibleRows],
@@ -485,13 +488,13 @@ export function ReportPageLayout({ schema, allowedReportTypes }: ReportPageLayou
           {activeTab === 'charts' && visibleRows.length > 0 && (
             <div className={styles.chartStack} key={activeReportIndex}>
               <div className={styles.chartSurface}>
-                <TimeSeriesChart metricOptions={schema.metricOptions} />
+                <TimeSeriesChart metricOptions={effectiveMetrics} />
               </div>
               <div className={styles.chartSurface}>
-                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={schema.metricOptions} />
+                <GroupBreakdownChart stackField={schema.breakdownStackField} metricOptions={effectiveMetrics} />
               </div>
               <div className={styles.chartSurface}>
-                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={schema.metricOptions} />
+                <CostBreakdownChart stackField={schema.breakdownStackField} metricOptions={effectiveMetrics} />
               </div>
               <div className={styles.chartSurface}>
                 <SankeyChart hierarchy={schema.sankeyHierarchy} />

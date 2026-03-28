@@ -30,8 +30,13 @@ import {
   PAGE_TYPES,
   PAGE_REPORT_TYPES,
   pageTypeForReport,
+  PRODUCT_METRIC_OPTIONS,
+  MIXED_METRIC_OPTIONS,
   type PageType,
 } from './lib/report-schema';
+import { REPORT_TYPES } from './lib/types';
+import type { UsageReportRow } from './lib/types';
+import { formatDisplayValue } from './lib/formatters';
 import { parseCSV } from './lib/csv-parser';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from './lib/local-storage';
 import { readShareData, clearShareHash } from './lib/share-state';
@@ -65,7 +70,9 @@ function AppContent() {
 
   const setActivePage = useCallback((page: PageType) => {
     setActivePageRaw(page);
-  }, []);
+    // Clear product filter when switching pages
+    setFilter('product', []);
+  }, [setFilter]);
 
   // Sync active page to URL
   useEffect(() => {
@@ -176,6 +183,41 @@ function AppContent() {
     return getReportSchema(pageReportTypes[0]);
   }, [activeReport, activePage]);
 
+  // Compute available products for usage report sub-navigation
+  const availableProducts = useMemo(() => {
+    if (activePage !== PAGE_TYPES.USAGE || !activeReport) return [];
+    if (activeReport.type !== REPORT_TYPES.USAGE_REPORT) return [];
+
+    const products = [
+      ...new Set(
+        (activeReport.rows as UsageReportRow[]).map((r) => r.product).filter(Boolean),
+      ),
+    ].sort();
+
+    return products;
+  }, [activePage, activeReport]);
+
+  // Current product filter (from filters state)
+  const activeProductFilter = filters.product?.[0] ?? null;
+
+  // Compute effective metric options based on product filter
+  const effectiveMetricOptions = useMemo(() => {
+    if (activePage !== PAGE_TYPES.USAGE) return activeSchema.metricOptions;
+    if (!activeProductFilter) return MIXED_METRIC_OPTIONS;
+    return PRODUCT_METRIC_OPTIONS[activeProductFilter] ?? MIXED_METRIC_OPTIONS;
+  }, [activePage, activeProductFilter, activeSchema.metricOptions]);
+
+  const handleProductSelect = useCallback(
+    (product: string | null) => {
+      if (product) {
+        setFilter('product', [product]);
+      } else {
+        setFilter('product', []);
+      }
+    },
+    [setFilter],
+  );
+
   const renderInsightsSidebar = () => (
     <div className={styles.sidebarContent}>
       <div className={styles.sidebarHeader}>
@@ -191,22 +233,58 @@ function AppContent() {
         />
       </div>
       <NavList aria-label="Insights navigation">
-        {NAV_PAGES.map(({ id, label, icon: Icon }) => (
-          <NavList.Item
-            key={id}
-            href="#"
-            aria-current={activePage === id ? 'page' : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              setActivePage(id);
-            }}
-          >
-            <NavList.LeadingVisual>
-              <Icon />
-            </NavList.LeadingVisual>
-            {label}
-          </NavList.Item>
-        ))}
+        {NAV_PAGES.map(({ id, label, icon: Icon }) => {
+          const isUsagePage = id === PAGE_TYPES.USAGE;
+          const showSubNav = isUsagePage && availableProducts.length > 1;
+
+          return (
+            <NavList.Item
+              key={id}
+              href="#"
+              aria-current={activePage === id && !activeProductFilter ? 'page' : undefined}
+              defaultOpen={isUsagePage && activePage === PAGE_TYPES.USAGE}
+              onClick={(event) => {
+                event.preventDefault();
+                setActivePage(id);
+                if (isUsagePage) handleProductSelect(null);
+              }}
+            >
+              <NavList.LeadingVisual>
+                <Icon />
+              </NavList.LeadingVisual>
+              {label}
+              {showSubNav && (
+                <NavList.SubNav>
+                  <NavList.Item
+                    href="#"
+                    aria-current={activePage === PAGE_TYPES.USAGE && !activeProductFilter ? 'page' : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setActivePage(PAGE_TYPES.USAGE);
+                      handleProductSelect(null);
+                    }}
+                  >
+                    All products
+                  </NavList.Item>
+                  {availableProducts.map((product) => (
+                    <NavList.Item
+                      key={product}
+                      href="#"
+                      aria-current={activeProductFilter === product ? 'page' : undefined}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setActivePage(PAGE_TYPES.USAGE);
+                        handleProductSelect(product);
+                      }}
+                    >
+                      {formatDisplayValue(product, 'product')}
+                    </NavList.Item>
+                  ))}
+                </NavList.SubNav>
+              )}
+            </NavList.Item>
+          );
+        })}
       </NavList>
       <div className={styles.sidebarFooter}>
         <ActionMenu>
@@ -273,7 +351,7 @@ function AppContent() {
             />
           </div>
         )}
-        <ReportPageLayout schema={activeSchema} allowedReportTypes={PAGE_REPORT_TYPES[activePage]} />
+        <ReportPageLayout schema={activeSchema} allowedReportTypes={PAGE_REPORT_TYPES[activePage]} metricOptions={effectiveMetricOptions} />
       </PageLayout.Content>
     </PageLayout>
   );

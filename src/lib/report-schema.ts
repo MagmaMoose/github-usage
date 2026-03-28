@@ -240,3 +240,35 @@ export function pageTypeForReport(reportType: ReportType): PageType {
   }
   return PAGE_TYPES.COPILOT;
 }
+
+// ─── Product-Specific Metric Options ───────────────────────────────────────────
+
+/** Per-product metric options for the usage report. When a product filter is active,
+ *  charts use these instead of the generic schema metricOptions. */
+export const PRODUCT_METRIC_OPTIONS: Record<string, MetricOption[]> = {
+  actions: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'Minutes', isCurrency: false },
+  ],
+  copilot: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'Seats / Requests', isCurrency: false },
+  ],
+  spark: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'Requests', isCurrency: false },
+  ],
+  git_lfs: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'Storage (GB)', isCurrency: false },
+  ],
+  packages: [
+    { key: 'grossAmount', label: 'Spend', isCurrency: true },
+    { key: 'quantity', label: 'Storage (GB)', isCurrency: false },
+  ],
+};
+
+/** Spend-only metrics (used when "All" products are shown or product not recognized) */
+export const MIXED_METRIC_OPTIONS: MetricOption[] = [
+  { key: 'grossAmount', label: 'Spend', isCurrency: true },
+];
