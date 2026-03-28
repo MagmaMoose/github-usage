@@ -182,7 +182,7 @@ export function InsightsSidebar({
           >
             {colorMode === 'night' ? 'Dark' : colorMode === 'day' ? 'Light' : 'System'}
           </ActionMenu.Button>
-          <ActionMenu.Overlay width="auto">
+          <ActionMenu.Overlay width="auto" side="outside-top" align="start">
             <ActionList selectionVariant="single">
               <ActionList.Item selected={colorMode === 'auto'} onSelect={() => setColorMode('auto')}>
                 System
@@ -198,9 +198,10 @@ export function InsightsSidebar({
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
         <IconButton
           as="a"
-          href="https://github.com/austenstone/tbb"
+          href="https://github.com/austenstone/github-actions-usage-report"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View source on GitHub"
@@ -215,6 +216,7 @@ export function InsightsSidebar({
           size="small"
           onClick={onboarding.restart}
         />
+        </span>
       </div>
     </div>
   );

@@ -7,28 +7,28 @@ type CaretPosition = ComponentProps<typeof Popover>['caret'];
 /** Step content configuration */
 export const STEP_CONTENT: Record<OnboardingStep, { heading: string; body: string; caret: CaretPosition }> = {
   'add-file': {
-    heading: 'Add files',
-    body: 'Drop multiple CSVs. Same-type reports auto-combine.',
+    heading: 'Upload your reports',
+    body: 'Upload one or more CSV billing reports exported from GitHub. You can add multiple files and they\'ll be combined automatically.',
     caret: 'top-right',
   },
   'view-tabs': {
-    heading: 'Charts or table',
-    body: 'Switch between interactive charts and a sortable data table. Both respect your current filters.',
+    heading: 'Visualize your data',
+    body: 'Toggle between interactive charts and a sortable data table. Both views update when you apply filters.',
     caret: 'top',
   },
   'group-by': {
-    heading: 'Group data',
-    body: 'Change how rows are grouped in charts and the table. Try grouping by model, organization, or repository.',
+    heading: 'Group your data',
+    body: 'Change how rows are grouped in charts and the table. Try grouping by user, model, organization, or repository.',
     caret: 'top',
   },
   'filter-bar': {
-    heading: 'Search & filter',
-    body: 'Type to search rows or add structured filters by user, model, SKU, or repository. Stack multiple filters to drill down.',
+    heading: 'Search and filter',
+    body: 'Type to search or click a field name to add structured filters. You can stack multiple filters to narrow down the data.',
     caret: 'top',
   },
   'columns': {
-    heading: 'Customize columns',
-    body: 'Show or hide columns to focus on your data.',
+    heading: 'Show or hide columns',
+    body: 'Choose which columns are visible in the table to focus on what matters.',
     caret: 'top-right',
   },
 };
