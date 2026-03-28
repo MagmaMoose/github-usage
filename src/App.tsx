@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { IconButton, PageLayout } from '@primer/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { IconButton, PageLayout, Spinner, Text } from '@primer/react';
 import { SidebarCollapseIcon } from '@primer/octicons-react';
 import { ReportProvider } from './context/ReportContext';
 import { useReport } from './context/useReport';
@@ -58,19 +58,25 @@ function AppContent() {
     useProductNavigation({ activePage, activeReport, filters, setFilter });
 
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebarCollapse();
+  const [loadingSamples, setLoadingSamples] = useState(false);
 
   // Handle ?demo URL param at the app level so it works even when sidebar
   // is collapsed (default state). For demo=auto we load directly; for plain
   // ?demo we force-open the sidebar so its prompt dialog can mount.
   const handleLoadSamplesDirect = useCallback(async () => {
-    const { loadSampleData } = await import('./lib/sample-data');
-    const samples = await loadSampleData();
-    for (const { name, content } of samples) {
-      const report = parseCSV(content, name);
-      report.isSample = true;
-      addReport(report, content);
+    setLoadingSamples(true);
+    try {
+      const { loadSampleData } = await import('./lib/sample-data');
+      const samples = await loadSampleData();
+      for (const { name, content } of samples) {
+        const report = parseCSV(content, name);
+        report.isSample = true;
+        addReport(report, content);
+      }
+      setActivePage(PAGE_TYPES.USAGE);
+    } finally {
+      setLoadingSamples(false);
     }
-    setActivePage(PAGE_TYPES.USAGE);
   }, [addReport, setActivePage]);
 
   useEffect(() => {
@@ -140,6 +146,16 @@ function AppContent() {
         </PageLayout.Pane>
       )}
       <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
+        {loadingSamples && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 12, background: 'var(--bgColor-default, var(--color-canvas-default))',
+          }}>
+            <Spinner size="large" />
+            <Text as="p" style={{ color: 'var(--fgColor-muted)', fontSize: 14 }}>Loading sample data…</Text>
+          </div>
+        )}
         {sidebarCollapsed && (
           <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 1 }}>
             <IconButton
