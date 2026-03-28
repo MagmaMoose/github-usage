@@ -2,6 +2,11 @@ import { useEffect } from 'react';
 import Highcharts from 'highcharts';
 import { buildGitHubChartTheme } from '../../lib/chart-theme';
 
+/** Allow data: URIs in Highcharts HTML labels (AST sanitizer blocks them by default) */
+if (!Highcharts.AST.allowedReferences.includes('data:')) {
+  Highcharts.AST.allowedReferences.push('data:');
+}
+
 /** Apply the GitHub Highcharts theme using live CSS variable values */
 function applyTheme() {
   const theme = buildGitHubChartTheme();
