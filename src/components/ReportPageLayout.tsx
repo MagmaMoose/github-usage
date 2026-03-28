@@ -263,9 +263,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
             .map((row) => String((row as unknown as Record<string, unknown>)[field] ?? '').trim())
             .filter(Boolean),
         ),
-      ]
-        .sort((left, right) => left.localeCompare(right))
-        .slice(0, 100);
+      ].sort((left, right) => left.localeCompare(right));
       nextValues.set(field, values);
     }
     return nextValues;
