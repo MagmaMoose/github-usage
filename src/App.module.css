@@ -241,6 +241,8 @@
   border: var(--borderWidth-thin, 1px) solid var(--borderColor-muted, #d8dee4);
   border-radius: var(--borderRadius-medium, 6px);
   overflow: hidden;
+  /* Isolate chart layout/paint to reduce cascading reflow costs */
+  contain: layout style paint;
 }
 
 .surfaceTitle {
