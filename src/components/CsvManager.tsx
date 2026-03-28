@@ -1,5 +1,6 @@
 import { useCallback, useRef, useMemo, useState } from 'react';
 import {
+  Banner,
   Button,
   PageHeader,
   Text,
@@ -10,7 +11,6 @@ import {
 import {
   DownloadIcon,
   FileIcon,
-  FileZipIcon,
   TrashIcon,
   UploadIcon,
 } from '@primer/octicons-react';
@@ -50,19 +50,18 @@ const columnHelper = createColumnHelper<FileRow>();
 
 function ZipInfo() {
   return (
-    <div className={styles.zipInfo}>
-      <div className={styles.zipInfoIcon}>
-        <FileZipIcon size={24} />
-      </div>
-      <div>
-        <Text as="p" className={styles.zipInfoTitle}>ZIP backup &amp; restore</Text>
-        <Text as="p" className={styles.zipInfoDesc}>
-          <strong>Download all</strong> saves your reports as a single <code>github-reports-YYYY-MM-DD.zip</code> archive.
-          To restore, just drop the ZIP file here or click <strong>Add file</strong> and select it.
-          All CSVs inside the archive will be imported automatically.
-        </Text>
-      </div>
-    </div>
+    <Banner
+      variant="info"
+      title="ZIP backup & restore"
+      description={
+        <>
+          <strong>Download all</strong> saves your reports as a single{' '}
+          <code>github-reports-YYYY-MM-DD.zip</code> archive. To restore, just drop the ZIP file
+          here or click <strong>Add file</strong> and select it. All CSVs inside the archive will
+          be imported automatically.
+        </>
+      }
+    />
   );
 }
 

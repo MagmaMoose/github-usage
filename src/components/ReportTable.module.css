@@ -236,20 +236,6 @@
   overflow-y: auto;
 }
 
-/* Row count badge */
-.rowCount {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 var(--base-size-6, 6px);
-  font-size: var(--text-body-size-small, 12px);
-  font-weight: var(--base-text-weight-medium, 500);
-  line-height: var(--text-body-lineHeight-medium, 20px);
-  color: var(--fgColor-default, #1f2328);
-  background-color: var(--bgColor-neutral-muted, #818b981f);
-  border-radius: var(--borderRadius-full, 10px);
-  margin-left: var(--base-size-8, 8px);
-}
-
 .headerBar {
   display: flex;
   align-items: center;
@@ -268,65 +254,6 @@
   display: flex;
   align-items: center;
   gap: var(--base-size-8, 8px);
-}
-
-/* Pagination */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--base-size-8, 8px) 0;
-  font-size: var(--text-body-size-small, 12px);
-  color: var(--fgColor-muted, #59636e);
-}
-
-.paginationButtons {
-  display: flex;
-  gap: var(--base-size-4, 4px);
-}
-
-.pageButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--control-medium-size, 32px);
-  height: var(--control-medium-size, 32px);
-  padding: 0 var(--base-size-8, 8px);
-  font-size: var(--text-body-size-small, 12px);
-  font-weight: var(--base-text-weight-medium, 500);
-  color: var(--fgColor-default, #1f2328);
-  background-color: var(--bgColor-default, #ffffff);
-  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
-  border-radius: var(--borderRadius-medium, 6px);
-  cursor: pointer;
-  user-select: none;
-}
-
-.pageButton:hover:not(:disabled) {
-  background-color: var(--bgColor-muted, #f6f8fa);
-}
-
-.pageButton:disabled {
-  color: var(--fgColor-disabled, #818b98);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.pageButton[data-active="true"] {
-  background-color: var(--bgColor-accent-emphasis, #0969da);
-  color: var(--fgColor-onEmphasis, #ffffff);
-  border-color: var(--bgColor-accent-emphasis, #0969da);
-}
-
-.pageSizeSelect {
-  padding: var(--base-size-4, 4px) var(--base-size-8, 8px);
-  font-size: var(--text-body-size-small, 12px);
-  color: var(--fgColor-default, #1f2328);
-  background-color: var(--bgColor-default, #ffffff);
-  border: var(--borderWidth-thin, 1px) solid var(--borderColor-default, #d1d9e0);
-  border-radius: var(--borderRadius-medium, 6px);
-  outline: none;
-  cursor: pointer;
 }
 
 @media (prefers-reduced-motion: reduce) {

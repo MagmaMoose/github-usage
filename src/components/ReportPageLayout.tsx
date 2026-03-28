@@ -13,6 +13,7 @@ import {
   Button,
   Heading,
   IconButton,
+  RelativeTime,
   Spinner,
   Stack,
   Text,
@@ -56,7 +57,7 @@ import { useHighchartsInit } from './charts/useHighchartsInit';
 import { getReportSchema, type ReportSchema, type MetricOption } from '../lib/report-schema';
 import type { ReportType } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
-import { formatDateRange, formatDateRangeCompact, preloadBotAvatars } from '../lib/formatters';
+import { formatDateRange, formatDateRangeCompact, preloadBotAvatars, formatDate } from '../lib/formatters';
 import { computeSummary } from '../lib/aggregation';
 import { parseCSV } from '../lib/csv-parser';
 import { extractCsvsFromZip, isZipFile, ACCEPTED_FILE_TYPES } from '../lib/zip';
@@ -522,9 +523,18 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
         <PageHeader.Description>
           <span className={styles.pageDescription}>
             Showing data from{' '}
-            {activeReport
-              ? formatDateRange(activeReport.dateRange.start, activeReport.dateRange.end)
-              : ''}
+            {activeReport && (
+              <>
+                {formatDate(activeReport.dateRange.start)} —{' '}
+                <RelativeTime
+n                  datetime={activeReport.dateRange.end + 'T00:00:00'}
+                  prefix=""
+                  threshold="P30D"
+                  tense="past"
+                  noTitle
+                />
+              </>
+            )}
           </span>
         </PageHeader.Description>
       </PageHeader>

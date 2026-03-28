@@ -12,7 +12,7 @@ import {
   type VisibilityState,
   type Table as TanstackTable,
 } from '@tanstack/react-table';
-import { Avatar, Button, SelectPanel } from '@primer/react';
+import { Avatar, Button, CounterLabel, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
 import { AppsIcon, ColumnsIcon, CreditCardIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
@@ -536,7 +536,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
         <div className={styles.titleGroup}>
           <h2 className={styles.tableTitle} id="report-table">
             Usage by {humanizeColumn(groupByColumn)}
-            <span className={styles.rowCount}>{totalRows.toLocaleString()}</span>
+            {' '}<CounterLabel>{totalRows.toLocaleString()}</CounterLabel>
           </h2>
           <div className={styles.tableSubtitle} id="report-table-subtitle">
             {visibleRows.length.toLocaleString()} filtered rows across{' '}
