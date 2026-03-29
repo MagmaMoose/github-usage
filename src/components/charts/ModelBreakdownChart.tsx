@@ -176,7 +176,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       plotOptions: { bar: { stacking: 'normal' } },
       legend: stackField === 'sku'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
-        : { symbolWidth: undefined, symbolHeight: undefined, symbolPadding: undefined },
+        : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       series,
     };
   }, [activeReport, groupByColumn, stackField, visibleRows, hiddenGroups, toggleGroup, activeMetric, dataField]);

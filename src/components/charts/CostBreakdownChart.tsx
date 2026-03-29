@@ -104,7 +104,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       plotOptions: { column: { stacking: 'normal' } },
       legend: stackField === 'sku'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
-        : { symbolWidth: undefined, symbolHeight: undefined, symbolPadding: undefined },
+        : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       series,
     };
   }, [activeReport, timeBucket, visibleRows, stackField, activeMetric, dataField]);

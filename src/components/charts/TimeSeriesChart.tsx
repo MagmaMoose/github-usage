@@ -182,7 +182,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
       series,
       legend: groupByColumn === 'sku'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
-        : { symbolWidth: undefined, symbolHeight: undefined, symbolPadding: undefined },
+        : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       chart: { height: 400 },
     };
   }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, dataField, activeMetric]);
