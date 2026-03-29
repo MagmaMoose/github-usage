@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { getModelIconUrl } from './chart-theme';
 import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, FileIcon, PackageIcon, PlayIcon, SparkleIcon, TagIcon } from '@primer/octicons-react';
 
 type OcticonComponent = ComponentType<{ size?: number; className?: string; fill?: string }>;
@@ -43,6 +44,9 @@ const AVATAR_COLUMNS = new Set(['username', 'organization', 'login', 'userLogin'
 export function getGroupIconSvg(rawValue: string, column: string, color?: string): string {
   if (column === 'sku') return getSkuIconSvg(rawValue, color);
   if (column === 'product') return getProductIconSvg(rawValue, color);
+  if (column === 'model' && rawValue) {
+    return `<img src="${getModelIconUrl(rawValue)}" width="16" height="16" style="border-radius:50%;flex-shrink:0;" loading="lazy" />`;
+  }
   if (AVATAR_COLUMNS.has(column) && rawValue) {
     return `<img src="${getAvatarUrl(rawValue, 32)}" width="16" height="16" style="border-radius:50%;flex-shrink:0;" loading="lazy" />`;
   }
@@ -51,7 +55,7 @@ export function getGroupIconSvg(rawValue: string, column: string, color?: string
 
 /** Check if a column has custom icon/avatar treatment */
 export function columnHasIcons(column: string): boolean {
-  return column === 'sku' || column === 'product' || AVATAR_COLUMNS.has(column);
+  return column === 'sku' || column === 'product' || column === 'model' || AVATAR_COLUMNS.has(column);
 }
 
 /** Get the React icon component for a group value (SKU/product only, not avatars) */
