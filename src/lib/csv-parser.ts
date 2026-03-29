@@ -222,11 +222,12 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
     .map((r) => {
       if ('date' in r) return r.date as string;
       if ('lastPushedDate' in r) return r.lastPushedDate;
+      if ('reportTime' in r) return (r.reportTime as string).slice(0, 10);
       if ('lastActivityAt' in r) return (r.lastActivityAt as string).slice(0, 10);
       if ('createdAt' in r) return (r.createdAt as string).slice(0, 10);
       return '';
     })
-    .filter(Boolean)
+    .filter((d) => d && /^\d{4}-\d{2}-\d{2}/.test(d))
     .sort();
   const dateRange = {
     start: dates[0] ?? '',
