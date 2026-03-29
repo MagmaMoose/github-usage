@@ -273,8 +273,22 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
               id?: string;
               isNode?: boolean;
               color?: string;
-              linksFrom?: Array<{ toNode: { name: string }; weight: number }>;
-              linksTo?: Array<{ fromNode: { name: string }; weight: number }>;
+              linksFrom?: Array<{ toNode: { name: string; id?: string }; weight: number }>;
+              linksTo?: Array<{ fromNode: { name: string; id?: string }; weight: number }>;
+            };
+
+            // Helper: resolve icon HTML for a node id like "L0:value"
+            const iconForId = (nodeId: string): string => {
+              const m = nodeId.match(/^L(\d+):(.*)/);
+              if (!m) return '';
+              const f = filteredLevels[parseInt(m[1])];
+              return f ? getGroupIconSvg(m[2], f) : '';
+            };
+            const nameWithIcon = (name: string, nodeId: string): string => {
+              const icon = iconForId(nodeId);
+              return icon
+                ? `<span style="display:inline-flex;align-items:center;gap:4px;">${icon}<b>${name}</b></span>`
+                : `<b>${name}</b>`;
             };
 
             // Node tooltip
@@ -296,7 +310,7 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
                 const childLabel = childField ? titleParts[levelIdx + 1]?.toLowerCase() + 's' : '';
 
                 const topLinks = (point.linksFrom ?? []).sort((a, b) => b.weight - a.weight).slice(0, 5);
-                let html = `<b>${point.name}</b><br/>${fmtVal(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
+                let html = `${nameWithIcon(point.name ?? key, id)}<br/>${fmtVal(spend)} <span style="color:#9198a1">(${spendPct} of total)</span>`;
 
                 if (childCount > 0) {
                   html += `<br/><span style="color:#9198a1">${childCount} ${childLabel}</span>`;
@@ -304,7 +318,12 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
 
                 if (topLinks.length > 0 && childField) {
                   html += `<br/><br/><span style="color:#9198a1;font-size:10px">Top ${childLabel}:</span>`;
-                  for (const l of topLinks) html += `<br/>  ${l.toNode.name}: ${fmtVal(l.weight)}`;
+                  for (const l of topLinks) {
+                    const childIcon = l.toNode.id ? iconForId(l.toNode.id) : '';
+                    const prefix = childIcon ? `<span style="display:inline-flex;align-items:center;gap:3px;">${childIcon}` : '';
+                    const suffix = childIcon ? '</span>' : '';
+                    html += `<br/>  ${prefix}${l.toNode.name}${suffix}: ${fmtVal(l.weight)}`;
+                  }
                 }
 
                 // Token breakdown for model nodes
@@ -334,11 +353,13 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
             }
 
             // Link tooltip
-            const from = point.fromNode?.name ?? '';
-            const to = point.toNode?.name ?? '';
+            const fromId = point.fromNode?.id ?? '';
+            const toId = point.toNode?.id ?? '';
+            const fromHtml = nameWithIcon(point.fromNode?.name ?? '', fromId);
+            const toHtml = nameWithIcon(point.toNode?.name ?? '', toId);
             const weight = point.weight ?? 0;
             const linkPct = pct(weight, grandTotal);
-            return `${from} \u2192 ${to}<br/><b>${fmtVal(weight)}</b> <span style="color:#9198a1">(${linkPct})</span>`;
+            return `${fromHtml} \u2192 ${toHtml}<br/><b>${fmtVal(weight)}</b> <span style="color:#9198a1">(${linkPct})</span>`;
           },
         },
         series: [
