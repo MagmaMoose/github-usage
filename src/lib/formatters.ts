@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, PackageIcon, PlayIcon, RepoIcon, TagIcon } from '@primer/octicons-react';
+import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, FileIcon, PackageIcon, PlayIcon, TagIcon } from '@primer/octicons-react';
 
 type OcticonComponent = ComponentType<{ size?: number; className?: string }>;
 
@@ -12,7 +12,7 @@ export function getSkuIcon(rawValue: string): OcticonComponent {
   if (v.includes('premium_request') || v.includes('ai_unit')) return AiModelIcon;
   if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return CopilotIcon;
   if (v.startsWith('packages')) return PackageIcon;
-  if (v.startsWith('git_lfs')) return RepoIcon;
+  if (v.startsWith('git_lfs')) return FileIcon;
   return TagIcon;
 }
 
@@ -126,34 +126,34 @@ export function formatDateRangeCompact(start: string, end: string): string {
   return `${fmt(sY, sM)}–${fmt(eY, eM)}`;
 }
 
-/** Human-readable display names for raw SKU codes */
+/** Human-readable display names for raw SKU codes (icon provides product context) */
 const SKU_DISPLAY_NAMES: Record<string, string> = {
-  copilot_premium_request: 'Copilot PRUs',
-  coding_agent_premium_request: 'Coding Agent PRUs',
+  copilot_premium_request: 'PRUs',
+  coding_agent_premium_request: 'Agent PRUs',
   spark_premium_request: 'Spark PRUs',
-  copilot_ai_unit: 'Copilot AI Credits',
-  coding_agent_ai_unit: 'Coding Agent AI Credits',
+  copilot_ai_unit: 'AI Credits',
+  coding_agent_ai_unit: 'Agent AI Credits',
   spark_ai_unit: 'Spark AI Credits',
-  copilot_enterprise: 'Copilot Enterprise',
-  copilot_for_business: 'Copilot Business',
-  actions_linux: 'Actions Linux',
-  actions_linux_4_core: 'Actions Linux 4-core',
-  actions_linux_8_core: 'Actions Linux 8-core',
-  actions_linux_16_core: 'Actions Linux 16-core',
-  actions_linux_32_core: 'Actions Linux 32-core',
-  actions_linux_64_core: 'Actions Linux 64-core',
-  actions_linux_arm: 'Actions Linux ARM',
-  actions_linux_slim: 'Actions Linux Slim',
-  actions_windows: 'Actions Windows',
-  actions_macos: 'Actions macOS',
-  actions_self_hosted_linux: 'Actions Self-Hosted Linux',
-  actions_self_hosted_windows: 'Actions Self-Hosted Windows',
-  actions_custom_image_storage: 'Actions Custom Image Storage',
-  actions_storage: 'Actions Storage',
-  git_lfs_bandwidth: 'Git LFS Bandwidth',
-  git_lfs_storage: 'Git LFS Storage',
-  packages_bandwidth: 'Packages Bandwidth',
-  packages_storage: 'Packages Storage',
+  copilot_enterprise: 'Enterprise',
+  copilot_for_business: 'Business',
+  actions_linux: 'Linux',
+  actions_linux_4_core: 'Linux 4-core',
+  actions_linux_8_core: 'Linux 8-core',
+  actions_linux_16_core: 'Linux 16-core',
+  actions_linux_32_core: 'Linux 32-core',
+  actions_linux_64_core: 'Linux 64-core',
+  actions_linux_arm: 'Linux ARM',
+  actions_linux_slim: 'Linux Slim',
+  actions_windows: 'Windows',
+  actions_macos: 'macOS',
+  actions_self_hosted_linux: 'Self-Hosted Linux',
+  actions_self_hosted_windows: 'Self-Hosted Windows',
+  actions_custom_image_storage: 'Custom Image Storage',
+  actions_storage: 'Storage',
+  git_lfs_bandwidth: 'Bandwidth',
+  git_lfs_storage: 'Storage',
+  packages_bandwidth: 'Bandwidth',
+  packages_storage: 'Storage',
 };
 
 /** Human-readable display names for raw product codes */
