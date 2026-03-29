@@ -2,7 +2,7 @@
 
 **Drag, drop, done.** Turn GitHub billing CSVs into interactive dashboards. Everything runs in your browser.
 
-**[→ Try it now](https://austenstone.github.io/tbb/?demo=auto)** · **[Live App](https://austenstone.github.io/tbb/)**
+**[→ Try it now](https://austenstone.github.io/github-actions-usage-report/?demo=auto)** · **[Live App](https://austenstone.github.io/github-actions-usage-report/)**
 
 ## Supported Reports
 
@@ -88,4 +88,4 @@ npm run typecheck    # TypeScript (no emit)
 
 ## Deployment
 
-Pushed to `main` → lint → typecheck → test → build → deployed to [GitHub Pages](https://austenstone.github.io/tbb/) via Actions.
+Pushed to `main` → lint → typecheck → test → build → deployed to [GitHub Pages](https://austenstone.github.io/github-actions-usage-report/) via Actions.
