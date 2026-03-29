@@ -5,8 +5,8 @@ import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
-import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
+import { humanizeColumn, formatCompact, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
+import { buildColorMap } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
@@ -103,18 +103,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
         data,
         color: seriesColor,
         visible: !isHidden,
-        ...(hasIcons && {
-          tooltip: {
-            pointFormatter: function (this: Highcharts.Point) {
-              const val = this.y ?? 0;
-              const icon = getGroupIconSvg(stackInfo.stack, stackField, String(this.color));
-              const formatted = activeMetric.isCurrency
-                ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : formatCompact(val);
-              return `<tr><td>${icon} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
-            },
-          },
-        }),
+        custom: { rawStack: stackInfo.stack },
         events: {
           legendItemClick: function () {
             toggleGroup(stackInfo.stack);
@@ -134,22 +123,13 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
           useHTML: true,
           formatter: function () {
             const name = typeof this.value === 'string' ? this.value : String(this.value);
-            const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
-            const isModel = groupByColumn === 'model';
-            const hasIcons = columnHasIcons(groupByColumn);
-            if (isAvatar && name) {
-              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
-            }
-            if (isModel && name) {
-              return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
-            }
-            if (hasIcons) {
-              // Find the raw SKU key from the sorted data for this category index
-              const rawKey = sorted[typeof this.pos === 'number' ? this.pos : 0]?.key ?? '';
-              const icon = rawKey ? getGroupIconSvg(rawKey, groupByColumn) : '';
-              return icon ? `<span style="display:inline-flex;align-items:center;gap:4px;">${icon}${name}</span>` : name;
-            }
-            return name || ' ';
+            if (!name || !columnHasIcons(groupByColumn)) return name || ' ';
+            // Resolve the raw key from sorted data for proper icon lookup
+            const rawKey = sorted[typeof this.pos === 'number' ? this.pos : 0]?.key ?? name;
+            const icon = getGroupIconSvg(rawKey, groupByColumn);
+            return icon
+              ? `<span style="display:inline-flex;align-items:center;gap:6px;">${name}${icon}</span>`
+              : name;
           },
         },
       },
@@ -164,14 +144,42 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             },
       },
       tooltip: {
-        shared: false,
-        headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
-        pointFormat: activeMetric.isCurrency
-          ? '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>'
-          : '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>{point.y:,.0f}</b></td></tr>',
-        footerFormat: activeMetric.isCurrency
-          ? '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>'
-          : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
+        shared: true,
+        useHTML: true,
+        formatter: function () {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const points = (this as any).points as Array<{ y: number; color: string; series: { name: string; userOptions?: { custom?: { rawStack?: string } } } }> | undefined;
+          if (!points?.length) return false;
+          // Resolve the grouped entity (x-axis value)
+          const key = String((this as Highcharts.TooltipFormatterContextObject).x ?? '');
+          const rawKey = sorted.find((s) => formatDisplayValue(s.key, groupByColumn) === key)?.key ?? key;
+          const headerIcon = columnHasIcons(groupByColumn) ? getGroupIconSvg(rawKey, groupByColumn) : '';
+          const headerHtml = headerIcon
+            ? `<span style="display:inline-flex;align-items:center;gap:4px;">${headerIcon}${key}</span>`
+            : key;
+          let html = `<table style="min-width:120px;"><tr><th colspan="2" style="color:var(--fgColor-muted,#59636e);font-weight:600;padding-bottom:2px;font-size:12px;">${headerHtml}</th></tr>`;
+
+          let total = 0;
+          const hasStackIcons = columnHasIcons(stackField);
+          for (const pt of points) {
+            if (!pt.y) continue;
+            total += pt.y;
+            const rawStack = pt.series.userOptions?.custom?.rawStack ?? '';
+            const indicator = hasStackIcons && rawStack
+              ? getGroupIconSvg(rawStack, stackField, String(pt.color))
+              : `<span style="color:${pt.color}">●</span>`;
+            const displayName = formatDisplayValue(rawStack, stackField) || pt.series.name;
+            const formatted = activeMetric.isCurrency
+              ? `$${pt.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : formatCompact(pt.y);
+            html += `<tr><td>${indicator} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
+          }
+          const totalStr = activeMetric.isCurrency
+            ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : formatCompact(total);
+          html += `<tr style="border-top:1px solid var(--borderColor-muted,#d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align:right;"><b>${totalStr}</b></td></tr></table>`;
+          return html;
+        },
       },
       plotOptions: { bar: { stacking: 'normal' } },
       legend: columnHasIcons(stackField)
