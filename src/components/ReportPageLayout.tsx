@@ -589,7 +589,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
               <Suspense fallback={null}>
-              <div className={styles.chartStack} key={`${activeReportIndex}-${avatarVersion}`}>
+              <div className={styles.chartStack} key={activeReportIndex}>
                 {!isFlatReport && (
                   <div className={styles.chartSurface}>
                     <TimeSeriesChart metricOptions={chartMetricOptions} />

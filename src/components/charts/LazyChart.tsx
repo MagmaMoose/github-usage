@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 interface LazyChartProps {
   children: ReactNode;
@@ -10,6 +10,9 @@ interface LazyChartProps {
 /**
  * Defers rendering of a chart component until it enters (or is near) the viewport.
  * Prevents off-screen charts from blocking the main thread during filter changes.
+ *
+ * Uses `contain: content` while loading to prevent layout shifts from propagating
+ * up the DOM, and keeps minHeight after mount to avoid scroll-jump on transition.
  */
 export function LazyChart({ children, className, minHeight = 400 }: LazyChartProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -33,8 +36,29 @@ export function LazyChart({ children, className, minHeight = 400 }: LazyChartPro
     return () => observer.disconnect();
   }, []);
 
+  // After chart renders, lock the wrapper to the actual rendered height to
+  // prevent scroll jumps when the chart's intrinsic size differs from minHeight.
+  const lockHeight = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    // Wait a tick for Highcharts to finish its initial reflow
+    requestAnimationFrame(() => {
+      const h = node.getBoundingClientRect().height;
+      if (h > 0) {
+        node.style.minHeight = `${h}px`;
+      }
+    });
+  }, []);
+
   return (
-    <div ref={ref} className={className} style={visible ? undefined : { minHeight }}>
+    <div
+      ref={(node) => {
+        // Merge refs
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        if (visible) lockHeight(node);
+      }}
+      className={className}
+      style={{ minHeight, contain: visible ? undefined : 'content' }}
+    >
       {visible ? children : null}
     </div>
   );
