@@ -141,6 +141,13 @@
   display: flex;
   justify-content: space-between;
   gap: var(--base-size-8, 8px);
+  align-items: center;
+}
+
+.heroCardBreakdown span svg {
+  flex-shrink: 0;
+  margin-right: 3px;
+  vertical-align: text-bottom;
 }
 
 .reportTabs,

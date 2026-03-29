@@ -1,3 +1,18 @@
+import type { ComponentType } from 'react';
+import { CopilotIcon, DatabaseIcon, PackageIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
+
+type OcticonComponent = ComponentType<{ size?: number; className?: string }>;
+
+/** Map a raw SKU key to the product-relevant Octicon */
+export function getSkuIcon(rawValue: string): OcticonComponent {
+  const v = rawValue.toLowerCase();
+  if (v.startsWith('actions')) return WorkflowIcon;
+  if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return CopilotIcon;
+  if (v.startsWith('packages')) return PackageIcon;
+  if (v.startsWith('git_lfs')) return DatabaseIcon;
+  return TagIcon;
+}
+
 /** Format a number as USD currency */
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {

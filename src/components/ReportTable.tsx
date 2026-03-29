@@ -14,12 +14,12 @@ import {
 } from '@tanstack/react-table';
 import { Avatar, Button, CounterLabel, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
-import { AppsIcon, ColumnsIcon, CopilotIcon, CreditCardIcon, DatabaseIcon, PackageIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
+import { AppsIcon, ColumnsIcon, CreditCardIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
-import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime } from '../lib/formatters';
+import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime, getSkuIcon } from '../lib/formatters';
 import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
@@ -35,17 +35,7 @@ const COLUMN_ICONS: Record<string, React.ComponentType<{ size?: number; classNam
   workflowPath: WorkflowIcon,
 };
 
-type OcticonComponent = React.ComponentType<{ size?: number; className?: string }>;
 
-/** Map a raw SKU key to the product-relevant Octicon */
-function getSkuIcon(rawValue: string): OcticonComponent {
-  const v = rawValue.toLowerCase();
-  if (v.startsWith('actions')) return WorkflowIcon;
-  if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return CopilotIcon;
-  if (v.startsWith('packages')) return PackageIcon;
-  if (v.startsWith('git_lfs')) return DatabaseIcon;
-  return TagIcon;
-}
 
 // Extend TanStack's ColumnMeta to support our align property
 declare module '@tanstack/react-table' {

@@ -3,7 +3,7 @@ import { HeroCard } from './HeroCard';
 import type { ReportSchema } from '../lib/report-schema';
 import type { ReportSummary, AnyReportRow, TokenUsageRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
-import { formatCurrency, formatCompact } from '../lib/formatters';
+import { formatCurrency, formatCompact, formatDisplayValue, getSkuIcon } from '../lib/formatters';
 import { topN } from '../lib/aggregation';
 import styles from '../App.module.css';
 
@@ -67,12 +67,17 @@ export function HeroCardsGrid({ schema, summary, visibleRows, reportType }: Hero
                   card.breakdownMetricField as keyof AnyReportRow & string,
                   3,
                 );
-                return top3.map((m) => (
-                  <span key={m.key}>
-                    <span>{m.key}</span>
-                    <span>{card.format === 'currency' ? formatCurrency(m.value) : formatCompact(m.value)}</span>
-                  </span>
-                ));
+                return top3.map((m) => {
+                  const label = formatDisplayValue(m.key, card.breakdownGroupField!);
+                  const isSkuBreakdown = card.breakdownGroupField === 'sku';
+                  const SkuIcon = isSkuBreakdown ? getSkuIcon(m.key) : null;
+                  return (
+                    <span key={m.key}>
+                      <span>{SkuIcon && <SkuIcon size={14} />}{label}</span>
+                      <span>{card.format === 'currency' ? formatCurrency(m.value) : formatCompact(m.value)}</span>
+                    </span>
+                  );
+                });
               })()}
 
               {/* Static breakdown entries */}
