@@ -133,11 +133,15 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
           break;
       }
 
+      const displayName = formatDisplayValue(group.key, groupByColumn) || ' ';
+      const isSku = groupByColumn === 'sku';
+      const icon = isSku ? getSkuIconSvg(group.key, color) : '';
+
       series.push({
         type: 'line' as const,
-        name: groupByColumn === 'sku'
-          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(group.key, color)}${formatDisplayValue(group.key, groupByColumn) || ' '}</span>`
-          : formatDisplayValue(group.key, groupByColumn) || ' ',
+        name: icon
+          ? `<span style="display:flex;align-items:center;gap:4px">${icon}${displayName}</span>`
+          : displayName,
         data: timestamps.map((t, j) => [t, chartData[j]] as [number, number]),
         color,
         ...(smoothed && {
@@ -150,7 +154,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             const formatted = activeMetric.isCurrency
               ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : formatCompact(val);
-            return `<span style="color:${this.color}">●</span> ${this.series.name}: <b>${formatted}</b><br/>`;
+            return `<span style="color:${this.color}">●</span> ${displayName}: <b>${formatted}</b><br/>`;
           },
         },
       });
@@ -174,7 +178,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             },
       },
       series,
-      ...(groupByColumn === 'sku' && { legend: { symbolWidth: 0, symbolPadding: 0 } }),
+      ...(groupByColumn === 'sku' && { legend: { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 } }),
       chart: { height: 400 },
     };
   }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, dataField, activeMetric]);
