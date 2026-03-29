@@ -5,7 +5,7 @@ import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getGroupIconSvg } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -93,7 +93,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
 
       const seriesColor = colorMap.get(stackInfo.stack) ?? '#808fa3';
       const displayName = formatDisplayValue(stackInfo.stack, stackField) || ' ';
-      const hasIcons = stackField === 'sku' || stackField === 'product';
+      const hasIcons = columnHasIcons(stackField);
       const iconHtml = hasIcons ? getGroupIconSvg(stackInfo.stack, stackField, seriesColor) : '';
       return {
         type: 'bar' as const,
@@ -136,7 +136,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             const name = typeof this.value === 'string' ? this.value : String(this.value);
             const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
             const isModel = groupByColumn === 'model';
-            const hasIcons = groupByColumn === 'sku' || groupByColumn === 'product';
+            const hasIcons = columnHasIcons(groupByColumn);
             if (isAvatar && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
             }
@@ -174,7 +174,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { bar: { stacking: 'normal' } },
-      legend: stackField === 'sku' || stackField === 'product'
+      legend: columnHasIcons(stackField)
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
         : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       series,

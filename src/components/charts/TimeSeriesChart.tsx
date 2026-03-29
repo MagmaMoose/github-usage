@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { MetricOption } from '../../lib/report-schema';
@@ -134,7 +134,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
       }
 
       const displayName = formatDisplayValue(group.key, groupByColumn) || ' ';
-      const hasIcons = groupByColumn === 'sku' || groupByColumn === 'product';
+      const hasIcons = columnHasIcons(groupByColumn);
       const icon = hasIcons ? getGroupIconSvg(group.key, groupByColumn, color) : '';
 
       series.push({
@@ -180,7 +180,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             },
       },
       series,
-      legend: groupByColumn === 'sku' || groupByColumn === 'product'
+      legend: columnHasIcons(groupByColumn)
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
         : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       chart: { height: 400 },

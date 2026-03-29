@@ -37,14 +37,24 @@ export function getProductIconSvg(rawValue: string, color?: string): string {
   return renderIcon(icon, color);
 }
 
+const AVATAR_COLUMNS = new Set(['username', 'organization', 'login', 'userLogin']);
+
 /** Columns that have dedicated icon functions */
 export function getGroupIconSvg(rawValue: string, column: string, color?: string): string {
   if (column === 'sku') return getSkuIconSvg(rawValue, color);
   if (column === 'product') return getProductIconSvg(rawValue, color);
+  if (AVATAR_COLUMNS.has(column) && rawValue) {
+    return `<img src="${getAvatarUrl(rawValue, 32)}" width="16" height="16" style="border-radius:50%;flex-shrink:0;" loading="lazy" />`;
+  }
   return '';
 }
 
-/** Get the React icon component for a group value */
+/** Check if a column has custom icon/avatar treatment */
+export function columnHasIcons(column: string): boolean {
+  return column === 'sku' || column === 'product' || AVATAR_COLUMNS.has(column);
+}
+
+/** Get the React icon component for a group value (SKU/product only, not avatars) */
 export function getGroupIcon(rawValue: string, column: string): OcticonComponent | null {
   if (column === 'sku') { const i = getSkuIcon(rawValue); return i === TagIcon ? null : i; }
   if (column === 'product') { const i = getProductIcon(rawValue); return i === TagIcon ? null : i; }

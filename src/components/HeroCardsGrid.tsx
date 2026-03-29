@@ -3,7 +3,7 @@ import { HeroCard } from './HeroCard';
 import type { ReportSchema } from '../lib/report-schema';
 import type { ReportSummary, AnyReportRow, TokenUsageRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
-import { formatCurrency, formatCompact, formatDisplayValue, getGroupIcon } from '../lib/formatters';
+import { formatCurrency, formatCompact, formatDisplayValue, getGroupIcon, getAvatarUrl } from '../lib/formatters';
 import { topN } from '../lib/aggregation';
 import styles from '../App.module.css';
 
@@ -68,11 +68,17 @@ export function HeroCardsGrid({ schema, summary, visibleRows, reportType }: Hero
                   3,
                 );
                 return top3.map((m) => {
-                  const label = formatDisplayValue(m.key, card.breakdownGroupField!);
-                  const GroupIcon = getGroupIcon(m.key, card.breakdownGroupField!);
+                  const field = card.breakdownGroupField!;
+                  const label = formatDisplayValue(m.key, field);
+                  const GroupIcon = getGroupIcon(m.key, field);
+                  const isAvatar = (field === 'username' || field === 'organization' || field === 'login' || field === 'userLogin') && m.key;
                   return (
                     <span key={m.key}>
-                      <span>{GroupIcon && <GroupIcon size={14} />}{label}</span>
+                      <span>
+                        {isAvatar && <img src={getAvatarUrl(m.key, 28)} width={14} height={14} alt="" style={{ borderRadius: '50%', verticalAlign: 'middle', marginRight: 3 }} loading="lazy" />}
+                        {GroupIcon && <GroupIcon size={14} />}
+                        {label}
+                      </span>
                       <span>{card.format === 'currency' ? formatCurrency(m.value) : formatCompact(m.value)}</span>
                     </span>
                   );
