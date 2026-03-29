@@ -18,11 +18,11 @@ import {
   MarkGithubIcon,
   MoonIcon,
   PackageIcon,
+  PlayIcon,
   QuestionIcon,
   SidebarExpandIcon,
   SparkleIcon,
   SunIcon,
-  ZapIcon,
 } from '@primer/octicons-react';
 import { useColorMode } from '../context/theme-context';
 import { useOnboardingContext } from './onboarding';
@@ -41,7 +41,7 @@ import { ACTIONS_STORAGE_SKUS, type ActionsSubView } from '../hooks/useProductNa
 import styles from '../App.module.css';
 
 const PRODUCT_ICONS: Record<string, React.ReactNode> = {
-  actions: <ZapIcon />,
+  actions: <PlayIcon />,
   copilot: <CopilotIcon />,
   spark: <SparkleIcon />,
   git_lfs: <FileIcon />,
@@ -184,7 +184,7 @@ export function InsightsSidebar({
                                 handleProductSelect('actions', 'compute');
                               }}
                             >
-                              <NavList.LeadingVisual><ZapIcon /></NavList.LeadingVisual>
+                              <NavList.LeadingVisual><PlayIcon /></NavList.LeadingVisual>
                               Actions Compute
                             </NavList.Item>
                             <NavList.Item
