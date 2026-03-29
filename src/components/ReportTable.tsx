@@ -14,7 +14,7 @@ import {
 } from '@tanstack/react-table';
 import { Avatar, Button, CounterLabel, SelectPanel } from '@primer/react';
 import { Table as PrimerTable } from '@primer/react/experimental';
-import { AppsIcon, ColumnsIcon, CreditCardIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
+import { AppsIcon, ColumnsIcon, CopilotIcon, CreditCardIcon, DatabaseIcon, PackageIcon, RepoIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
@@ -34,6 +34,18 @@ const COLUMN_ICONS: Record<string, React.ComponentType<{ size?: number; classNam
   repository: RepoIcon,
   workflowPath: WorkflowIcon,
 };
+
+type OcticonComponent = React.ComponentType<{ size?: number; className?: string }>;
+
+/** Map a raw SKU key to the product-relevant Octicon */
+function getSkuIcon(rawValue: string): OcticonComponent {
+  const v = rawValue.toLowerCase();
+  if (v.startsWith('actions')) return WorkflowIcon;
+  if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return CopilotIcon;
+  if (v.startsWith('packages')) return PackageIcon;
+  if (v.startsWith('git_lfs')) return DatabaseIcon;
+  return TagIcon;
+}
 
 // Extend TanStack's ColumnMeta to support our align property
 declare module '@tanstack/react-table' {
@@ -370,7 +382,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
               </button>
             );
           }
-          const ColumnIcon = COLUMN_ICONS[groupByColumn];
+          const ColumnIcon = groupByColumn === 'sku' ? getSkuIcon(value) : COLUMN_ICONS[groupByColumn];
           return (
             <button
               type="button"
