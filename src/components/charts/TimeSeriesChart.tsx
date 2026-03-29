@@ -180,7 +180,9 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             },
       },
       series,
-      ...(groupByColumn === 'sku' && { legend: { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 } }),
+      legend: groupByColumn === 'sku'
+        ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
+        : { symbolWidth: undefined, symbolHeight: undefined, symbolPadding: undefined },
       chart: { height: 400 },
     };
   }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, dataField, activeMetric]);
