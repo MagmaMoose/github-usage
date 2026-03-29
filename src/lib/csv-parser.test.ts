@@ -788,6 +788,91 @@ describe('parseCSV — Copilot Seat Activity (real file)', () => {
     expect(row).not.toHaveProperty('grossAmount');
     expect(row).not.toHaveProperty('quantity');
   });
+
+  it('computes a valid dateRange from reportTime', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.dateRange.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(report.dateRange.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(report.dateRange.start <= report.dateRange.end).toBe(true);
+  });
+
+  it('dateRange values are parseable as valid Date objects', () => {
+    const report = parseCSV(csv, 'seats.csv');
+    const start = new Date(report.dateRange.start + 'T00:00:00');
+    const end = new Date(report.dateRange.end + 'T00:00:00');
+    expect(isNaN(start.getTime())).toBe(false);
+    expect(isNaN(end.getTime())).toBe(false);
+    expect(start.toISOString()).toBeTruthy();
+    expect(end.toISOString()).toBeTruthy();
+  });
+});
+
+// ─── dateRange Edge Cases ──────────────────────────────────────────────────────
+
+describe('parseCSV — dateRange edge cases', () => {
+  const seatHeader = 'Report Time,Login,Last Authenticated At,Last Activity At,Last Surface Used,Organization';
+
+  it('handles rows where lastActivityAt is empty', () => {
+    const csv = [
+      seatHeader,
+      '2026-03-28T06:54:33Z,user1,2026-03-27T03:52:53Z,,None,org1',
+      '2026-03-28T06:54:33Z,user2,2026-03-27T03:52:53Z,,None,org1',
+    ].join('\n');
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.dateRange.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(report.dateRange.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(isNaN(new Date(report.dateRange.end + 'T00:00:00').getTime())).toBe(false);
+  });
+
+  it('handles rows where lastActivityAt is "None"', () => {
+    const csv = [
+      seatHeader,
+      '2026-03-28T06:54:33Z,user1,2026-03-27T03:52:53Z,None,None,org1',
+    ].join('\n');
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.dateRange.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(report.dateRange.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // "None" must NOT leak into dateRange
+    expect(report.dateRange.start).not.toBe('None');
+    expect(report.dateRange.end).not.toBe('None');
+  });
+
+  it('handles rows where lastActivityAt is "N/A"', () => {
+    const csv = [
+      seatHeader,
+      '2026-03-28T06:54:33Z,user1,2026-03-27T03:52:53Z,N/A,None,org1',
+    ].join('\n');
+    const report = parseCSV(csv, 'seats.csv');
+    expect(report.dateRange.start).not.toBe('N/A');
+    expect(report.dateRange.end).not.toBe('N/A');
+  });
+
+  it('all real example files produce valid dateRange dates', () => {
+    const files = [
+      'premiumRequestUsageReport_1_c6fca30f0acd458098a95808eaf43399.csv',
+      'Token.Usage.Report.csv',
+      'usageReport_1_7f2ed6006ee54fb8af73f5cbb7ac1f1d.csv',
+      'ghas_active_committers_octodemo_2026-03-27T1521.csv',
+      'export-octodemo-1774679438.csv',
+      'octodemo-seat-activity-1774680875.csv',
+    ];
+    for (const file of files) {
+      const csvText = loadExample(file);
+      const report = parseCSV(csvText, file);
+      if (report.dateRange.start) {
+        expect(report.dateRange.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        const start = new Date(report.dateRange.start + 'T00:00:00');
+        expect(isNaN(start.getTime())).toBe(false);
+      }
+      if (report.dateRange.end) {
+        expect(report.dateRange.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        const end = new Date(report.dateRange.end + 'T00:00:00');
+        expect(isNaN(end.getTime())).toBe(false);
+        // This is the exact operation that crashed: toISOString() must not throw
+        expect(() => end.toISOString()).not.toThrow();
+      }
+    }
+  });
 });
 
 // ─── Updated Cross-Report Schema Validation ───────────────────────────────────
