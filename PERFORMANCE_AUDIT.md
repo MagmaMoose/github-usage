@@ -1,4 +1,4 @@
-# TBB Performance Audit
+# Performance Audit
 
 **Date:** March 28, 2026
 **Tool:** Chrome DevTools MCP (Lighthouse + Performance Trace)

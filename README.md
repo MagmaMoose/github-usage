@@ -6,7 +6,7 @@
 
 ## Supported Reports
 
-TBB auto-detects the report type from CSV headers. Drop one file or a whole zip.
+Auto-detects the report type from CSV headers. Drop one file or a whole zip.
 
 | Report | What you get |
 |---|---|

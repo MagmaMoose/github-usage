@@ -7,12 +7,12 @@ import { formatDateRangeCompact } from '../lib/formatters';
 export function useBrowserTitle(activeReport: ParsedReport | null): void {
   useEffect(() => {
     if (!activeReport) {
-      document.title = 'TBB — GitHub Billing Dashboard';
+      document.title = 'GitHub Usage Report Viewer';
       return;
     }
     const schema = getReportSchema(activeReport.type);
     const dateLabel = formatDateRangeCompact(activeReport.dateRange.start, activeReport.dateRange.end);
     const label = dateLabel ? `${schema.label} (${dateLabel})` : schema.label;
-    document.title = `${label} — TBB | GitHub Billing Dashboard`;
+    document.title = `${label} | GitHub Usage Report Viewer`;
   }, [activeReport]);
 }

@@ -5,7 +5,7 @@ applyTo: "**/chart-theme.ts"
 
 # AI Model Provider Brand Reference
 
-When rendering model names, charts, badges, or avatars in TBB, use these official brand colors and assets.
+When rendering model names, charts, badges, or avatars in the GitHub Usage Report Viewer, use these official brand colors and assets.
 
 ## Brand Colors
 
