@@ -5,7 +5,7 @@ import { ActionList, ActionMenu } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
-import { formatDisplayValue, formatCompact, bucketKeyToTimestamp } from '../../lib/formatters';
+import { formatDisplayValue, formatCompact, bucketKeyToTimestamp, getSkuIconSvg } from '../../lib/formatters';
 import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow, BillingRow } from '../../lib/types';
 import styles from './Charts.module.css';
@@ -53,7 +53,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
 
       return {
         type: 'column' as const,
-        name: formatDisplayValue(groupInfo.group, stackField) || ' ',
+        name: (stackField === 'sku' ? getSkuIconSvg(groupInfo.group) : '') + (formatDisplayValue(groupInfo.group, stackField) || ' '),
         data,
         color: colorMap.get(groupInfo.group) ?? '#808fa3',
       };

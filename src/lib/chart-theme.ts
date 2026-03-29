@@ -232,6 +232,7 @@ export function buildGitHubChartTheme(): Record<string, unknown> {
         fontWeight: '400',
       },
       itemHoverStyle: { color: fgDefault },
+      useHTML: true,
       align: 'left',
       verticalAlign: 'top',
       x: -8,

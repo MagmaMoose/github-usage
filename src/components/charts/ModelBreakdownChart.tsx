@@ -5,7 +5,7 @@ import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getSkuIconSvg } from '../../lib/formatters';
 import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -93,7 +93,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
 
       return {
         type: 'bar' as const,
-        name: formatDisplayValue(stackInfo.stack, stackField) || ' ',
+        name: (stackField === 'sku' ? getSkuIconSvg(stackInfo.stack) : '') + (formatDisplayValue(stackInfo.stack, stackField) || ' '),
         data,
         color: colorMap.get(stackInfo.stack) ?? '#808fa3',
         visible: !isHidden,

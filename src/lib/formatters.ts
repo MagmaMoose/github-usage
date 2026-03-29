@@ -3,6 +3,36 @@ import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, FileIcon, Packag
 
 type OcticonComponent = ComponentType<{ size?: number; className?: string }>;
 
+// Octicon 16×16 SVG paths for inline HTML (Highcharts legends, tooltips)
+const SVG_PATHS = {
+  play: 'M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm4.005-2.757a.75.75 0 0 1 .77-.027l5 3a.75.75 0 0 1 0 1.268l-5 3A.75.75 0 0 1 5 11.75v-6a.75.75 0 0 1 .505-.507Z',
+  copilot: 'M7.998 15.035c-4.405 0-7.998-3.196-7.998-7 0-2.52 1.52-4.768 3.712-5.99C4.227 1.988 4.658 2 5.123 2c1.16 0 1.283.693 2.01 1.071C7.57 3.312 7.772 3.5 8 3.5c.228 0 .43-.188.867-.429C9.594 2.693 9.717 2 10.877 2c.465 0 .896-.012 1.41.045C14.478 3.267 15.998 5.515 15.998 8.035c0 3.804-3.593 7-7.998 7ZM5.5 7c-.276 0-.5.224-.5.5v2c0 .276.224.5.5.5s.5-.224.5-.5v-2c0-.276-.224-.5-.5-.5Zm5 0c-.276 0-.5.224-.5.5v2c0 .276.224.5.5.5s.5-.224.5-.5v-2c0-.276-.224-.5-.5-.5Z',
+  aiModel: 'M8.5.75a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0ZM4.927 3.784l-.924-.924a.75.75 0 1 0-1.06 1.06l.924.924a.75.75 0 0 0 1.06-1.06Zm7.206 1.06.924-.924a.75.75 0 0 0-1.06-1.06l-.924.924a.75.75 0 0 0 1.06 1.06ZM3 8a5 5 0 1 1 10 0 5 5 0 0 1-10 0Zm6.5 5.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0ZM3.784 12.133l-.924.924a.75.75 0 1 0 1.06 1.06l.924-.924a.75.75 0 0 0-1.06-1.06Zm9.492 1.06.924-.924a.75.75 0 1 0-1.06-1.06l-.924.924a.75.75 0 0 0 1.06 1.06Z',
+  package: 'M8.878.392a1.75 1.75 0 0 0-1.756 0l-5.25 3.045A1.75 1.75 0 0 0 1 4.951v6.098c0 .624.332 1.2.872 1.514l5.25 3.045a1.75 1.75 0 0 0 1.756 0l5.25-3.045c.54-.313.872-.89.872-1.514V4.951c0-.624-.332-1.2-.872-1.514L8.878.392Z',
+  database: 'M1.75 3h12.5c0-1.105-2.798-2-6.25-2S1.75 1.895 1.75 3ZM1.75 5.5V8c0 1.105 2.798 2 6.25 2s6.25-.895 6.25-2V5.5c-1.078.63-3.397 1-6.25 1s-5.172-.37-6.25-1Zm0 5V13c0 1.105 2.798 2 6.25 2s6.25-.895 6.25-2v-2.5c-1.078.63-3.397 1-6.25 1s-5.172-.37-6.25-1Z',
+  container: 'M8.5 1.75v3H15v-3a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1Zm-1 3v-3a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v3Zm-6.5 1v6.5A1.75 1.75 0 0 0 2.75 14h10.5A1.75 1.75 0 0 0 15 12.25V5.75Z',
+  file: 'M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z',
+  tag: 'M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.752 1.752 0 0 1 1 7.775Z',
+  repo: 'M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z',
+} as const;
+
+function svgIcon(path: string, color?: string): string {
+  const fill = color ?? 'currentColor';
+  return `<svg width="12" height="12" viewBox="0 0 16 16" fill="${fill}" style="vertical-align:-1px;margin-right:4px;"><path d="${path}"/></svg>`;
+}
+
+/** Get an inline SVG string for a SKU (for Highcharts legend/tooltip HTML) */
+export function getSkuIconSvg(rawValue: string, color?: string): string {
+  const v = rawValue.toLowerCase();
+  if (v.includes('custom_image')) return svgIcon(SVG_PATHS.container, color);
+  if (v.includes('storage') && v.startsWith('actions')) return svgIcon(SVG_PATHS.database, color);
+  if (v.startsWith('actions')) return svgIcon(SVG_PATHS.play, color);
+  if (v.includes('premium_request') || v.includes('ai_unit')) return svgIcon(SVG_PATHS.aiModel, color);
+  if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return svgIcon(SVG_PATHS.copilot, color);
+  if (v.startsWith('packages')) return svgIcon(SVG_PATHS.package, color);
+  if (v.startsWith('git_lfs')) return svgIcon(SVG_PATHS.repo, color);
+  return '';
+}
 /** Map a raw SKU key to the product-relevant Octicon */
 export function getSkuIcon(rawValue: string): OcticonComponent {
   const v = rawValue.toLowerCase();

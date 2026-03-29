@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getSkuIconSvg } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { MetricOption } from '../../lib/report-schema';
@@ -135,7 +135,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
 
       series.push({
         type: 'line' as const,
-        name: formatDisplayValue(group.key, groupByColumn) || ' ',
+        name: (groupByColumn === 'sku' ? getSkuIconSvg(group.key) : '') + (formatDisplayValue(group.key, groupByColumn) || ' '),
         data: timestamps.map((t, j) => [t, chartData[j]] as [number, number]),
         color,
         ...(smoothed && {
