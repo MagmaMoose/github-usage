@@ -4,8 +4,6 @@
 
 **[→ Try it now](https://austenstone.github.io/tbb/?demo=auto)** · **[Live App](https://austenstone.github.io/tbb/)**
 
-https://github.com/user-attachments/assets/891585e5-6015-41d4-a12e-8a94f50e00c1
-
 ## Supported Reports
 
 TBB auto-detects the report type from CSV headers. Drop one file or a whole zip.
