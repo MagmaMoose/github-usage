@@ -1,4 +1,4 @@
-# TBB
+# GitHub Usage Report Viewer
 
 **Drag, drop, done.** Turn GitHub billing CSVs into interactive dashboards. Everything runs in your browser.
 
