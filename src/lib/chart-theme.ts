@@ -230,6 +230,7 @@ export function buildGitHubChartTheme(): Record<string, unknown> {
         fontFamily,
         color: fgDefault,
         fontWeight: '400',
+        lineHeight: '16px',
       },
       itemHoverStyle: { color: fgDefault },
       useHTML: true,
@@ -237,7 +238,8 @@ export function buildGitHubChartTheme(): Record<string, unknown> {
       verticalAlign: 'top',
       x: -8,
       y: -12,
-      maxHeight: 120,
+      itemMarginBottom: 2,
+      maxHeight: 160,
       navigation: {
         activeColor: fgDefault,
         inactiveColor: fgMuted,
