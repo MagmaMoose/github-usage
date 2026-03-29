@@ -92,14 +92,29 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       });
 
       const seriesColor = colorMap.get(stackInfo.stack) ?? '#808fa3';
+      const displayName = formatDisplayValue(stackInfo.stack, stackField) || ' ';
+      const isSku = stackField === 'sku';
+      const iconHtml = isSku ? getSkuIconSvg(stackInfo.stack, seriesColor) : '';
       return {
         type: 'bar' as const,
-        name: stackField === 'sku'
-          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(stackInfo.stack, seriesColor)}${formatDisplayValue(stackInfo.stack, stackField) || ' '}</span>`
-          : formatDisplayValue(stackInfo.stack, stackField) || ' ',
+        name: iconHtml
+          ? `<span style="display:flex;align-items:center;gap:4px">${iconHtml}${displayName}</span>`
+          : displayName,
         data,
         color: seriesColor,
         visible: !isHidden,
+        ...(isSku && {
+          tooltip: {
+            pointFormatter: function (this: Highcharts.Point) {
+              const val = this.y ?? 0;
+              const icon = getSkuIconSvg(stackInfo.stack, String(this.color));
+              const formatted = activeMetric.isCurrency
+                ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : formatCompact(val);
+              return `<tr><td>${icon} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
+            },
+          },
+        }),
         events: {
           legendItemClick: function () {
             toggleGroup(stackInfo.stack);

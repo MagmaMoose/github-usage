@@ -52,13 +52,28 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       });
 
       const seriesColor = colorMap.get(groupInfo.group) ?? '#808fa3';
+      const displayName = formatDisplayValue(groupInfo.group, stackField) || ' ';
+      const isSku = stackField === 'sku';
+      const iconHtml = isSku ? getSkuIconSvg(groupInfo.group, seriesColor) : '';
       return {
         type: 'column' as const,
-        name: stackField === 'sku'
-          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(groupInfo.group, seriesColor)}${formatDisplayValue(groupInfo.group, stackField) || ' '}</span>`
-          : formatDisplayValue(groupInfo.group, stackField) || ' ',
+        name: iconHtml
+          ? `<span style="display:flex;align-items:center;gap:4px">${iconHtml}${displayName}</span>`
+          : displayName,
         data,
         color: seriesColor,
+        ...(isSku && {
+          tooltip: {
+            pointFormatter: function (this: Highcharts.Point) {
+              const val = this.y ?? 0;
+              const icon = getSkuIconSvg(groupInfo.group, String(this.color));
+              const formatted = activeMetric.isCurrency
+                ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : formatCompact(val);
+              return `<tr><td>${icon} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
+            },
+          },
+        }),
       };
     });
 
