@@ -4,7 +4,7 @@ import HighchartsSankey from 'highcharts/modules/sankey';
 import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { buildColorMap, GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
-import { formatCompact, formatDisplayValue } from '../../lib/formatters';
+import { formatCompact, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -183,6 +183,9 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
     // Build nodes with explicit columns
     const nodes: SankeyNode[] = [];
 
+    // Track which levels have icons so the nodeFormatter can use useHTML
+    const levelsWithIcons = new Set<number>();
+
     for (let i = 0; i < filteredLevels.length; i++) {
       const field = filteredLevels[i];
       const prefix = `L${i}:`;
@@ -194,11 +197,18 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
         ? buildColorMap(topEntries, useBranding)
         : new Map<string, string>();
 
+      if (columnHasIcons(field)) levelsWithIcons.add(i);
+
       for (let j = 0; j < topEntries.length; j++) {
         const value = topEntries[j];
+        const displayName = formatDisplayValue(value, field) || value;
+        const icon = columnHasIcons(field) ? getGroupIconSvg(value, field) : '';
         nodes.push({
           id: `${prefix}${value}`,
-          name: formatDisplayValue(value, field) || value,
+          name: displayName,
+          // Store icon HTML in a custom property for the nodeFormatter
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(icon ? { custom: { icon } } as any : {}),
           column: i,
           color: colorMap.get(value) ?? GITHUB_COLORS_RESOLVED[j % GITHUB_COLORS_RESOLVED.length],
         });
@@ -344,13 +354,23 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
             curveFactor: 0.5,
             dataLabels: {
               enabled: true,
+              useHTML: true,
               style: {
                 fontSize: '11px',
                 fontWeight: '500',
                 color: 'var(--fgColor-default, #f0f6fc)',
-                textOutline: '1px var(--bgColor-default, #0d1117)',
+                textOutline: 'none',
               },
-              nodeFormat: '{point.name}',
+              nodeFormatter: function () {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const pt = (this as any).point as { name: string; custom?: { icon?: string } };
+                const icon = pt.custom?.icon;
+                const bg = 'var(--bgColor-default, #0d1117)';
+                const fg = 'var(--fgColor-default, #f0f6fc)';
+                const name = `<span style="text-shadow: -1px -1px 0 ${bg}, 1px -1px 0 ${bg}, -1px 1px 0 ${bg}, 1px 1px 0 ${bg}; color:${fg};">${pt.name}</span>`;
+                if (!icon) return name;
+                return `<span style="display:inline-flex; align-items:center; gap:3px;">${icon}${name}</span>`;
+              },
             },
           },
         ],
