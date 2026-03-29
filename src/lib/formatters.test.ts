@@ -219,13 +219,13 @@ describe('formatDateRangeCompact', () => {
 describe('formatDisplayValue', () => {
   it('formats SKU codes to human-readable names', () => {
     expect(formatDisplayValue('copilot_premium_request', 'sku')).toBe('Copilot PRUs');
-    expect(formatDisplayValue('actions_linux', 'sku')).toBe('Actions Linux');
-    expect(formatDisplayValue('actions_macos', 'sku')).toBe('Actions macOS');
+    expect(formatDisplayValue('actions_linux', 'sku')).toBe('Linux');
+    expect(formatDisplayValue('actions_macos', 'sku')).toBe('macOS');
   });
 
   it('formats product codes to display names', () => {
-    expect(formatDisplayValue('copilot', 'product')).toBe('GitHub Copilot');
-    expect(formatDisplayValue('actions', 'product')).toBe('GitHub Actions');
+    expect(formatDisplayValue('copilot', 'product')).toBe('Copilot');
+    expect(formatDisplayValue('actions', 'product')).toBe('Actions');
     expect(formatDisplayValue('git_lfs', 'product')).toBe('Git LFS');
   });
 

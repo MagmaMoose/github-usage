@@ -575,7 +575,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
                   : 'Try a different search term or clear the current period filter.'}
               </Text>
               {Object.keys(filters).length > 0 && (
-                <Button variant="default" size="small" onClick={clearAllToolbarFilters} sx={{ mt: 2 }}>
+                <Button variant="default" size="small" onClick={clearAllToolbarFilters} style={{ marginTop: 8 }}>
                   Clear all filters
                 </Button>
               )}
