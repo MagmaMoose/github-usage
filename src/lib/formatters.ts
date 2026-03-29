@@ -18,7 +18,7 @@ const SVG_PATHS = {
 
 function svgIcon(path: string, color?: string): string {
   const fill = color ?? 'currentColor';
-  return `<svg width="12" height="12" viewBox="0 0 16 16" fill="${fill}" style="vertical-align:-1px;margin-right:4px;"><path d="${path}"/></svg>`;
+  return `<svg width="10" height="10" viewBox="0 0 16 16" fill="${fill}" style="vertical-align:-1px;margin-right:3px;opacity:0.7;"><path d="${path}"/></svg>`;
 }
 
 /** Get an inline SVG string for a SKU (for Highcharts legend/tooltip HTML) */
