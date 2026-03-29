@@ -142,16 +142,16 @@ export function formatDateRangeCompact(start: string, end: string): string {
   return `${fmt(sY, sM)}–${fmt(eY, eM)}`;
 }
 
-/** Human-readable display names for raw SKU codes (icon provides product context) */
+/** Human-readable display names for raw SKU codes (Actions prefix stripped since icon provides context) */
 const SKU_DISPLAY_NAMES: Record<string, string> = {
-  copilot_premium_request: 'PRUs',
-  coding_agent_premium_request: 'Agent PRUs',
+  copilot_premium_request: 'Copilot PRUs',
+  coding_agent_premium_request: 'Coding Agent PRUs',
   spark_premium_request: 'Spark PRUs',
-  copilot_ai_unit: 'AI Credits',
-  coding_agent_ai_unit: 'Agent AI Credits',
+  copilot_ai_unit: 'Copilot AI Credits',
+  coding_agent_ai_unit: 'Coding Agent AI Credits',
   spark_ai_unit: 'Spark AI Credits',
-  copilot_enterprise: 'Enterprise',
-  copilot_for_business: 'Business',
+  copilot_enterprise: 'Copilot Enterprise',
+  copilot_for_business: 'Copilot Business',
   actions_linux: 'Linux',
   actions_linux_4_core: 'Linux 4-core',
   actions_linux_8_core: 'Linux 8-core',
@@ -166,10 +166,10 @@ const SKU_DISPLAY_NAMES: Record<string, string> = {
   actions_self_hosted_windows: 'Self-Hosted Windows',
   actions_custom_image_storage: 'Custom Image Storage',
   actions_storage: 'Storage',
-  git_lfs_bandwidth: 'Bandwidth',
-  git_lfs_storage: 'Storage',
-  packages_bandwidth: 'Bandwidth',
-  packages_storage: 'Storage',
+  git_lfs_bandwidth: 'Git LFS Bandwidth',
+  git_lfs_storage: 'Git LFS Storage',
+  packages_bandwidth: 'Packages Bandwidth',
+  packages_storage: 'Packages Storage',
 };
 
 /** Human-readable display names for raw product codes */
