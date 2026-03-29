@@ -94,7 +94,9 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       const seriesColor = colorMap.get(stackInfo.stack) ?? '#808fa3';
       return {
         type: 'bar' as const,
-        name: (stackField === 'sku' ? getSkuIconSvg(stackInfo.stack, seriesColor) : '') + (formatDisplayValue(stackInfo.stack, stackField) || ' '),
+        name: stackField === 'sku'
+          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(stackInfo.stack, seriesColor)}${formatDisplayValue(stackInfo.stack, stackField) || ' '}</span>`
+          : formatDisplayValue(stackInfo.stack, stackField) || ' ',
         data,
         color: seriesColor,
         visible: !isHidden,

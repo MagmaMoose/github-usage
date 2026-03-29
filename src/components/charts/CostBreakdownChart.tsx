@@ -54,7 +54,9 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       const seriesColor = colorMap.get(groupInfo.group) ?? '#808fa3';
       return {
         type: 'column' as const,
-        name: (stackField === 'sku' ? getSkuIconSvg(groupInfo.group, seriesColor) : '') + (formatDisplayValue(groupInfo.group, stackField) || ' '),
+        name: stackField === 'sku'
+          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(groupInfo.group, seriesColor)}${formatDisplayValue(groupInfo.group, stackField) || ' '}</span>`
+          : formatDisplayValue(groupInfo.group, stackField) || ' ',
         data,
         color: seriesColor,
       };

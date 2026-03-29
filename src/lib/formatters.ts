@@ -18,20 +18,23 @@ const SVG_PATHS = {
 
 function svgIcon(path: string, color?: string): string {
   const fill = color ?? 'currentColor';
-  return `<svg width="12" height="12" viewBox="0 0 16 16" fill="${fill}" style="vertical-align:middle;margin-right:3px;display:inline-block;"><path d="${path}"/></svg>`;
+  return `<svg width="12" height="12" viewBox="0 0 16 16" fill="${fill}" style="flex-shrink:0;"><path d="${path}"/></svg>`;
 }
 
-/** Get an inline SVG string for a SKU (for Highcharts legend/tooltip HTML) */
+/** Get an inline SVG string for a SKU (for Highcharts legend/tooltip HTML), wrapped in a flex container */
 export function getSkuIconSvg(rawValue: string, color?: string): string {
   const v = rawValue.toLowerCase();
-  if (v.includes('custom_image')) return svgIcon(SVG_PATHS.container, color);
-  if (v.includes('storage') && v.startsWith('actions')) return svgIcon(SVG_PATHS.database, color);
-  if (v.startsWith('actions')) return svgIcon(SVG_PATHS.play, color);
-  if (v.includes('premium_request') || v.includes('ai_unit')) return svgIcon(SVG_PATHS.aiModel, color);
-  if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return svgIcon(SVG_PATHS.copilot, color);
-  if (v.startsWith('packages')) return svgIcon(SVG_PATHS.package, color);
-  if (v.startsWith('git_lfs')) return svgIcon(SVG_PATHS.repo, color);
-  return '';
+  let icon = '';
+  if (v.includes('custom_image')) icon = svgIcon(SVG_PATHS.container, color);
+  else if (v.includes('storage') && v.startsWith('actions')) icon = svgIcon(SVG_PATHS.database, color);
+  else if (v.startsWith('actions')) icon = svgIcon(SVG_PATHS.play, color);
+  else if (v.includes('premium_request') || v.includes('ai_unit')) icon = svgIcon(SVG_PATHS.aiModel, color);
+  else if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) icon = svgIcon(SVG_PATHS.copilot, color);
+  else if (v.startsWith('packages')) icon = svgIcon(SVG_PATHS.package, color);
+  else if (v.startsWith('git_lfs')) icon = svgIcon(SVG_PATHS.repo, color);
+  if (!icon) return '';
+  // Return just the icon; chart components wrap icon + name in a flex span
+  return icon;
 }
 /** Map a raw SKU key to the product-relevant Octicon */
 export function getSkuIcon(rawValue: string): OcticonComponent {

@@ -135,7 +135,9 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
 
       series.push({
         type: 'line' as const,
-        name: (groupByColumn === 'sku' ? getSkuIconSvg(group.key, color) : '') + (formatDisplayValue(group.key, groupByColumn) || ' '),
+        name: groupByColumn === 'sku'
+          ? `<span style="display:flex;align-items:center;gap:4px">${getSkuIconSvg(group.key, color)}${formatDisplayValue(group.key, groupByColumn) || ' '}</span>`
+          : formatDisplayValue(group.key, groupByColumn) || ' ',
         data: timestamps.map((t, j) => [t, chartData[j]] as [number, number]),
         color,
         ...(smoothed && {
