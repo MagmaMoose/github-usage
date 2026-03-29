@@ -91,11 +91,12 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
         return Math.round(sumBy(stackRows, dataField as keyof AnyReportRow & string) * 100) / 100;
       });
 
+      const seriesColor = colorMap.get(stackInfo.stack) ?? '#808fa3';
       return {
         type: 'bar' as const,
-        name: (stackField === 'sku' ? getSkuIconSvg(stackInfo.stack) : '') + (formatDisplayValue(stackInfo.stack, stackField) || ' '),
+        name: (stackField === 'sku' ? getSkuIconSvg(stackInfo.stack, seriesColor) : '') + (formatDisplayValue(stackInfo.stack, stackField) || ' '),
         data,
-        color: colorMap.get(stackInfo.stack) ?? '#808fa3',
+        color: seriesColor,
         visible: !isHidden,
         events: {
           legendItemClick: function () {
@@ -149,6 +150,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { bar: { stacking: 'normal' } },
+      ...(stackField === 'sku' && { legend: { symbolWidth: 0, symbolPadding: 0 } }),
       series,
     };
   }, [activeReport, groupByColumn, stackField, visibleRows, hiddenGroups, toggleGroup, activeMetric, dataField]);

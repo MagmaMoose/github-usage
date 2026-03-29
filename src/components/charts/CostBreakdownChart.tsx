@@ -51,11 +51,12 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
         return [bucketKeyToTimestamp(bucketKey), Math.round(sumBy(matchingRows, dataField as keyof AnyReportRow & string) * 100) / 100] as [number, number];
       });
 
+      const seriesColor = colorMap.get(groupInfo.group) ?? '#808fa3';
       return {
         type: 'column' as const,
-        name: (stackField === 'sku' ? getSkuIconSvg(groupInfo.group) : '') + (formatDisplayValue(groupInfo.group, stackField) || ' '),
+        name: (stackField === 'sku' ? getSkuIconSvg(groupInfo.group, seriesColor) : '') + (formatDisplayValue(groupInfo.group, stackField) || ' '),
         data,
-        color: colorMap.get(groupInfo.group) ?? '#808fa3',
+        color: seriesColor,
       };
     });
 
@@ -84,6 +85,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { column: { stacking: 'normal' } },
+      ...(stackField === 'sku' && { legend: { symbolWidth: 0, symbolPadding: 0 } }),
       series,
     };
   }, [activeReport, timeBucket, visibleRows, stackField, activeMetric, dataField]);

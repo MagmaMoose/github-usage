@@ -188,11 +188,11 @@ const SKU_DISPLAY_NAMES: Record<string, string> = {
 
 /** Human-readable display names for raw product codes */
 const PRODUCT_DISPLAY_NAMES: Record<string, string> = {
-  copilot: 'GitHub Copilot',
-  spark: 'GitHub Spark',
-  actions: 'GitHub Actions',
+  copilot: 'Copilot',
+  spark: 'Spark',
+  actions: 'Actions',
   git_lfs: 'Git LFS',
-  packages: 'GitHub Packages',
+  packages: 'Packages',
 };
 
 /**

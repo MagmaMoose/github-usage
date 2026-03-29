@@ -135,7 +135,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
 
       series.push({
         type: 'line' as const,
-        name: (groupByColumn === 'sku' ? getSkuIconSvg(group.key) : '') + (formatDisplayValue(group.key, groupByColumn) || ' '),
+        name: (groupByColumn === 'sku' ? getSkuIconSvg(group.key, color) : '') + (formatDisplayValue(group.key, groupByColumn) || ' '),
         data: timestamps.map((t, j) => [t, chartData[j]] as [number, number]),
         color,
         ...(smoothed && {
@@ -172,6 +172,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             },
       },
       series,
+      ...(groupByColumn === 'sku' && { legend: { symbolWidth: 0, symbolPadding: 0 } }),
       chart: { height: 400 },
     };
   }, [activeReport, groupByColumn, timeBucket, visibleRows, lineMode, rollingWindow, dataField, activeMetric]);
