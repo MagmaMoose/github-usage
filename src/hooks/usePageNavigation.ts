@@ -13,7 +13,7 @@ interface PageNavigationDeps {
   reports: ParsedReport[];
   activeReport: ParsedReport | null;
   setActiveReport: (index: number) => void;
-  setFilter: (column: string, values: string[]) => void;
+  clearFilters: () => void;
   setGroupByColumn: (column: string) => void;
   groupByColumn: string;
   timeBucket: string;
@@ -32,7 +32,7 @@ export function usePageNavigation({
   reports,
   activeReport,
   setActiveReport,
-  setFilter,
+  clearFilters,
   setGroupByColumn,
   groupByColumn,
   timeBucket,
@@ -49,7 +49,7 @@ export function usePageNavigation({
 
   const setActivePage = useCallback((page: PageType) => {
     setActivePageRaw(page);
-    setFilter('product', []);
+    clearFilters();
     // Files page has no report types
     const reportTypes = PAGE_REPORT_TYPES[page];
     if (!reportTypes || reportTypes.length === 0) return;
@@ -60,7 +60,7 @@ export function usePageNavigation({
     if (matchIndex !== -1) {
       setActiveReport(matchIndex);
     }
-  }, [setFilter, setGroupByColumn, reports, setActiveReport]);
+  }, [clearFilters, setGroupByColumn, reports, setActiveReport]);
 
   // Sync active page to URL
   useEffect(() => {
