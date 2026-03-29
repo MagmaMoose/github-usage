@@ -5,7 +5,7 @@ import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getSkuIconSvg } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatDisplayValue, getAvatarUrl, getGroupIconSvg } from '../../lib/formatters';
 import { buildColorMap, getModelIconUrl } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -93,8 +93,8 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
 
       const seriesColor = colorMap.get(stackInfo.stack) ?? '#808fa3';
       const displayName = formatDisplayValue(stackInfo.stack, stackField) || ' ';
-      const isSku = stackField === 'sku';
-      const iconHtml = isSku ? getSkuIconSvg(stackInfo.stack, seriesColor) : '';
+      const hasIcons = stackField === 'sku' || stackField === 'product';
+      const iconHtml = hasIcons ? getGroupIconSvg(stackInfo.stack, stackField, seriesColor) : '';
       return {
         type: 'bar' as const,
         name: iconHtml
@@ -103,11 +103,11 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
         data,
         color: seriesColor,
         visible: !isHidden,
-        ...(isSku && {
+        ...(hasIcons && {
           tooltip: {
             pointFormatter: function (this: Highcharts.Point) {
               const val = this.y ?? 0;
-              const icon = getSkuIconSvg(stackInfo.stack, String(this.color));
+              const icon = getGroupIconSvg(stackInfo.stack, stackField, String(this.color));
               const formatted = activeMetric.isCurrency
                 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : formatCompact(val);
@@ -136,17 +136,17 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             const name = typeof this.value === 'string' ? this.value : String(this.value);
             const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
             const isModel = groupByColumn === 'model';
-            const isSku = groupByColumn === 'sku';
+            const hasIcons = groupByColumn === 'sku' || groupByColumn === 'product';
             if (isAvatar && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
             }
             if (isModel && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
             }
-            if (isSku) {
+            if (hasIcons) {
               // Find the raw SKU key from the sorted data for this category index
               const rawKey = sorted[typeof this.pos === 'number' ? this.pos : 0]?.key ?? '';
-              const icon = rawKey ? getSkuIconSvg(rawKey) : '';
+              const icon = rawKey ? getGroupIconSvg(rawKey, groupByColumn) : '';
               return icon ? `<span style="display:inline-flex;align-items:center;gap:4px;">${icon}${name}</span>` : name;
             }
             return name || ' ';
@@ -174,7 +174,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { bar: { stacking: 'normal' } },
-      legend: stackField === 'sku'
+      legend: stackField === 'sku' || stackField === 'product'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
         : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       series,

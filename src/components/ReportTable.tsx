@@ -19,7 +19,7 @@ import { OnboardingBubble, ONBOARDING_STEPS } from './onboarding';
 import { type ActionListItemInput } from '@primer/react/deprecated';
 import { useReport } from '../context/useReport';
 import { groupBy, sumBy } from '../lib/aggregation';
-import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime, getSkuIcon } from '../lib/formatters';
+import { formatCurrency, formatCompact, humanizeColumn, formatDisplayValue, getAvatarUrl, formatDatetime, getGroupIcon } from '../lib/formatters';
 import type { AnyReportRow, TokenUsageRow, UsageReportRow } from '../lib/types';
 import { REPORT_TYPES } from '../lib/types';
 import { getModelIconUrl } from '../lib/chart-theme';
@@ -372,7 +372,8 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
               </button>
             );
           }
-          const ColumnIcon = groupByColumn === 'sku' ? getSkuIcon(value) : COLUMN_ICONS[groupByColumn];
+          const dynamicIcon = getGroupIcon(value, groupByColumn);
+          const ColumnIcon = dynamicIcon ?? COLUMN_ICONS[groupByColumn];
           return (
             <button
               type="button"

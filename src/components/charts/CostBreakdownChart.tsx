@@ -5,7 +5,7 @@ import { ActionList, ActionMenu } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
-import { formatDisplayValue, formatCompact, bucketKeyToTimestamp, getSkuIconSvg } from '../../lib/formatters';
+import { formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg } from '../../lib/formatters';
 import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow, BillingRow } from '../../lib/types';
 import styles from './Charts.module.css';
@@ -53,8 +53,8 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
 
       const seriesColor = colorMap.get(groupInfo.group) ?? '#808fa3';
       const displayName = formatDisplayValue(groupInfo.group, stackField) || ' ';
-      const isSku = stackField === 'sku';
-      const iconHtml = isSku ? getSkuIconSvg(groupInfo.group, seriesColor) : '';
+      const hasIcons = stackField === 'sku' || stackField === 'product';
+      const iconHtml = hasIcons ? getGroupIconSvg(groupInfo.group, stackField, seriesColor) : '';
       return {
         type: 'column' as const,
         name: iconHtml
@@ -62,11 +62,11 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
           : displayName,
         data,
         color: seriesColor,
-        ...(isSku && {
+        ...(hasIcons && {
           tooltip: {
             pointFormatter: function (this: Highcharts.Point) {
               const val = this.y ?? 0;
-              const icon = getSkuIconSvg(groupInfo.group, String(this.color));
+              const icon = getGroupIconSvg(groupInfo.group, stackField, String(this.color));
               const formatted = activeMetric.isCurrency
                 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 : formatCompact(val);
@@ -102,7 +102,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { column: { stacking: 'normal' } },
-      legend: stackField === 'sku'
+      legend: stackField === 'sku' || stackField === 'product'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
         : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       series,

@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getSkuIconSvg } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { MetricOption } from '../../lib/report-schema';
@@ -134,8 +134,8 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
       }
 
       const displayName = formatDisplayValue(group.key, groupByColumn) || ' ';
-      const isSku = groupByColumn === 'sku';
-      const icon = isSku ? getSkuIconSvg(group.key, color) : '';
+      const hasIcons = groupByColumn === 'sku' || groupByColumn === 'product';
+      const icon = hasIcons ? getGroupIconSvg(group.key, groupByColumn, color) : '';
 
       series.push({
         type: 'line' as const,
@@ -155,7 +155,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
               ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : formatCompact(val);
             return isSku
-              ? `${getSkuIconSvg(group.key, String(this.color))} ${displayName}: <b>${formatted}</b><br/>`
+              ? `${getGroupIconSvg(group.key, groupByColumn, String(this.color))} ${displayName}: <b>${formatted}</b><br/>`
               : `<span style="color:${this.color}">●</span> ${displayName}: <b>${formatted}</b><br/>`;
           },
         },
@@ -180,7 +180,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             },
       },
       series,
-      legend: groupByColumn === 'sku'
+      legend: groupByColumn === 'sku' || groupByColumn === 'product'
         ? { symbolWidth: 0, symbolHeight: 0, symbolPadding: 0 }
         : { symbolWidth: 16, symbolHeight: 12, symbolPadding: 5 },
       chart: { height: 400 },

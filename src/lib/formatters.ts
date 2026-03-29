@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, FileIcon, PackageIcon, PlayIcon, TagIcon } from '@primer/octicons-react';
+import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, FileIcon, PackageIcon, PlayIcon, SparkleIcon, TagIcon } from '@primer/octicons-react';
 
 type OcticonComponent = ComponentType<{ size?: number; className?: string; fill?: string }>;
 
@@ -17,6 +17,38 @@ export function getSkuIconSvg(rawValue: string, color?: string): string {
   const icon = getSkuIcon(rawValue);
   if (icon === TagIcon) return '';
   return renderIcon(icon, color);
+}
+
+/** Map a raw product key to the relevant Octicon */
+export function getProductIcon(rawValue: string): OcticonComponent {
+  const v = rawValue.toLowerCase();
+  if (v === 'actions') return PlayIcon;
+  if (v === 'copilot') return CopilotIcon;
+  if (v === 'spark') return SparkleIcon;
+  if (v === 'git_lfs') return FileIcon;
+  if (v === 'packages') return PackageIcon;
+  return TagIcon;
+}
+
+/** Get an inline SVG string for a product (for Highcharts legend/tooltip HTML) */
+export function getProductIconSvg(rawValue: string, color?: string): string {
+  const icon = getProductIcon(rawValue);
+  if (icon === TagIcon) return '';
+  return renderIcon(icon, color);
+}
+
+/** Columns that have dedicated icon functions */
+export function getGroupIconSvg(rawValue: string, column: string, color?: string): string {
+  if (column === 'sku') return getSkuIconSvg(rawValue, color);
+  if (column === 'product') return getProductIconSvg(rawValue, color);
+  return '';
+}
+
+/** Get the React icon component for a group value */
+export function getGroupIcon(rawValue: string, column: string): OcticonComponent | null {
+  if (column === 'sku') { const i = getSkuIcon(rawValue); return i === TagIcon ? null : i; }
+  if (column === 'product') { const i = getProductIcon(rawValue); return i === TagIcon ? null : i; }
+  return null;
 }
 
 /** Map a raw SKU key to the product-relevant Octicon */
