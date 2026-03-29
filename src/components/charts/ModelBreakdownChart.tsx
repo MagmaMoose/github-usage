@@ -144,41 +144,36 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             },
       },
       tooltip: {
-        shared: true,
+        shared: false,
         useHTML: true,
         formatter: function () {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const points = (this as any).points as Array<{ y: number; color: string; series: { name: string; userOptions?: { custom?: { rawStack?: string } } } }> | undefined;
-          if (!points?.length) return false;
-          // Resolve the grouped entity (x-axis value)
-          const key = String((this as Highcharts.TooltipFormatterContextObject).x ?? '');
+          const pt = this as unknown as { point: { y: number; total: number; color: string }; series: { name: string; userOptions?: { custom?: { rawStack?: string } } }; x: string };
+          const val = pt.point.y ?? 0;
+          const total = pt.point.total ?? val;
+          // Header: groupBy entity with icon
+          const key = String(pt.x ?? '');
           const rawKey = sorted.find((s) => formatDisplayValue(s.key, groupByColumn) === key)?.key ?? key;
           const headerIcon = columnHasIcons(groupByColumn) ? getGroupIconSvg(rawKey, groupByColumn) : '';
           const headerHtml = headerIcon
             ? `<span style="display:inline-flex;align-items:center;gap:4px;">${headerIcon}${key}</span>`
             : key;
-          let html = `<table style="min-width:120px;"><tr><th colspan="2" style="color:var(--fgColor-muted,#59636e);font-weight:600;padding-bottom:2px;font-size:12px;">${headerHtml}</th></tr>`;
-
-          let total = 0;
+          // Row: stack value with icon
           const hasStackIcons = columnHasIcons(stackField);
-          for (const pt of points) {
-            if (!pt.y) continue;
-            total += pt.y;
-            const rawStack = pt.series.userOptions?.custom?.rawStack ?? '';
-            const indicator = hasStackIcons && rawStack
-              ? getGroupIconSvg(rawStack, stackField, String(pt.color))
-              : `<span style="color:${pt.color}">●</span>`;
-            const displayName = formatDisplayValue(rawStack, stackField) || pt.series.name;
-            const formatted = activeMetric.isCurrency
-              ? `$${pt.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : formatCompact(pt.y);
-            html += `<tr><td>${indicator} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
-          }
+          const rawStack = pt.series.userOptions?.custom?.rawStack ?? '';
+          const indicator = hasStackIcons && rawStack
+            ? getGroupIconSvg(rawStack, stackField, String(pt.point.color))
+            : `<span style="color:${pt.point.color}">●</span>`;
+          const displayName = formatDisplayValue(rawStack, stackField) || pt.series.name;
+          const formatted = activeMetric.isCurrency
+            ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : formatCompact(val);
           const totalStr = activeMetric.isCurrency
             ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : formatCompact(total);
-          html += `<tr style="border-top:1px solid var(--borderColor-muted,#d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align:right;"><b>${totalStr}</b></td></tr></table>`;
-          return html;
+          return `<table style="min-width:120px;"><tr><th colspan="2" style="color:var(--fgColor-muted,#59636e);font-weight:600;padding-bottom:2px;font-size:12px;">${headerHtml}</th></tr>` +
+            `<tr><td>${indicator} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>` +
+            `<tr style="border-top:1px solid var(--borderColor-muted,#d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align:right;"><b>${totalStr}</b></td></tr></table>`;
         },
       },
       plotOptions: { bar: { stacking: 'normal' } },
