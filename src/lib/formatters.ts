@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { ContainerIcon, CopilotIcon, DatabaseIcon, PackageIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
+import { AiModelIcon, ContainerIcon, CopilotIcon, DatabaseIcon, PackageIcon, TagIcon, WorkflowIcon } from '@primer/octicons-react';
 
 type OcticonComponent = ComponentType<{ size?: number; className?: string }>;
 
@@ -9,6 +9,7 @@ export function getSkuIcon(rawValue: string): OcticonComponent {
   if (v.includes('custom_image')) return ContainerIcon;
   if (v.includes('storage') && v.startsWith('actions')) return DatabaseIcon;
   if (v.startsWith('actions')) return WorkflowIcon;
+  if (v.includes('premium_request') || v.includes('ai_unit')) return AiModelIcon;
   if (v.startsWith('copilot') || v.startsWith('coding_agent') || v.startsWith('spark')) return CopilotIcon;
   if (v.startsWith('packages')) return PackageIcon;
   if (v.startsWith('git_lfs')) return DatabaseIcon;
