@@ -570,8 +570,15 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
                 No matching usage rows
               </Heading>
               <Text as="p" className={styles.surfaceDescription}>
-                Try a different search term or clear the current period filter.
+                {Object.keys(filters).length > 0
+                  ? `Active filters (${Object.entries(filters).map(([k, v]) => `${k}: ${v.join(', ')}`).join('; ')}) may not apply to this report.`
+                  : 'Try a different search term or clear the current period filter.'}
               </Text>
+              {Object.keys(filters).length > 0 && (
+                <Button variant="default" size="small" onClick={clearAllToolbarFilters} sx={{ mt: 2 }}>
+                  Clear all filters
+                </Button>
+              )}
             </div>
           )}
 
