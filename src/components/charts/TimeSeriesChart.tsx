@@ -154,7 +154,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
             const formatted = activeMetric.isCurrency
               ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : formatCompact(val);
-            return isSku
+            return hasIcons
               ? `${getGroupIconSvg(group.key, groupByColumn, String(this.color))} ${displayName}: <b>${formatted}</b><br/>`
               : `<span style="color:${this.color}">●</span> ${displayName}: <b>${formatted}</b><br/>`;
           },
