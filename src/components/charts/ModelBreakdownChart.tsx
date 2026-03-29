@@ -121,11 +121,18 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             const name = typeof this.value === 'string' ? this.value : String(this.value);
             const isAvatar = groupByColumn === 'username' || groupByColumn === 'organization';
             const isModel = groupByColumn === 'model';
+            const isSku = groupByColumn === 'sku';
             if (isAvatar && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getAvatarUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
             }
             if (isModel && name) {
               return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}<img src="${getModelIconUrl(name)}" width="16" height="16" style="border-radius:50%;" loading="lazy" /></span>`;
+            }
+            if (isSku) {
+              // Find the raw SKU key from the sorted data for this category index
+              const rawKey = sorted[typeof this.pos === 'number' ? this.pos : 0]?.key ?? '';
+              const icon = rawKey ? getSkuIconSvg(rawKey) : '';
+              return icon ? `<span style="display:inline-flex;align-items:center;gap:4px;">${icon}${name}</span>` : name;
             }
             return name || ' ';
           },
