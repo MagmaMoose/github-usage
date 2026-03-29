@@ -148,12 +148,12 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
         useHTML: true,
         formatter: function () {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const pt = this as unknown as { point: { y: number; total: number; color: string }; series: { name: string; userOptions?: { custom?: { rawStack?: string } } }; x: string };
+          const pt = this as unknown as { point: { y: number; total: number; color: string; category?: string; index: number }; series: { name: string; userOptions?: { custom?: { rawStack?: string } } }; x: number };
           const val = pt.point.y ?? 0;
           const total = pt.point.total ?? val;
-          // Header: groupBy entity with icon
-          const key = String(pt.x ?? '');
-          const rawKey = sorted.find((s) => formatDisplayValue(s.key, groupByColumn) === key)?.key ?? key;
+          // Header: groupBy entity with icon (pt.x is numeric index, use category name)
+          const key = pt.point.category ?? categories[pt.x] ?? String(pt.x);
+          const rawKey = sorted[pt.x]?.key ?? key;
           const headerIcon = columnHasIcons(groupByColumn) ? getGroupIconSvg(rawKey, groupByColumn) : '';
           const headerHtml = headerIcon
             ? `<span style="display:inline-flex;align-items:center;gap:4px;">${headerIcon}${key}</span>`
