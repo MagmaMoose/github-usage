@@ -147,7 +147,6 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
         shared: false,
         useHTML: true,
         formatter: function () {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const pt = this as unknown as { point: { y: number; total: number; color: string; category?: string; index: number }; series: { name: string; userOptions?: { custom?: { rawStack?: string } } }; x: number };
           const val = pt.point.y ?? 0;
           const total = pt.point.total ?? val;

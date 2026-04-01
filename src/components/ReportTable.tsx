@@ -497,6 +497,7 @@ export function ReportTable({ onGroupClick }: ReportTableProps) {
     return cols;
   }, [groupByColumn, isTokenReport, isUsageReport, isFlatReport, activeReport, fieldsWithValues, tableData, handleGroupClick]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table v8 returns stable references; this is safe
   const table = useReactTable({
     data: tableData,
     columns,
