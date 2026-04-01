@@ -234,16 +234,12 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
   );
 
   // Pre-warm the avatar cache for any bot usernames in the current data
-  const [avatarVersion, setAvatarVersion] = useState(0);
   useEffect(() => {
     const usernames = visibleRows
       .map((r) => (r as unknown as Record<string, unknown>).username as string)
       .filter(Boolean);
     if (usernames.length === 0) return;
-    preloadBotAvatars(usernames).then((resolved) => {
-      // Only bump version if new avatars were actually resolved
-      if (resolved) setAvatarVersion((n) => n + 1);
-    });
+    preloadBotAvatars(usernames);
   }, [visibleRows]);
 
   const [activeTab, setActiveTabRaw] = useState<ViewTab>(() => {
