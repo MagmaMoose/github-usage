@@ -585,13 +585,14 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY
               || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
-              <Suspense fallback={null}>
-              {/* Use visibility:hidden (not display:none) during transient empty states
-                  so the chart DOM keeps its layout height and scroll position is preserved. */}
+              /* No outer Suspense here — each LazyChart has its own Suspense boundary
+                 so React's hideInstance only affects individual charts, not the entire stack. */
               <div className={styles.chartStack} key={activeReportIndex} style={hasData ? undefined : { visibility: 'hidden' }}>
                 {!isFlatReport && (
                   <div className={styles.chartSurface}>
-                    <TimeSeriesChart metricOptions={chartMetricOptions} />
+                    <Suspense fallback={null}>
+                      <TimeSeriesChart metricOptions={chartMetricOptions} />
+                    </Suspense>
                   </div>
                 )}
                 <LazyChart className={styles.chartSurface}>
@@ -606,7 +607,6 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
                   <SankeyChart hierarchy={schema.sankeyHierarchy} metric={activeMetric} />
                 </LazyChart>
               </div>
-              </Suspense>
             );
           })()}
 

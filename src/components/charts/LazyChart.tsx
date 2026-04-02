@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 interface LazyChartProps {
   children: ReactNode;
@@ -59,7 +59,7 @@ export function LazyChart({ children, className, minHeight = 400 }: LazyChartPro
       className={className}
       style={{ minHeight, contain: visible ? undefined : 'content' }}
     >
-      {visible ? children : null}
+      {visible ? <Suspense fallback={null}>{children}</Suspense> : null}
     </div>
   );
 }
