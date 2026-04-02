@@ -586,9 +586,9 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
               <Suspense fallback={null}>
-              {/* Keep chart DOM alive during transient empty states (e.g. startTransition
-                  filter updates) to prevent body-height collapse → scroll-position loss. */}
-              <div className={styles.chartStack} key={activeReportIndex} style={hasData ? undefined : { display: 'none' }}>
+              {/* Use visibility:hidden (not display:none) during transient empty states
+                  so the chart DOM keeps its layout height and scroll position is preserved. */}
+              <div className={styles.chartStack} key={activeReportIndex} style={hasData ? undefined : { visibility: 'hidden' }}>
                 {!isFlatReport && (
                   <div className={styles.chartSurface}>
                     <TimeSeriesChart metricOptions={chartMetricOptions} />
