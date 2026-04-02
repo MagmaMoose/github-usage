@@ -1,9 +1,15 @@
 import { useEffect } from 'react';
 
 let initialized = false;
+let themeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Apply the GitHub Highcharts theme using live CSS variable values */
-async function initAndApplyTheme() {
+/**
+ * Apply the GitHub Highcharts theme using live CSS variable values.
+ * @param updateExisting - When true, re-applies theme to already-mounted charts.
+ *   Skipped on first init because `Highcharts.setOptions()` already covers
+ *   charts created after the call. Only needed for live theme switches.
+ */
+async function initAndApplyTheme(updateExisting = false) {
   const [{ default: Highcharts }, { buildGitHubChartTheme }] = await Promise.all([
     import('highcharts'),
     import('../../lib/chart-theme'),
@@ -23,15 +29,29 @@ async function initAndApplyTheme() {
     plotOptions: { series: { animation: false } },
   });
 
-  // Re-apply visual styles (colors, backgrounds) to existing charts
-  // without clobbering per-chart options like title, series, etc.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { title: _t, subtitle: _s, series: _sr, ...safeTheme } = theme;
-  Highcharts.charts.forEach((chart) => {
-    if (chart) {
-      chart.update(safeTheme, true, true);
-    }
-  });
+  // Only re-apply to existing charts on theme change (not first init)
+  if (updateExisting) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { title: _t, subtitle: _s, series: _sr, ...safeTheme } = theme;
+    Highcharts.charts.forEach((chart) => {
+      if (chart) {
+        chart.update(safeTheme, true, true);
+      }
+    });
+  }
+}
+
+/**
+ * Debounced theme re-apply for live color scheme changes.
+ * Coalesces rapid attribute mutations (Primer sets multiple attrs at once)
+ * into a single chart update pass.
+ */
+function scheduleThemeUpdate() {
+  if (themeDebounceTimer) clearTimeout(themeDebounceTimer);
+  themeDebounceTimer = setTimeout(() => {
+    themeDebounceTimer = null;
+    initAndApplyTheme(true);
+  }, 100);
 }
 
 /** Initialize Highcharts with GitHub theme + accessibility module.
@@ -40,28 +60,22 @@ export function useHighchartsInit() {
   useEffect(() => {
     if (!initialized) {
       initialized = true;
-      initAndApplyTheme();
+      initAndApplyTheme(false); // First init — no existing charts to update
     }
 
     // Watch for OS color scheme changes (light ↔ dark)
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      // Small delay to let Primer's theme CSS vars update first
-      setTimeout(() => { initAndApplyTheme(); }, 50);
-    };
-    mediaQuery.addEventListener('change', handleChange);
+    mediaQuery.addEventListener('change', scheduleThemeUpdate);
 
-    // Also watch for Primer's data-color-mode attribute changes
-    const observer = new MutationObserver(() => {
-      setTimeout(() => { initAndApplyTheme(); }, 50);
-    });
+    // Watch for Primer's data-color-mode attribute changes
+    const observer = new MutationObserver(scheduleThemeUpdate);
     const primerRoot = document.querySelector('[data-color-mode]');
     if (primerRoot) {
       observer.observe(primerRoot, { attributes: true, attributeFilter: ['data-color-mode', 'data-light-theme', 'data-dark-theme'] });
     }
 
     return () => {
-      mediaQuery.removeEventListener('change', handleChange);
+      mediaQuery.removeEventListener('change', scheduleThemeUpdate);
       observer.disconnect();
     };
   }, []);
