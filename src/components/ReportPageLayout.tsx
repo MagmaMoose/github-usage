@@ -578,14 +578,17 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
             </div>
           )}
 
-          {activeTab === 'charts' && visibleRows.length > 0 && (() => {
+          {activeTab === 'charts' && (() => {
+            const hasData = visibleRows.length > 0;
             const isFlatReport = activeReport?.type === REPORT_TYPES.GHAS_ACTIVE_COMMITTERS
               || activeReport?.type === REPORT_TYPES.DORMANT_USERS
               || activeReport?.type === REPORT_TYPES.COPILOT_SEAT_ACTIVITY
               || activeReport?.type === REPORT_TYPES.ENTERPRISE_MEMBERS;
             return (
               <Suspense fallback={null}>
-              <div className={styles.chartStack} key={activeReportIndex}>
+              {/* Keep chart DOM alive during transient empty states (e.g. startTransition
+                  filter updates) to prevent body-height collapse → scroll-position loss. */}
+              <div className={styles.chartStack} key={activeReportIndex} style={hasData ? undefined : { display: 'none' }}>
                 {!isFlatReport && (
                   <div className={styles.chartSurface}>
                     <TimeSeriesChart metricOptions={chartMetricOptions} />
