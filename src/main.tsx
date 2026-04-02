@@ -8,6 +8,12 @@ import App from './App';
 import { ThemeContext } from './context/theme-context';
 import './global.css';
 
+// Prevent browser from auto-resetting scroll position when we call
+// history.replaceState() to sync URL params (filters, groupBy, period, etc.)
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
 export default function Root() {
   const [colorMode, setColorMode] = useState<'auto' | 'day' | 'night'>(() => {
     const stored = localStorage.getItem('tbb-color-mode');
