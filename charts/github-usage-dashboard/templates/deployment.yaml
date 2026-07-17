@@ -3,7 +3,9 @@
 #     image automation (GitOps); pinning a digest in the chart defeats that.
 #   4a20ebac/48a5beba — LimitRange/ResourceQuota are namespace-level governance,
 #     not the concern of an application chart.
-# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424
+#   b7652612 — the `data` volumeMount can't be readOnly: it's the app's writable
+#     state dir (SQLite fallback DB); readOnly:true would break it.
+# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424,b7652612-de4e-4466-a0bf-1cd81f0c6063
 apiVersion: apps/v1
 kind: Deployment
 metadata:

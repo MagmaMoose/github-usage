@@ -12,7 +12,9 @@
 #   baee238e… Generic-token misfire on GITHUB_TOKEN, whose value here is empty.
 #   8c978947… "volume shared between containers" — each named volume is used by
 #             exactly ONE service (db -> pg data, app -> app data); not shared.
-# kics-scan disable=baee238e-1921-4801-9c3f-79ae1d7b2cbc,8c978947-0ff6-485c-b0c2-0bfca6026466
+#   ce76b7d0… flags the `cap_add` on the db service — postgres needs a minimal
+#             cap set to initialise under `cap_drop: [ALL]`; the app drops all.
+# kics-scan disable=baee238e-1921-4801-9c3f-79ae1d7b2cbc,8c978947-0ff6-485c-b0c2-0bfca6026466,ce76b7d0-9e77-464d-b86f-c5c48e03e22d
 services:
   db:
     image: postgres:16-alpine
