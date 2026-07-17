@@ -895,3 +895,35 @@ describe('cross-report: all 6 report types are uniquely detectable', () => {
     }
   });
 });
+
+describe('parseCSV — dateRange normalization', () => {
+  it('slices full-ISO date timestamps to YYYY-MM-DD (live usage reports)', () => {
+    // Live GitHub billing CSVs put a full ISO timestamp in the `date` column.
+    // dateRange must stay date-only: consumers append `T00:00:00` to build a
+    // datetime (RelativeTime, formatDate), and a leftover `...Z` makes that
+    // invalid — which previously crashed the whole app with no error boundary.
+    const csv = [
+      'date,product,sku,quantity,unit_type,applied_cost_per_quantity,gross_amount,discount_amount,net_amount,username,organization,repository,workflow_path,cost_center_name',
+      '2026-01-01T00:00:00Z,actions,actions_linux,17.0,minutes,0.006,0.102,0.102,0.0,,MagmaMoose,exploitum,,',
+      '2026-07-01T00:00:00Z,actions,actions_linux,86.0,minutes,0.006,0.516,0.516,0.0,,MagmaMoose,sargeant-photos,,',
+    ].join('\n');
+    const report = parseCSV(csv, 'metered-usage.csv');
+    expect(report.dateRange.start).toBe('2026-01-01');
+    expect(report.dateRange.end).toBe('2026-07-01');
+    // The exact crash condition: building a datetime from the range must be valid.
+    expect(Number.isNaN(new Date(report.dateRange.end + 'T00:00:00').getTime())).toBe(false);
+  });
+
+  it('slices full-ISO lastPushedDate timestamps to YYYY-MM-DD (GHAS reports)', () => {
+    // GHAS active-committers CSVs can carry a full ISO timestamp in the
+    // `Last pushed date` column; it must normalize the same way as `date`.
+    const csv = [
+      'User login,Organization / repository,Last pushed date,Last pushed email',
+      'octocat,acme/console,2026-03-27T15:21:00Z,octocat@users.noreply.github.com',
+    ].join('\n');
+    const report = parseCSV(csv, 'ghas-active-committers.csv');
+    expect(report.dateRange.start).toBe('2026-03-27');
+    expect(report.dateRange.end).toBe('2026-03-27');
+    expect(Number.isNaN(new Date(report.dateRange.end + 'T00:00:00').getTime())).toBe(false);
+  });
+});
