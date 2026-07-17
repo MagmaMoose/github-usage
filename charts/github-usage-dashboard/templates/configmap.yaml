@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gud.fullname" . }}-config
+  labels:
+    {{- include "gud.labels" . | nindent 4 }}
+data:
+  # Non-secret runtime config. Secrets (App key, PAT, webhook URLs, SMTP
+  # password) come from the Secret referenced in the Deployment, not here.
+  # APP_MODE is intentionally unset: the app auto-detects live (when a GitHub
+  # target + auth are present) or demo (otherwise, e.g. a creds-less install).
+  {{- with .Values.github.org }}
+  GITHUB_ORG: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.github.enterprise }}
+  GITHUB_ENTERPRISE: {{ . | quote }}
+  {{- end }}
+  GITHUB_API_BASE: {{ .Values.github.apiBase | quote }}
+  {{- with .Values.github.appId }}
+  GITHUB_APP_ID: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.github.installationId }}
+  GITHUB_APP_INSTALLATION_ID: {{ . | quote }}
+  {{- end }}
+
+  {{- with .Values.config.publicUrl }}
+  PUBLIC_URL: {{ . | quote }}
+  {{- end }}
+  CACHE_TTL_SECONDS: {{ .Values.config.cacheTtlSeconds | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  DB_PATH: "/var/lib/github-usage/app.db"
+
+  # Schedules (empty values are simply omitted -> disabled).
+  {{- with .Values.schedule.daily }}
+  SCHEDULE_DAILY_CRON: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.schedule.weekly }}
+  SCHEDULE_WEEKLY_CRON: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.schedule.monthly }}
+  SCHEDULE_MONTHLY_CRON: {{ . | quote }}
+  {{- end }}
+  SCHEDULE_TIMEZONE: {{ .Values.schedule.timezone | quote }}
+
+  # Email channel (non-secret parts; SMTP_PASSWORD is a secret).
+  {{- with .Values.notifications.email.smtpHost }}
+  SMTP_HOST: {{ . | quote }}
+  {{- end }}
+  SMTP_PORT: {{ .Values.notifications.email.smtpPort | quote }}
+  {{- with .Values.notifications.email.smtpUser }}
+  SMTP_USER: {{ . | quote }}
+  {{- end }}
+  SMTP_STARTTLS: {{ .Values.notifications.email.smtpStartTls | quote }}
+  {{- with .Values.notifications.email.from }}
+  REPORT_EMAIL_FROM: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.notifications.email.to }}
+  REPORT_EMAIL_TO: {{ join "," . | quote }}
+  {{- end }}

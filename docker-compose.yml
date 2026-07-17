@@ -1,0 +1,87 @@
+# Local one-command run:  docker compose up --build   →  http://localhost:8000
+#
+# Defaults to DEMO mode (bundled sample CSVs, no GitHub secrets) backed by a
+# first-class Postgres. To run against real GitHub billing, copy .env.example to
+# .env and fill it in, then `docker compose up`.
+#
+# SQLite fallback: unset DATABASE_URL (and drop the `db` service) to use the
+# file-backed SQLite store on the mounted volume instead — meant for quick local
+# poking, not production.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-gud}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-gud}"
+      POSTGRES_DB: "${POSTGRES_DB:-gud}"
+    volumes:
+      - github-usage-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gud} -d ${POSTGRES_DB:-gud}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  github-usage-dashboard:
+    build:
+      context: .
+      target: runtime
+    image: github-usage:dev
+    # Bind to loopback: the API has no built-in auth, so don't expose it on all
+    # interfaces. Put it behind an auth proxy (e.g. Cloudflare Access) to publish.
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # demo | live  (auto-detected from creds if unset; forced to demo here so
+      # a bare `up` is always populated).
+      APP_MODE: "${APP_MODE:-demo}"
+
+      # First-class datastore (report cache + notification log).
+      DATABASE_URL: "${DATABASE_URL:-postgresql://gud:gud@db:5432/gud}"
+
+      # --- GitHub billing scope (set either / both for live mode) ---
+      GITHUB_ORG: "${GITHUB_ORG:-}"
+      GITHUB_ENTERPRISE: "${GITHUB_ENTERPRISE:-}"
+      GITHUB_API_BASE: "${GITHUB_API_BASE:-https://api.github.com}"
+
+      # --- GitHub App auth (default) ---
+      GITHUB_APP_ID: "${GITHUB_APP_ID:-}"
+      GITHUB_APP_INSTALLATION_ID: "${GITHUB_APP_INSTALLATION_ID:-}"
+      GITHUB_APP_PRIVATE_KEY: "${GITHUB_APP_PRIVATE_KEY:-}"
+      # --- or a PAT override (takes precedence; needed for enterprise billing) ---
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+
+      # --- notification channels (each enabled only when configured) ---
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
+      TEAMS_WEBHOOK_URL: "${TEAMS_WEBHOOK_URL:-}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      REPORT_EMAIL_FROM: "${REPORT_EMAIL_FROM:-}"
+      REPORT_EMAIL_TO: "${REPORT_EMAIL_TO:-}"
+
+      # --- scheduled delivery (5-field cron; empty = off) ---
+      SCHEDULE_DAILY_CRON: "${SCHEDULE_DAILY_CRON:-}"
+      SCHEDULE_WEEKLY_CRON: "${SCHEDULE_WEEKLY_CRON:-}"
+      SCHEDULE_MONTHLY_CRON: "${SCHEDULE_MONTHLY_CRON:-}"
+      SCHEDULE_TIMEZONE: "${SCHEDULE_TIMEZONE:-UTC}"
+
+      # Public URL used in report "Open dashboard" links.
+      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8000}"
+
+      # SQLite fallback path (used only when DATABASE_URL is empty).
+      DB_PATH: "/var/lib/github-usage/app.db"
+      CACHE_TTL_SECONDS: "${CACHE_TTL_SECONDS:-3600}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    volumes:
+      - github-usage-data:/var/lib/github-usage
+    restart: unless-stopped
+
+volumes:
+  github-usage-data:
+  github-usage-pg:

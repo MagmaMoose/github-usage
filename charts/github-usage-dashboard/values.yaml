@@ -1,0 +1,205 @@
+# github-usage-dashboard — Helm values.
+#
+# The dashboard runs as a SINGLE replica: it owns one SQLite DB (the report
+# cache + notification log) on a RWO PVC. The chart pins replicas=1 with a
+# Recreate strategy so the PVC isn't held during a rollout.
+
+image:
+  repository: ghcr.io/magmamoose/github-usage
+  tag: ""                 # defaults to .Chart.appVersion when empty
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  # - name: ghcr-pull-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automount: false        # the app doesn't call the k8s API
+
+# ----------------------------------------------------------------------------
+# GitHub billing scope + auth.
+#
+# Set `org`, `enterprise`, or both. `appId` / `installationId` / `apiBase` are
+# non-secret and rendered into the ConfigMap; the App private key and any PAT
+# are SECRETS (see `secrets` / `externalSecret` below).
+# ----------------------------------------------------------------------------
+github:
+  org: ""                 # e.g. "acme-eng"
+  enterprise: ""          # e.g. "acme"
+  apiBase: "https://api.github.com"   # GHES: https://ghe.example.com/api/v3
+  appId: ""               # GitHub App ID (non-secret)
+  installationId: ""      # GitHub App installation ID (non-secret)
+
+# ----------------------------------------------------------------------------
+# Datastore (report cache + notification log). Postgres is FIRST-CLASS and
+# recommended for production; SQLite on the PVC below is the fallback used only
+# when no Postgres DSN is provided.
+#
+# The DSN is a SECRET (it holds a password), so provide it one of three ways:
+#   1. externalSecret.data: map DATABASE_URL <- your store (recommended), or
+#   2. database.url: set the DSN here (chart-managed Secret; dev/testing), or
+#   3. secrets.existingSecretName: include DATABASE_URL in your own Secret.
+# Leave all empty to fall back to SQLite on the PVC.
+# ----------------------------------------------------------------------------
+database:
+  url: ""   # e.g. postgresql://gud:pass@postgres.db.svc:5432/github_usage
+
+# ----------------------------------------------------------------------------
+# Non-secret app config -> ConfigMap.
+# ----------------------------------------------------------------------------
+config:
+  # Public URL used in report "Open dashboard" links (usually == ingress host).
+  publicUrl: ""
+  cacheTtlSeconds: 3600
+  logLevel: "INFO"
+
+# ----------------------------------------------------------------------------
+# Scheduled report delivery. 5-field cron; empty = disabled. Evaluated in `timezone`.
+#   daily 08:00 -> "0 8 * * *"   Mondays 09:00 -> "0 9 * * 1"   1st 07:00 -> "0 7 1 * *"
+# ----------------------------------------------------------------------------
+schedule:
+  daily: ""
+  weekly: ""
+  monthly: ""
+  timezone: "UTC"
+
+# ----------------------------------------------------------------------------
+# Notification channels. Non-secret bits (SMTP host/port/user/from, recipients)
+# live here; the Slack/Teams webhook URLs and SMTP password are SECRETS.
+# A channel is active only when its config is present.
+# ----------------------------------------------------------------------------
+notifications:
+  email:
+    smtpHost: ""
+    smtpPort: 587
+    smtpUser: ""
+    smtpStartTls: true
+    from: ""
+    to: []                # ["team@example.com", "billing@example.com"]
+
+# ----------------------------------------------------------------------------
+# Secrets — the env vars that must not be in plaintext config. Choose ONE source:
+#
+#   1. externalSecret.enabled=true  -> projected from an external store
+#      (OCI Vault / etc. via external-secrets). RECOMMENDED in-cluster.
+#   2. secrets.existingSecretName    -> a Secret you manage out-of-band.
+#   3. secrets.create=true + data    -> chart-managed plaintext (dev/testing).
+#
+# Recognised keys (all optional):
+#   DATABASE_URL, GITHUB_APP_PRIVATE_KEY, GITHUB_TOKEN,
+#   SLACK_WEBHOOK_URL, TEAMS_WEBHOOK_URL, SMTP_PASSWORD
+# ----------------------------------------------------------------------------
+secrets:
+  create: false
+  existingSecretName: ""
+  data: {}
+    # GITHUB_APP_PRIVATE_KEY: |
+    #   -----BEGIN RSA PRIVATE KEY-----
+    #   ...
+    #   -----END RSA PRIVATE KEY-----
+    # SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/..."
+    # TEAMS_WEBHOOK_URL: "https://...webhook.office.com/..."
+    # SMTP_PASSWORD: "..."
+
+externalSecret:
+  enabled: false
+  # Stable external-secrets.io/v1 API (GA since ESO v0.14). Set to
+  # external-secrets.io/v1beta1 only if your cluster runs an older operator.
+  apiVersion: external-secrets.io/v1
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: oci-vault
+    kind: ClusterSecretStore
+  # Map app env-var names <- remote store keys.
+  data: []
+    # - secretKey: GITHUB_APP_PRIVATE_KEY
+    #   remoteRef:
+    #     key: github-usage-app-private-key
+    # - secretKey: SLACK_WEBHOOK_URL
+    #   remoteRef:
+    #     key: github-usage-slack-webhook
+
+# ----------------------------------------------------------------------------
+# Persistence — PVC at /var/lib/github-usage for the SQLite FALLBACK store. Only
+# used when no Postgres DSN is set (see `database` above). Harmless to leave on
+# when using Postgres (the volume just goes unused); set enabled=false to drop it.
+# ----------------------------------------------------------------------------
+persistence:
+  enabled: true
+  storageClassName: ""    # "" = cluster default
+  accessModes: [ReadWriteOnce]
+  size: 1Gi
+  annotations: {}
+
+# ----------------------------------------------------------------------------
+# Service + Ingress.
+#
+# For the magmamoose stack the ingress is DNS-only: a cloudflared tunnel
+# terminates the hostname at this Service, and external-dns publishes the record
+# from the annotations. Cloudflare Access gates the hostname. See the example
+# annotations below.
+# ----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # external-dns.alpha.kubernetes.io/hostname: "usage.magmamoose.com"
+    # external-dns.alpha.kubernetes.io/target: "<tunnel-id>.cfargotunnel.com"
+    # external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+  hosts:
+    - host: usage.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: usage-tls
+    #   hosts: [usage.example.com]
+
+# ----------------------------------------------------------------------------
+# Pod / container settings.
+# ----------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# Probes hit /health.
+livenessProbe:
+  initialDelaySeconds: 20
+  periodSeconds: 30
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+extraEnv: []
+  # - name: HTTP_TIMEOUT
+  #   value: "30"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,27 @@
+# Keep the build context small + reproducible.
+.git
+.github
+.claude
+
+# Node — reinstalled from the lockfile inside the web stage.
+node_modules
+dist
+
+# Python — deps come from requirements.txt inside the runtime stage.
+backend/.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+
+# Local/dev cruft
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vscode
+.idea
+charts
+docs
+PERFORMANCE_AUDIT.md

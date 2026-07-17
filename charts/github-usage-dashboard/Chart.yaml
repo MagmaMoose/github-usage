@@ -1,0 +1,28 @@
+apiVersion: v2
+name: github-usage-dashboard
+description: |
+  A long-lived, self-hosted GitHub usage dashboard. A single FastAPI process
+  auto-fetches GitHub billing usage for a configured org and/or enterprise,
+  serves the interactive React dashboard, and delivers summary reports to
+  Slack, Microsoft Teams, and Email — on demand or on a daily/weekly/monthly
+  schedule.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/magmamoose/github-usage
+sources:
+  - https://github.com/magmamoose/github-usage
+keywords:
+  - github
+  - billing
+  - usage
+  - copilot
+  - actions
+  - dashboard
+  - fastapi
+maintainers:
+  - name: Magmamoose
+icon: https://avatars.githubusercontent.com/magmamoose
+annotations:
+  # Runs as a single replica — one SQLite writer on a RWO PVC (see values.yaml).
+  artifacthub.io/license: MIT
