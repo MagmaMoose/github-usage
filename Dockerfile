@@ -38,11 +38,11 @@ COPY backend/app /app/app
 COPY examples /app/demo-data
 COPY --from=web /web/dist /app/web
 
-# Non-root runtime user, pinned to uid/gid 1000 so it matches the Helm chart's
-# securityContext (runAsUser/runAsGroup/fsGroup: 1000). The SQLite cache/log DB
-# lives on a PVC at /var/lib/github-usage (see the Helm chart).
-RUN groupadd --gid 1000 app \
-    && useradd --uid 1000 --gid 1000 --create-home --home-dir /home/app \
+# Non-root runtime user, pinned to uid/gid 10001 so it matches the Helm chart's
+# securityContext (runAsUser/runAsGroup/fsGroup: 10001) and avoids collisions with
+# host/system UIDs. The SQLite cache/log DB lives on a PVC at /var/lib/github-usage.
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/app \
        --shell /usr/sbin/nologin app \
     && mkdir -p /var/lib/github-usage \
     && chown -R app:app /var/lib/github-usage /home/app /app

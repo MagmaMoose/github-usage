@@ -176,9 +176,11 @@ resources:
 
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: 1000
+  # High UID/GID (>10000) to avoid collisions with host/system users; matches the
+  # `app` user baked into the image.
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
   seccompProfile:
     type: RuntimeDefault
 

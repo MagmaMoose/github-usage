@@ -1,7 +1,14 @@
+# Reviewed KICS suppressions (deliberate for a GitOps-deployed chart):
+#   caa3479d/7c81d34c — imagePullPolicy/digest: the image tag is managed by Flux
+#     image automation (GitOps); pinning a digest in the chart defeats that.
+#   4a20ebac/48a5beba — LimitRange/ResourceQuota are namespace-level governance,
+#     not the concern of an application chart.
+# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "gud.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "gud.labels" . | nindent 4 }}
 spec:
@@ -16,6 +23,8 @@ spec:
       labels:
         {{- include "gud.selectorLabels" . | nindent 8 }}
       annotations:
+        # Confine the container under the default AppArmor profile.
+        container.apparmor.security.beta.kubernetes.io/dashboard: runtime/default
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- if eq (include "gud.managedSecret" .) "true" }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
@@ -66,8 +75,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/github-usage
+              readOnly: false   # SQLite fallback writes here
             - name: tmp
               mountPath: /tmp
+              readOnly: false
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
