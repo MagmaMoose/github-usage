@@ -913,4 +913,17 @@ describe('parseCSV — dateRange normalization', () => {
     // The exact crash condition: building a datetime from the range must be valid.
     expect(Number.isNaN(new Date(report.dateRange.end + 'T00:00:00').getTime())).toBe(false);
   });
+
+  it('slices full-ISO lastPushedDate timestamps to YYYY-MM-DD (GHAS reports)', () => {
+    // GHAS active-committers CSVs can carry a full ISO timestamp in the
+    // `Last pushed date` column; it must normalize the same way as `date`.
+    const csv = [
+      'User login,Organization / repository,Last pushed date,Last pushed email',
+      'octocat,acme/console,2026-03-27T15:21:00Z,octocat@users.noreply.github.com',
+    ].join('\n');
+    const report = parseCSV(csv, 'ghas-active-committers.csv');
+    expect(report.dateRange.start).toBe('2026-03-27');
+    expect(report.dateRange.end).toBe('2026-03-27');
+    expect(Number.isNaN(new Date(report.dateRange.end + 'T00:00:00').getTime())).toBe(false);
+  });
 });
