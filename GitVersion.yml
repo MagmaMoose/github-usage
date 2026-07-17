@@ -1,0 +1,42 @@
+# GitVersion configuration for Diatreme's `versioning-tool: gitversion` release
+# (.github/workflows/release.yml). Without this file the release job fails with
+# "GitVersion configuration file not found at GitVersion.yml".
+# https://gitversion.net/docs/reference/configuration
+#
+# TBD (single trunk): every merge to main produces a new version — feat/ bumps
+# the minor, fix/ & hotfix/ bump the patch. Tags are v-prefixed (vX.Y.Z), which
+# is what the Flux ImagePolicy in CalebSargeant/infra tracks for the GHCR image.
+workflow: GitFlow/v1
+
+branches:
+  main:
+    regex: ^(main|master)$
+    mode: ContinuousDelivery
+    increment: Patch
+    prevent-increment-of-merged-branch-version: true
+
+  feat:
+    regex: ^feat/
+    mode: ContinuousDelivery
+    increment: Minor
+    source-branches:
+      - main
+
+  fix:
+    regex: ^fix/
+    mode: ContinuousDelivery
+    increment: Patch
+    source-branches:
+      - main
+
+  hotfix:
+    regex: ^hotfix/
+    mode: ContinuousDelivery
+    increment: Patch
+    source-branches:
+      - main
+
+# Tag prefix (GitVersion adds the v).
+tag-prefix: '[vV]'
+
+assembly-versioning-scheme: MajorMinorPatch
