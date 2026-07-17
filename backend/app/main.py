@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -58,7 +57,7 @@ def create_app() -> FastAPI:
 
     store = build_store(settings)
     reports = ReportService(settings, store)
-    dashboard_url = os.environ.get("PUBLIC_URL", "").strip()
+    dashboard_url = settings.public_url
     scheduler = ReportScheduler(settings, store, reports, dashboard_url)
 
     logger.info(

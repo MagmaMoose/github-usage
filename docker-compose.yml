@@ -76,7 +76,10 @@ services:
       # --- GitHub App auth (default) ---
       GITHUB_APP_ID: "${GITHUB_APP_ID:-}"
       GITHUB_APP_INSTALLATION_ID: "${GITHUB_APP_INSTALLATION_ID:-}"
+      # Provide the App private key inline (PEM) …
       GITHUB_APP_PRIVATE_KEY: "${GITHUB_APP_PRIVATE_KEY:-}"
+      # … or mount it as a file and point at the path instead.
+      GITHUB_APP_PRIVATE_KEY_PATH: "${GITHUB_APP_PRIVATE_KEY_PATH:-}"
       # --- or a PAT override (takes precedence; needed for enterprise billing) ---
       GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
 

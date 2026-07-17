@@ -180,6 +180,10 @@ class Settings:
 
     log_level: str = "INFO"
 
+    # Public URL shown as the "Open dashboard" link in reports (usually the
+    # ingress host). Empty = omit the link.
+    public_url: str = ""
+
     @property
     def is_demo(self) -> bool:
         return self.mode == "demo"
@@ -241,6 +245,7 @@ def load_settings() -> Settings:
         cache_ttl_seconds=_int("CACHE_TTL_SECONDS", 3600),
         http_timeout=float(_env("HTTP_TIMEOUT", "30") or "30"),
         log_level=_env("LOG_LEVEL", "INFO") or "INFO",
+        public_url=_env("PUBLIC_URL"),
     )
 
 
