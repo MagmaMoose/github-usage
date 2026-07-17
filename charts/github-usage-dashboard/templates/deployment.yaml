@@ -5,7 +5,11 @@
 #     not the concern of an application chart.
 #   b7652612 — the `data` volumeMount can't be readOnly: it's the app's writable
 #     state dir (SQLite fallback DB); readOnly:true would break it.
-# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424,b7652612-de4e-4466-a0bf-1cd81f0c6063
+#   8b36775e — AppArmor: not all target nodes enable AppArmor (e.g. the OCI nodes
+#     on the firefly cluster reject `runtime/default` with "AppArmor is not
+#     enabled on the host"), so requiring it here makes pods unschedulable. Rely
+#     on seccompProfile RuntimeDefault + dropped caps instead.
+# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424,b7652612-de4e-4466-a0bf-1cd81f0c6063,8b36775e-183d-4d46-b0f7-96a6f34a723f
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,8 +29,6 @@ spec:
       labels:
         {{- include "gud.selectorLabels" . | nindent 8 }}
       annotations:
-        # Confine the container under the default AppArmor profile.
-        container.apparmor.security.beta.kubernetes.io/dashboard: runtime/default
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- if eq (include "gud.managedSecret" .) "true" }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
