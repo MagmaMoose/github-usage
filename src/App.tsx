@@ -6,6 +6,7 @@ import { useReport } from './context/useReport';
 import { ReportPageLayout } from './components/ReportPageLayout';
 import { CsvManager } from './components/CsvManager';
 import { InsightsSidebar } from './components/InsightsSidebar';
+import { ServerControls } from './components/ServerControls';
 import { OnboardingProvider } from './components/onboarding';
 import {
   getReportSchema,
@@ -21,6 +22,7 @@ import { useShareHydration } from './hooks/useShareHydration';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { useProductNavigation } from './hooks/useProductNavigation';
 import { useSidebarCollapse } from './hooks/useSidebarCollapse';
+import { useServerData } from './hooks/useServerData';
 import styles from './App.module.css';
 
 function AppContent() {
@@ -39,6 +41,7 @@ function AppContent() {
     searchQuery,
     filters,
     groupByColumn,
+    isHydrating,
   } = useReport();
 
   const { activePage, setActivePage } = usePageNavigation({
@@ -93,6 +96,11 @@ function AppContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useShareHydration({ addReport, setGroupByColumn, setTimeBucket, setPeriodKey, setSearchQuery, setFilter });
+
+  // Auto-load GitHub usage from the FastAPI backend (if present). No-op on
+  // static hosting — the dashboard then behaves as the pure client-side app.
+  const serverData = useServerData({ addReport, ready: !isHydrating });
+
   useBrowserTitle(activeReport);
   usePeriodInference(activeReport, periodKey, setPeriodKey);
 
@@ -141,6 +149,7 @@ function AppContent() {
         </PageLayout.Pane>
       )}
       <PageLayout.Content width="xlarge" padding="normal" className={styles.pageContent}>
+        <ServerControls state={serverData} />
         {loadingSamples && (
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
