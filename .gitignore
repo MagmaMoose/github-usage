@@ -14,6 +14,20 @@ dist-ssr
 coverage
 .angular
 
+# Python backend
+__pycache__/
+*.py[cod]
+.venv/
+backend/.venv/
+backend/.local/
+.pytest_cache/
+.ruff_cache/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
