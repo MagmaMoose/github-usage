@@ -501,7 +501,7 @@ export function ReportPageLayout({ schema, allowedReportTypes, metricOptions }: 
               <>
                 {formatDate(activeReport.dateRange.start)} —{' '}
                 <RelativeTime
-                  datetime={activeReport.dateRange.end + 'T00:00:00'}
+                  datetime={activeReport.dateRange.end.slice(0, 10) + 'T00:00:00'}
                   prefix=""
                   threshold="P30D"
                   tense="past"

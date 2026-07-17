@@ -220,8 +220,8 @@ export function parseCSV(csvText: string, fileName: string): ParsedReport {
 
   const dates = rows
     .map((r) => {
-      if ('date' in r) return r.date as string;
-      if ('lastPushedDate' in r) return r.lastPushedDate;
+      if ('date' in r) return (r.date as string).slice(0, 10);
+      if ('lastPushedDate' in r) return (r.lastPushedDate as string).slice(0, 10);
       if ('reportTime' in r) return (r.reportTime as string).slice(0, 10);
       if ('lastActivityAt' in r) return (r.lastActivityAt as string).slice(0, 10);
       if ('createdAt' in r) return (r.createdAt as string).slice(0, 10);
