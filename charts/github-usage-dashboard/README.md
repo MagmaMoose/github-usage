@@ -94,6 +94,16 @@ Put a Cloudflare Access policy on the hostname — the dashboard has no built-in
 
 ## Scheduled reports
 
+Schedules are configured **in the dashboard** — the gear button opens the
+"Scheduled reports" editor where you turn daily / weekly / monthly delivery on or
+off, pick the time, weekday / day-of-month, timezone, and which channels each
+schedule targets. Edits are persisted in the datastore and take effect
+immediately (no redeploy).
+
+The `schedule` values below only **seed** the initial config on a fresh
+database, so a GitOps deploy can ship a sensible default; after first boot the
+in-app configuration is authoritative.
+
 ```yaml
 schedule:
   daily: "0 8 * * *"      # 08:00 every day
@@ -108,7 +118,8 @@ notifications:
 ```
 
 Slack/Teams webhooks + the SMTP password come from the Secret. A channel is
-active only when its config is present.
+active only when its config is present — a schedule can only deliver to channels
+that are configured.
 
 ## Values
 

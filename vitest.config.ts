@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // @primer/react ships an ESM `.css` import that Node can't load when the
+    // dep is externalized; inline it so Vite transforms it for component tests.
+    server: { deps: { inline: ['@primer/react'] } },
     coverage: {
       provider: 'v8',
       include: ['src/lib/**'],

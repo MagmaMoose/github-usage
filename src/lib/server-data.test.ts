@@ -4,6 +4,9 @@ import {
   fetchServerReports,
   refreshServerReports,
   sendServerReport,
+  getSchedules,
+  putSchedules,
+  type SchedulePutBody,
 } from './server-data';
 
 /** Build a minimal fetch Response stand-in. */
@@ -160,5 +163,76 @@ describe('sendServerReport', () => {
   it('returns null when the send fails', async () => {
     fetchMock.mockResolvedValueOnce(res({}, { ok: false, status: 500 }));
     expect(await sendServerReport(['email'])).toBeNull();
+  });
+});
+
+describe('getSchedules', () => {
+  it('returns the parsed config on success', async () => {
+    fetchMock.mockResolvedValueOnce(
+      res({ timezone: 'UTC', entries: {}, channels_enabled: ['slack'], weekdays: ['mon'], jobs: [] }),
+    );
+    const cfg = await getSchedules();
+    expect(cfg?.timezone).toBe('UTC');
+    expect(cfg?.channels_enabled).toEqual(['slack']);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/schedules');
+  });
+
+  it('returns null when no backend is present', async () => {
+    fetchMock.mockResolvedValueOnce(res({}, { ok: false, status: 404 }));
+    expect(await getSchedules()).toBeNull();
+  });
+});
+
+describe('putSchedules', () => {
+  const body: SchedulePutBody = {
+    timezone: 'UTC',
+    entries: {
+      daily: { enabled: true, hour: 9, minute: 0, day_of_week: 'mon', day_of_month: 1, cron: '', channels: null },
+      weekly: { enabled: false, hour: 9, minute: 0, day_of_week: 'mon', day_of_month: 1, cron: '', channels: null },
+      monthly: { enabled: false, hour: 9, minute: 0, day_of_week: 'mon', day_of_month: 1, cron: '', channels: null },
+    },
+  };
+
+  it('PUTs JSON and returns { ok: true, config } on success', async () => {
+    fetchMock.mockResolvedValueOnce(
+      res({ timezone: 'UTC', entries: body.entries, channels_enabled: [], weekdays: [], jobs: [] }),
+    );
+    const result = await putSchedules(body);
+    expect(result).toEqual({ ok: true, config: expect.objectContaining({ timezone: 'UTC' }) });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/schedules');
+    expect(init.method).toBe('PUT');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body).timezone).toBe('UTC');
+  });
+
+  it('surfaces the validation message on a 400', async () => {
+    fetchMock.mockResolvedValueOnce(
+      res({ detail: 'daily.hour must be between 0 and 23' }, { ok: false, status: 400 }),
+    );
+    const result = await putSchedules(body);
+    expect(result).toEqual({ ok: false, error: 'daily.hour must be between 0 and 23' });
+  });
+
+  it('falls back to a generic message when a 400 has no detail', async () => {
+    fetchMock.mockResolvedValueOnce(res({}, { ok: false, status: 400 }));
+    const result = await putSchedules(body);
+    expect(result).toEqual({ ok: false, error: 'Invalid schedule' });
+  });
+
+  it('reports missing channels on a 503', async () => {
+    fetchMock.mockResolvedValueOnce(res({}, { ok: false, status: 503 }));
+    const result = await putSchedules(body);
+    expect(result).toEqual({ ok: false, error: 'No notification channels configured' });
+  });
+
+  it('returns null when the server is unreachable', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network'));
+    expect(await putSchedules(body)).toBeNull();
+  });
+
+  it('returns null on an unexpected status', async () => {
+    fetchMock.mockResolvedValueOnce(res({}, { ok: false, status: 500 }));
+    expect(await putSchedules(body)).toBeNull();
   });
 });

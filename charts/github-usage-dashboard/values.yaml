@@ -58,7 +58,14 @@ config:
   logLevel: "INFO"
 
 # ----------------------------------------------------------------------------
-# Scheduled report delivery. 5-field cron; empty = disabled. Evaluated in `timezone`.
+# Scheduled report delivery.
+#
+# These values only SEED the schedule on a fresh database. Once the app is
+# running, schedules are edited in the dashboard itself (the gear button ->
+# "Scheduled reports"), persisted in the datastore, and take effect immediately
+# — so after first boot the in-app config wins and changing these has no effect.
+#
+# 5-field cron; empty = disabled. Evaluated in `timezone`.
 #   daily 08:00 -> "0 8 * * *"   Mondays 09:00 -> "0 9 * * 1"   1st 07:00 -> "0 7 1 * *"
 # ----------------------------------------------------------------------------
 schedule:

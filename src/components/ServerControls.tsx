@@ -7,16 +7,18 @@
  * On static hosting the backend is absent, `state.available` is false, and this
  * renders nothing.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ActionList, ActionMenu, IconButton, Label, Spinner, Text, Tooltip } from '@primer/react';
 import {
   AlertFillIcon,
   CheckCircleFillIcon,
   ClockIcon,
+  GearIcon,
   PaperAirplaneIcon,
   SyncIcon,
 } from '@primer/octicons-react';
 import type { ServerDataState } from '../hooks/useServerData';
+import { ScheduleDialog } from './ScheduleDialog';
 
 const CHANNEL_LABELS: Record<string, string> = {
   slack: 'Slack',
@@ -35,6 +37,7 @@ function relativeTime(epochSeconds: number | null): string {
 
 export function ServerControls({ state }: { state: ServerDataState }) {
   const { available, status, source, fetchedAt, loading, refreshing, sending, sendResult, error } = state;
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const channels = status?.channels ?? [];
   const scheduleSummary = useMemo(() => {
@@ -51,6 +54,7 @@ export function ServerControls({ state }: { state: ServerDataState }) {
   if (!available) return null;
 
   return (
+    <>
     <div
       style={{
         position: 'absolute',
@@ -162,6 +166,24 @@ export function ServerControls({ state }: { state: ServerDataState }) {
           </span>
         </Tooltip>
       )}
+
+      <Tooltip text="Configure scheduled reports" direction="s">
+        <IconButton
+          aria-label="Configure scheduled reports"
+          icon={GearIcon}
+          size="small"
+          variant="invisible"
+          onClick={() => setScheduleOpen(true)}
+        />
+      </Tooltip>
     </div>
+
+    {scheduleOpen && (
+      <ScheduleDialog
+        onDismiss={() => setScheduleOpen(false)}
+        onSaved={() => void state.reloadStatus()}
+      />
+    )}
+    </>
   );
 }

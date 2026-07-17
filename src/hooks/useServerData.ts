@@ -35,6 +35,8 @@ export interface ServerDataState {
   error: string | null;
   refresh: () => Promise<void>;
   send: (channels?: string[]) => Promise<void>;
+  /** Re-read /api/status (e.g. after editing schedules) so the toolbar reflects it. */
+  reloadStatus: () => Promise<void>;
 }
 
 export function useServerData({ addReport, ready }: UseServerDataArgs): ServerDataState {
@@ -100,6 +102,11 @@ export function useServerData({ addReport, ready }: UseServerDataArgs): ServerDa
     }
   }, [addReport]);
 
+  const reloadStatus = useCallback(async () => {
+    const st = await fetchServerStatus();
+    if (st) setStatus(st);
+  }, []);
+
   const send = useCallback(async (channels?: string[]) => {
     setSending(true);
     setSendResult(null);
@@ -125,5 +132,6 @@ export function useServerData({ addReport, ready }: UseServerDataArgs): ServerDa
     error,
     refresh,
     send,
+    reloadStatus,
   };
 }
