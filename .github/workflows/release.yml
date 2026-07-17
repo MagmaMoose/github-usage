@@ -62,6 +62,10 @@ jobs:
         uses: magmamoose/diatreme@f31adec7d62907cc81b9b880cd776e24fcdcbaf1 # v2.0.0
         with:
           mode: ci
+          # Build multi-arch so the arm64 variant is verified BEFORE merge (the
+          # cluster's OCI workers are arm64). Diatreme's `platforms` input defaults
+          # to linux/amd64 and overrides docker-bake.hcl's default, so set it here.
+          platforms: linux/amd64,linux/arm64
           image_name: ${{ steps.detect.outputs.image_name }}
       # Default-branch push (or manual dispatch): version + release.
       - if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -72,4 +76,7 @@ jobs:
           environment: prod
           environments: '["prod"]'
           prerelease-identifiers: '{}'
+          # Publish a multi-arch manifest (amd64 + arm64) so the image runs on the
+          # cluster's arm64 OCI workers, not just amd64. See the ci step above.
+          platforms: linux/amd64,linux/arm64
           image_name: ${{ steps.detect.outputs.image_name }}
