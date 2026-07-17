@@ -107,8 +107,21 @@ class GitHubClient:
 
     # --- GHAS active committers -----------------------------------------
     async def org_advanced_security(self, org: str) -> dict:
-        # Not paginated the same way; the payload embeds a `repositories` array.
-        return await self._get(f"/orgs/{org}/settings/billing/advanced-security")
+        # The payload embeds a `repositories` array (not paginated the usual way).
+        # GitHub's standalone GHAS billing (Code Security / Secret Protection)
+        # *requires* naming the product, while bundled/legacy plans reject the
+        # param. So make the bare call, and only when the API explicitly asks for
+        # the product (HTTP 422), retry for code_security — the classic
+        # active-committers metric this report has always tracked.
+        path = f"/orgs/{org}/settings/billing/advanced-security"
+        try:
+            return await self._get(path)
+        except GitHubError as exc:
+            if exc.status == 422 and "advanced_security_product" in str(exc):
+                return await self._get(
+                    path, {"advanced_security_product": "code_security"}
+                )
+            raise
 
     # --- Enterprise consumed licenses -----------------------------------
     async def enterprise_consumed_licenses(self, enterprise: str) -> list[dict]:
