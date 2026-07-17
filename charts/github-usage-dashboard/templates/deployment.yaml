@@ -1,0 +1,105 @@
+# Reviewed KICS suppressions (deliberate for a GitOps-deployed chart):
+#   caa3479d/7c81d34c — imagePullPolicy/digest: the image tag is managed by Flux
+#     image automation (GitOps); pinning a digest in the chart defeats that.
+#   4a20ebac/48a5beba — LimitRange/ResourceQuota are namespace-level governance,
+#     not the concern of an application chart.
+#   b7652612 — the `data` volumeMount can't be readOnly: it's the app's writable
+#     state dir (SQLite fallback DB); readOnly:true would break it.
+# kics-scan disable=caa3479d-885d-4882-9aac-95e5e78ef5c2,7c81d34c-8e5a-402b-9798-9f442630e678,4a20ebac-1060-4c81-95d1-1f7f620e983b,48a5beba-e4c0-4584-a2aa-e6894e4cf424,b7652612-de4e-4466-a0bf-1cd81f0c6063
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gud.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gud.labels" . | nindent 4 }}
+spec:
+  replicas: 1                           # single SQLite writer — see values.yaml.
+  strategy:
+    type: Recreate                      # RWO PVC; don't hold it during rollout.
+  selector:
+    matchLabels:
+      {{- include "gud.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gud.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Confine the container under the default AppArmor profile.
+        container.apparmor.security.beta.kubernetes.io/dashboard: runtime/default
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if eq (include "gud.managedSecret" .) "true" }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "gud.serviceAccountName" . }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: dashboard
+          image: {{ include "gud.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: {{ include "gud.fullname" . }}-config
+            {{- $secret := include "gud.secretName" . }}
+            {{- if $secret }}
+            - secretRef:
+                name: {{ $secret }}
+            {{- end }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/github-usage
+              readOnly: false   # SQLite fallback writes here
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "gud.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

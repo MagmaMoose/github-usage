@@ -1,0 +1,41 @@
+github-usage-dashboard {{ .Chart.AppVersion }} is rolling out as
+  {{ include "gud.fullname" . }} in namespace {{ .Release.Namespace }}.
+
+Watch the rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "gud.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "gud.fullname" . }}
+
+Reach it locally:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "gud.fullname" . }} 8000:{{ .Values.service.port }}
+  open http://localhost:8000
+
+{{ if .Values.ingress.enabled -}}
+Ingress hosts:
+{{- range .Values.ingress.hosts }}
+  - https://{{ .host }}
+{{- end }}
+{{- else -}}
+Ingress is disabled (ingress.enabled=false) — use port-forward, or enable it.
+{{- end }}
+
+{{- if not (or .Values.github.org .Values.github.enterprise) }}
+
+WARNING: neither github.org nor github.enterprise is set. The app will start but
+has no billing scope to fetch. Set at least one in your values.
+{{- end }}
+
+{{- $secret := include "gud.secretName" . }}
+{{- if not $secret }}
+
+NOTE: no secret source configured (secrets.create / secrets.existingSecretName /
+externalSecret.enabled all off). Without GITHUB_APP_PRIVATE_KEY or GITHUB_TOKEN
+the app can't authenticate to GitHub and will serve demo/empty data.
+{{- end }}
+
+{{- if and (or .Values.schedule.daily .Values.schedule.weekly .Values.schedule.monthly) (not .Values.notifications.email.smtpHost) }}
+{{- if not $secret }}
+
+NOTE: a schedule is set but no notification channel appears configured — the
+scheduled jobs will run but have nowhere to send. Configure Slack/Teams/Email.
+{{- end }}
+{{- end }}
