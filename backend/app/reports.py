@@ -46,13 +46,16 @@ class ReportService:
     async def get_reports(self) -> dict[str, Any]:
         """Return cached reports if still fresh, else refresh. Shape:
         {"source", "fetched_at", "age_seconds", "reports": [{name,type,csv}]}."""
-        cached = self._store.load_reports()
+        # Store calls are synchronous (sqlite3 / sync psycopg pool); run them off
+        # the event loop so a DB read can't stall other requests — same pattern as
+        # the blocking SMTP send in notify/email.py.
+        cached = await asyncio.to_thread(self._store.load_reports)
         if self._is_fresh(cached):
             return self._envelope(cached)
         # Double-checked locking: a concurrent caller may have refreshed while we
         # waited for the lock, so re-read the cache before pulling again.
         async with self._refresh_lock:
-            cached = self._store.load_reports()
+            cached = await asyncio.to_thread(self._store.load_reports)
             if self._is_fresh(cached):
                 return self._envelope(cached)
             return await self._do_refresh()
@@ -64,14 +67,14 @@ class ReportService:
 
     async def _do_refresh(self) -> dict[str, Any]:
         if self._s.is_demo:
-            reports = self._load_demo_reports()
+            reports = await asyncio.to_thread(self._load_demo_reports)  # reads CSV files
             source = "demo"
         else:
             reports, transient = await self._fetch_live_reports()
             source = "live"
             # Never blow away a good cache with an all-empty failed pull.
             if not reports:
-                cached = self._store.load_reports()
+                cached = await asyncio.to_thread(self._store.load_reports)
                 if cached and cached["reports"]:
                     logger.warning("live refresh returned nothing; keeping prior cache")
                     return self._envelope(cached)
@@ -79,14 +82,14 @@ class ReportService:
             # not a permanent 401/403/404), keep the last-known-good copy from the
             # prior cache so one blip doesn't drop a report for a whole TTL.
             elif transient:
-                self._merge_prior(reports, transient)
-        fetched_at = self._store.save_reports(reports, source=source)
+                await self._merge_prior(reports, transient)
+        fetched_at = await asyncio.to_thread(self._store.save_reports, reports, source=source)
         return self._envelope({"reports": reports, "source": source, "fetched_at": fetched_at})
 
-    def _merge_prior(self, reports: list[dict[str, Any]], failed_names: set[str]) -> None:
+    async def _merge_prior(self, reports: list[dict[str, Any]], failed_names: set[str]) -> None:
         """Re-add prior-cache copies of reports that failed transiently this pull
         and aren't otherwise present, so a transient blip is self-healing."""
-        prior = self._store.load_reports()
+        prior = await asyncio.to_thread(self._store.load_reports)
         if not prior or not prior.get("reports"):
             return
         have = {r["name"] for r in reports}
@@ -95,8 +98,8 @@ class ReportService:
                 reports.append(old)
                 logger.warning("kept cached '%s' after a transient fetch failure", old["name"])
 
-    def peek_cached(self) -> dict[str, Any] | None:
-        cached = self._store.load_reports()
+    async def peek_cached(self) -> dict[str, Any] | None:
+        cached = await asyncio.to_thread(self._store.load_reports)
         return self._envelope(cached) if cached else None
 
     # --- live fetch -------------------------------------------------------

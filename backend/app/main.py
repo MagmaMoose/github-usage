@@ -12,6 +12,7 @@ to its drag-and-drop / demo behaviour.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -84,7 +85,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/status")
     async def status() -> JSONResponse:
-        cached = reports.peek_cached()
+        cached = await reports.peek_cached()
         return JSONResponse({
             "mode": settings.mode,
             "github": {
@@ -163,7 +164,8 @@ def create_app() -> FastAPI:
 
     @app.get("/api/notifications")
     async def notifications(limit: int = 50) -> JSONResponse:
-        return JSONResponse({"notifications": store.list_notifications(min(max(limit, 1), 200))})
+        rows = await asyncio.to_thread(store.list_notifications, min(max(limit, 1), 200))
+        return JSONResponse({"notifications": rows})
 
     # --- static SPA -------------------------------------------------------
     _mount_spa(app, settings.web_dir, logger)

@@ -12,6 +12,7 @@ moving part instead of two.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -45,9 +46,10 @@ class ReportScheduler:
         except Exception as exc:  # noqa: BLE001
             logger.error("scheduled refresh failed (%s): %s", trigger, type(exc).__name__)
             # Fall back to whatever is cached so a transient GitHub blip still reports.
-            envelope = self._reports.peek_cached()
+            envelope = await self._reports.peek_cached()
             if not envelope:
-                self._store.record_notification(
+                await asyncio.to_thread(
+                    self._store.record_notification,
                     trigger=trigger, channels=[], status="error",
                     detail={"error": "refresh failed and no cache"})
                 return

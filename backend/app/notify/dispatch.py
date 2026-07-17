@@ -34,7 +34,9 @@ async def send_report(
 
     if not active:
         result = {"status": "skipped", "reason": "no channels enabled", "results": []}
-        store.record_notification(trigger=trigger, channels=[], status="skipped", detail=result)
+        # Off the event loop: the store call is synchronous (sqlite3 / sync pool).
+        await asyncio.to_thread(
+            store.record_notification, trigger=trigger, channels=[], status="skipped", detail=result)
         return result
 
     summary = build_summary(reports, source=envelope.get("source", "unknown"))
@@ -65,6 +67,7 @@ async def send_report(
     oks = sum(1 for r in results if r.get("ok"))
     status = "ok" if oks == len(results) else ("partial" if oks else "error")
     detail = {"status": status, "summary": summary.as_dict(), "results": results}
-    store.record_notification(trigger=trigger, channels=active, status=status, detail=detail)
+    await asyncio.to_thread(
+        store.record_notification, trigger=trigger, channels=active, status=status, detail=detail)
     logger.info("report sent (%s) via %s -> %s", trigger, active, status)
     return detail

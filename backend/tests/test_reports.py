@@ -74,7 +74,7 @@ async def test_try_success_appends():
     assert out == [{"name": "r.csv", "type": "usage_report", "csv": "date,net_amount\n"}]
 
 
-def test_merge_prior_keeps_transiently_failed_report():
+async def test_merge_prior_keeps_transiently_failed_report():
     prior = {"reports": [
         {"name": "usage.csv", "type": "usage_report", "csv": "OLD-USAGE"},
         {"name": "seats.csv", "type": "copilot_seat_activity", "csv": "OLD-SEATS"},
@@ -83,15 +83,15 @@ def test_merge_prior_keeps_transiently_failed_report():
 
     # This pull got seats fresh but usage.csv failed transiently.
     reports = [{"name": "seats.csv", "type": "copilot_seat_activity", "csv": "NEW-SEATS"}]
-    svc._merge_prior(reports, {"usage.csv"})
+    await svc._merge_prior(reports, {"usage.csv"})
 
     by_name = {r["name"]: r["csv"] for r in reports}
     assert by_name["seats.csv"] == "NEW-SEATS"      # fresh copy kept
     assert by_name["usage.csv"] == "OLD-USAGE"      # prior copy restored
 
 
-def test_merge_prior_noop_without_prior_cache():
+async def test_merge_prior_noop_without_prior_cache():
     svc = _svc(None)
     reports = [{"name": "seats.csv", "type": "copilot_seat_activity", "csv": "NEW"}]
-    svc._merge_prior(reports, {"usage.csv"})
+    await svc._merge_prior(reports, {"usage.csv"})
     assert reports == [{"name": "seats.csv", "type": "copilot_seat_activity", "csv": "NEW"}]
