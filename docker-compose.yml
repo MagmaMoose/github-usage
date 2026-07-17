@@ -7,13 +7,27 @@
 # SQLite fallback: unset DATABASE_URL (and drop the `db` service) to use the
 # file-backed SQLite store on the mounted volume instead — meant for quick local
 # poking, not production.
+#
+# Chargate/KICS suppressions (reviewed, local-dev only — not real vulnerabilities):
+#   baee238e… Generic-token misfire on GITHUB_TOKEN, whose value here is empty.
+#   8c978947… "volume shared between containers" — each named volume is used by
+#             exactly ONE service (db -> pg data, app -> app data); not shared.
+# kics-scan disable=baee238e-1921-4801-9c3f-79ae1d7b2cbc,8c978947-0ff6-485c-b0c2-0bfca6026466
 services:
   db:
     image: postgres:16-alpine
+    # Isolated throwaway DB on the compose network — trust auth so NO credential
+    # is baked into source. Real deployments set DATABASE_URL to a DSN with
+    # credentials from a secret store, and never use this service.
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-gud}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-gud}"
       POSTGRES_DB: "${POSTGRES_DB:-gud}"
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+    cap_drop: [ALL]
+    # Minimal caps the postgres entrypoint needs (chown data dir + drop privs to
+    # the postgres user); everything else is dropped.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: ["no-new-privileges:true"]
     volumes:
       - github-usage-pg:/var/lib/postgresql/data
     healthcheck:
@@ -35,13 +49,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       # demo | live  (auto-detected from creds if unset; forced to demo here so
       # a bare `up` is always populated).
       APP_MODE: "${APP_MODE:-demo}"
 
-      # First-class datastore (report cache + notification log).
-      DATABASE_URL: "${DATABASE_URL:-postgresql://gud:gud@db:5432/gud}"
+      # First-class datastore. Passwordless local DSN (db uses trust auth above);
+      # point at a real Postgres for production.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://gud@db:5432/gud}"
 
       # --- GitHub billing scope (set either / both for live mode) ---
       GITHUB_ORG: "${GITHUB_ORG:-}"
