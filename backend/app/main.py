@@ -21,11 +21,18 @@ from fastapi import Body, Depends, FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
-from .config import load_settings
+from .config import Settings, load_settings
 from .notify.dispatch import send_report
 from .reports import ReportService
 from .scheduler import ReportScheduler
-from .store import build_store
+from .schedules import (
+    WEEKDAYS,
+    ScheduleError,
+    ScheduleModel,
+    load_model,
+    parse_model,
+)
+from .store import Store, build_store
 
 _VALID_CHANNELS = {"slack", "teams", "email"}
 
@@ -68,7 +75,10 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        scheduler.start()
+        # Load the persisted schedule (seeded from the SCHEDULE_* env vars on a
+        # fresh DB) off the event loop, then install the jobs.
+        model = await asyncio.to_thread(_load_or_seed_schedules, store, settings)
+        scheduler.start(model)
         try:
             yield
         finally:
@@ -95,13 +105,8 @@ def create_app() -> FastAPI:
             },
             "channels": settings.notify.enabled_channels(),
             "database": store.describe(),
-            "schedules": {
-                "daily": settings.schedule.daily_cron or None,
-                "weekly": settings.schedule.weekly_cron or None,
-                "monthly": settings.schedule.monthly_cron or None,
-                "timezone": settings.schedule.timezone,
-                "jobs": scheduler.jobs(),
-            },
+            # Live schedule summary (reflects dashboard edits, not just env).
+            "schedules": scheduler.describe(),
             "cache": {
                 "source": cached["source"] if cached else None,
                 "fetched_at": cached["fetched_at"] if cached else None,
@@ -141,6 +146,27 @@ def create_app() -> FastAPI:
             "reports": [r["name"] for r in env["reports"]],
         })
 
+    # --- schedules --------------------------------------------------------
+    @app.get("/api/schedules")
+    async def get_schedules() -> JSONResponse:
+        """Current schedule config for the dashboard editor."""
+        return JSONResponse(_schedules_response(scheduler.model(), settings, scheduler))
+
+    @app.put("/api/schedules", dependencies=[Depends(_require_json)])
+    async def put_schedules(payload: dict = _SEND_BODY) -> JSONResponse:
+        """Replace the schedule config. Body is the full model:
+        {"timezone": "...", "entries": {"daily": {...}, "weekly": {...},
+        "monthly": {...}}}. Takes effect immediately (no restart) and is
+        persisted, so it survives restarts and overrides the SCHEDULE_* env."""
+        try:
+            model = parse_model(payload)
+        except ScheduleError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        await asyncio.to_thread(store.save_schedules, model.as_dict())
+        scheduler.set_model(model)
+        logger.info("schedules updated via API (tz=%s)", model.timezone)
+        return JSONResponse(_schedules_response(model, settings, scheduler))
+
     # --- notifications ----------------------------------------------------
     @app.post("/api/report/send", dependencies=[Depends(_require_json)])
     async def send(payload: dict = _SEND_BODY) -> JSONResponse:
@@ -170,6 +196,29 @@ def create_app() -> FastAPI:
     _mount_spa(app, settings.web_dir, logger)
 
     return app
+
+
+def _load_or_seed_schedules(store: Store, settings: Settings) -> ScheduleModel:
+    """Load the persisted schedule model; on a fresh DB, seed it from the
+    SCHEDULE_* env vars and persist so the UI has a row to edit. Synchronous
+    (store I/O) — call via asyncio.to_thread from the async lifespan."""
+    raw = store.load_schedules()
+    model = load_model(raw, settings)
+    if raw is None:
+        store.save_schedules(model.as_dict())
+    return model
+
+
+def _schedules_response(
+    model: ScheduleModel, settings: Settings, scheduler: ReportScheduler,
+) -> dict:
+    """Editor-facing schedule payload: the full model plus the context the UI
+    needs (which channels can actually deliver, weekday options, next runs)."""
+    data = model.as_dict()
+    data["channels_enabled"] = settings.notify.enabled_channels()
+    data["weekdays"] = list(WEEKDAYS)
+    data["jobs"] = scheduler.jobs()
+    return data
 
 
 def _describe_auth(settings) -> str:

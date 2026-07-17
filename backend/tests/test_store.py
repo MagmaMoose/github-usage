@@ -35,6 +35,20 @@ def test_sqlite_reports_roundtrip(tmp_path):
     assert store.load_reports()["source"] == "demo"
 
 
+def test_sqlite_schedules_roundtrip(tmp_path):
+    store = SqliteStore(str(tmp_path / "app.db"))
+    assert store.load_schedules() is None
+    payload = {
+        "timezone": "Europe/Amsterdam",
+        "entries": {"daily": {"enabled": True, "hour": 9, "minute": 0}},
+    }
+    store.save_schedules(payload)
+    assert store.load_schedules() == payload
+    # Upsert: a second save overwrites the single row.
+    store.save_schedules({"timezone": "UTC", "entries": {}})
+    assert store.load_schedules()["timezone"] == "UTC"
+
+
 def test_sqlite_notifications_log(tmp_path):
     store = SqliteStore(str(tmp_path / "app.db"))
     store.record_notification(

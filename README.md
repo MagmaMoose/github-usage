@@ -155,13 +155,24 @@ remain drag-and-drop uploads.
 
 ### Notifications
 
-Each channel activates only when its config is present. Send **on demand** from
-the dashboard toolbar (or `POST /api/report/send`), or on a **schedule**:
+Each channel activates only when its config is present:
 
 ```bash
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 TEAMS_WEBHOOK_URL=https://...webhook.office.com/...
 SMTP_HOST=smtp.example.com   REPORT_EMAIL_TO=team@example.com
+```
+
+Send a report **on demand** from the dashboard toolbar (or `POST /api/report/send`).
+
+For **scheduled** delivery, use the in-app editor — the gear button opens
+"Scheduled reports", where you enable daily / weekly / monthly delivery, pick the
+time, weekday / day-of-month, timezone, and which channels each schedule targets.
+Changes are persisted and apply immediately (no restart). The `SCHEDULE_*` env
+vars still work but only **seed** the schedule on a fresh database, so a GitOps
+deploy can ship a default; after first boot the in-app config is authoritative:
+
+```bash
 SCHEDULE_DAILY_CRON="0 8 * * *"   SCHEDULE_WEEKLY_CRON="0 9 * * 1"   SCHEDULE_TIMEZONE=Europe/Berlin
 ```
 
@@ -176,6 +187,8 @@ SCHEDULE_DAILY_CRON="0 8 * * *"   SCHEDULE_WEEKLY_CRON="0 9 * * 1"   SCHEDULE_TI
 | `GET /api/reports/{name}` | One report as native CSV |
 | `POST /api/refresh` | Force a fresh GitHub pull |
 | `POST /api/report/send` | Send a report now (`{"channels": [...]}` optional) |
+| `GET /api/schedules` | Current scheduled-report config |
+| `PUT /api/schedules` | Update scheduled-report config (persisted, live) |
 | `GET /api/notifications` | Recent delivery log |
 
 ### Container image & Kubernetes

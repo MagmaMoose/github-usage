@@ -50,6 +50,44 @@ export interface SendResult {
   reason?: string;
 }
 
+export type Frequency = 'daily' | 'weekly' | 'monthly';
+
+export interface ScheduleEntry {
+  enabled: boolean;
+  hour: number;
+  minute: number;
+  /** Weekday for the weekly schedule, "mon".."sun". */
+  day_of_week: string;
+  /** Day of month (1–28) for the monthly schedule. */
+  day_of_month: number;
+  /** Advanced 5-field cron override; when set it wins over the fields above. */
+  cron: string;
+  /** Channels this schedule targets; null = every enabled channel. */
+  channels: string[] | null;
+}
+
+/** The full editable schedule config plus the context the editor needs. */
+export interface ScheduleConfig {
+  timezone: string;
+  entries: Record<Frequency, ScheduleEntry>;
+  /** Channels that are actually configured and can deliver right now. */
+  channels_enabled: string[];
+  /** Allowed weekday tokens, in display order. */
+  weekdays: string[];
+  /** Live APScheduler jobs with their next fire time. */
+  jobs: Array<{ id: string; next_run: string | null }>;
+}
+
+/** Just the mutable part of the config, sent on PUT. */
+export interface SchedulePutBody {
+  timezone: string;
+  entries: Record<Frequency, ScheduleEntry>;
+}
+
+export type PutSchedulesResult =
+  | { ok: true; config: ScheduleConfig }
+  | { ok: false; error: string };
+
 /** Same-origin API base. Absolute so it ignores the SPA's Vite `base` path. */
 const API = '/api';
 
@@ -144,4 +182,47 @@ export async function refreshServerReports(): Promise<
 /** Trigger an on-demand report send. Omit `channels` to use all enabled ones. */
 export function sendServerReport(channels?: string[]): Promise<SendResult | null> {
   return request<SendResult>('POST', '/report/send', channels ? { channels } : {});
+}
+
+/** Read the current scheduled-report configuration. `null` if no backend. */
+export function getSchedules(): Promise<ScheduleConfig | null> {
+  return getJSON<ScheduleConfig>('/schedules');
+}
+
+/**
+ * Save the scheduled-report configuration. Resolves to:
+ *   - `{ ok: true, config }`   on success (config includes recomputed next runs),
+ *   - `{ ok: false, error }`   when the backend rejects the input (validation),
+ *   - `null`                    when no backend is reachable.
+ * Unlike the other mutations this surfaces the server's validation message so
+ * the editor can show *why* a save was rejected.
+ */
+export async function putSchedules(body: SchedulePutBody): Promise<PutSchedulesResult | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${API}/schedules`, {
+      method: 'PUT',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const config = (await res.json()) as ScheduleConfig;
+      return { ok: true, config };
+    }
+    if (res.status === 400) {
+      // Surface the human-readable validation message from the backend.
+      const detail = await res.json().catch(() => null);
+      const error =
+        detail && typeof detail.detail === 'string' ? detail.detail : 'Invalid schedule';
+      return { ok: false, error };
+    }
+    if (res.status === 503) return { ok: false, error: 'No notification channels configured' };
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

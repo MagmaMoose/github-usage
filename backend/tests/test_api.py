@@ -67,3 +67,57 @@ def test_post_without_json_content_type_is_415(client):
 
 def test_status_reports_datastore(client):
     assert client.get("/api/status").json()["database"] == "sqlite"
+
+
+# -- schedules -------------------------------------------------------------
+
+def test_get_schedules_defaults(client):
+    body = client.get("/api/schedules").json()
+    assert body["timezone"] == "UTC"
+    assert set(body["entries"]) == {"daily", "weekly", "monthly"}
+    assert body["entries"]["daily"]["enabled"] is False
+    assert body["weekdays"][0] == "mon"
+    # Demo has no channels configured.
+    assert body["channels_enabled"] == []
+
+
+def test_put_schedules_requires_json_content_type(client):
+    r = client.put("/api/schedules", content=b"{}", headers={"content-type": "text/plain"})
+    assert r.status_code == 415
+
+
+def test_put_schedules_enables_job_and_persists(client):
+    payload = {
+        "timezone": "UTC",
+        "entries": {
+            "weekly": {"enabled": True, "hour": 8, "minute": 30, "day_of_week": "tue"},
+        },
+    }
+    r = client.put("/api/schedules", json=payload)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["entries"]["weekly"]["enabled"] is True
+    # A live job now exists with a computed next run.
+    weekly = next(j for j in body["jobs"] if j["id"] == "report-weekly")
+    assert weekly["next_run"]
+    # Persisted: a fresh read returns the same config.
+    again = client.get("/api/schedules").json()
+    assert again["entries"]["weekly"]["day_of_week"] == "tue"
+    # And /api/status reflects the live model.
+    status = client.get("/api/status").json()["schedules"]
+    assert status["weekly"] == "30 8 * * tue"
+
+
+def test_put_schedules_validation_error_is_400(client):
+    r = client.put("/api/schedules", json={
+        "timezone": "UTC",
+        "entries": {"daily": {"enabled": True, "hour": 99}},
+    })
+    assert r.status_code == 400
+    assert "hour" in r.json()["detail"]
+
+
+def test_put_schedules_bad_timezone_is_400(client):
+    r = client.put("/api/schedules", json={"timezone": "Mars/Phobos", "entries": {}})
+    assert r.status_code == 400
+    assert "timezone" in r.json()["detail"]

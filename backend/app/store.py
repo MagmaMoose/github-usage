@@ -49,6 +49,12 @@ class Store(ABC):
     def list_notifications(self, limit: int = 50) -> list[dict[str, Any]]: ...
 
     @abstractmethod
+    def save_schedules(self, payload: dict[str, Any]) -> None: ...
+
+    @abstractmethod
+    def load_schedules(self) -> dict[str, Any] | None: ...
+
+    @abstractmethod
     def describe(self) -> str: ...
 
     def close(self) -> None:  # noqa: B027 — optional lifecycle hook, no-op by default
@@ -82,6 +88,11 @@ CREATE TABLE IF NOT EXISTS notifications (
     channels    TEXT,
     status      TEXT    NOT NULL,
     detail      TEXT
+);
+CREATE TABLE IF NOT EXISTS schedules (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    updated_at  REAL    NOT NULL,
+    payload     TEXT    NOT NULL
 );
 """
 
@@ -155,6 +166,21 @@ class SqliteStore(Store):
             out.append(d)
         return out
 
+    def save_schedules(self, payload: dict[str, Any]) -> None:
+        ts = time.time()
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "INSERT INTO schedules (id, updated_at, payload) VALUES (1, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at, "
+                "payload=excluded.payload",
+                (ts, json.dumps(payload)),
+            )
+
+    def load_schedules(self) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT payload FROM schedules WHERE id = 1").fetchone()
+        return json.loads(row["payload"]) if row else None
+
     def describe(self) -> str:
         return "sqlite"
 
@@ -180,6 +206,13 @@ _PG_SCHEMA = (
         channels    JSONB,
         status      TEXT NOT NULL,
         detail      JSONB
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS schedules (
+        id          INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        updated_at  DOUBLE PRECISION NOT NULL,
+        payload     JSONB NOT NULL
     )
     """,
 )
@@ -287,6 +320,24 @@ class PostgresStore(Store):
             d["detail"] = d.get("detail") or {}
             out.append(d)
         return out
+
+    def save_schedules(self, payload: dict[str, Any]) -> None:
+        from psycopg.types.json import Json
+
+        ts = time.time()
+        with self._ensure().connection() as conn:
+            conn.execute(
+                "INSERT INTO schedules (id, updated_at, payload) VALUES (1, %s, %s) "
+                "ON CONFLICT (id) DO UPDATE SET updated_at=EXCLUDED.updated_at, "
+                "payload=EXCLUDED.payload",
+                (ts, Json(payload)),
+            )
+
+    def load_schedules(self) -> dict[str, Any] | None:
+        with self._ensure().connection() as conn:
+            row = conn.execute("SELECT payload FROM schedules WHERE id = 1").fetchone()
+        # JSONB decodes to a Python dict already.
+        return row["payload"] if row else None
 
     def describe(self) -> str:
         return "postgres"
