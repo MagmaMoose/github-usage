@@ -1,0 +1,14 @@
+# Runtime deps for the github-usage-dashboard backend.
+# Pinned exact (matches the diatreme-pro convention) so image builds are reproducible.
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+httpx==0.27.2
+# GitHub App auth: sign the App JWT (RS256) to mint installation tokens.
+# The [crypto] extra pulls in `cryptography` for RSA signing.
+PyJWT[crypto]==2.9.0
+# In-process cron for the daily/weekly/monthly report jobs.
+APScheduler==3.10.4
+# Postgres (first-class store + report cache). SQLite is the local/demo fallback
+# and needs no extra dep (stdlib sqlite3). [binary] ships a wheel — no libpq build.
+psycopg[binary]==3.2.10
+psycopg-pool==3.2.4
