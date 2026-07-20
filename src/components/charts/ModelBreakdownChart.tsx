@@ -5,7 +5,7 @@ import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { CopilotIcon, CreditCardIcon } from '@primer/octicons-react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, topN } from '../../lib/aggregation';
-import { humanizeColumn, formatCompact, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
+import { humanizeColumn, formatCompact, formatCurrency, currencySymbol, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { REPORT_TYPES } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -136,7 +136,7 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
       yAxis: {
         title: { text: undefined },
         labels: activeMetric.isCurrency
-          ? { format: '${value}' }
+          ? { format: `${currencySymbol()}{value}` }
           : {
               formatter: function () {
                 return formatCompact(this.value as number);
@@ -165,10 +165,10 @@ export function GroupBreakdownChart({ stackField = 'model', metricOptions }: Gro
             : `<span style="color:${pt.point.color}">●</span>`;
           const displayName = formatDisplayValue(rawStack, stackField) || pt.series.name;
           const formatted = activeMetric.isCurrency
-            ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? formatCurrency(val)
             : formatCompact(val);
           const totalStr = activeMetric.isCurrency
-            ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ? formatCurrency(total)
             : formatCompact(total);
           return `<table style="min-width:120px;"><tr><th colspan="2" style="color:var(--fgColor-muted,#59636e);font-weight:600;padding-bottom:2px;font-size:12px;">${headerHtml}</th></tr>` +
             `<tr><td>${indicator} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>` +

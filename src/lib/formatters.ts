@@ -78,14 +78,57 @@ export function getSkuIcon(rawValue: string): OcticonComponent {
   return TagIcon;
 }
 
-/** Format a number as USD currency */
+// Active display currency (ISO 4217). GitHub's billing API returns bare amounts
+// with no currency, so this is a display-only choice set at runtime from the
+// backend (/api/status, /api/reports) — no FX conversion is applied. Defaults
+// to USD so the statically-hosted / demo SPA keeps its original behaviour.
+let _displayCurrency = 'USD';
+
+// Locale used for grouping/decimal separators per currency (e.g. EUR → "1.234,56").
+const LOCALE_BY_CURRENCY: Record<string, string> = {
+  USD: 'en-US', EUR: 'nl-NL', GBP: 'en-GB', JPY: 'ja-JP', CAD: 'en-CA', AUD: 'en-AU',
+};
+
+/** Set the display currency (from the backend). Empty/invalid falls back to USD. */
+export function setDisplayCurrency(code: string | null | undefined): void {
+  _displayCurrency = (code || 'USD').toUpperCase();
+}
+
+/** The active display currency code (e.g. "USD", "EUR"). */
+export function getDisplayCurrency(): string {
+  return _displayCurrency;
+}
+
+function currencyLocale(): string {
+  return LOCALE_BY_CURRENCY[_displayCurrency] ?? 'en-US';
+}
+
+/** The symbol for the active display currency (e.g. "$", "€", "£"). Used where a
+ *  full formatted value doesn't fit — notably Highcharts template strings. */
+export function currencySymbol(): string {
+  try {
+    const parts = new Intl.NumberFormat(currencyLocale(), {
+      style: 'currency', currency: _displayCurrency,
+    }).formatToParts(0);
+    return parts.find((p) => p.type === 'currency')?.value ?? _displayCurrency;
+  } catch {
+    return _displayCurrency;
+  }
+}
+
+/** Format a number as currency in the active display currency (no conversion). */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return new Intl.NumberFormat(currencyLocale(), {
+      style: 'currency',
+      currency: _displayCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // Unknown/invalid ISO code: plain grouped number with the code appended.
+    return `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ${_displayCurrency}`;
+  }
 }
 
 /** Format a number with abbreviation (K, M, B) */

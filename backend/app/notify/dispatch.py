@@ -39,7 +39,8 @@ async def send_report(
             store.record_notification, trigger=trigger, channels=[], status="skipped", detail=result)
         return result
 
-    summary = build_summary(reports, source=envelope.get("source", "unknown"))
+    summary = build_summary(
+        reports, source=envelope.get("source", "unknown"), currency=settings.currency)
 
     tasks = []
     for ch in active:

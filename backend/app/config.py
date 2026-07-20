@@ -184,6 +184,11 @@ class Settings:
     # ingress host). Empty = omit the link.
     public_url: str = ""
 
+    # Display currency for monetary amounts (ISO 4217, e.g. USD, EUR, GBP).
+    # GitHub's billing API returns bare amounts with no currency, so this is a
+    # pure display/formatting choice — no FX conversion is applied.
+    currency: str = "USD"
+
     @property
     def is_demo(self) -> bool:
         return self.mode == "demo"
@@ -246,6 +251,7 @@ def load_settings() -> Settings:
         http_timeout=float(_env("HTTP_TIMEOUT", "30") or "30"),
         log_level=_env("LOG_LEVEL", "INFO") or "INFO",
         public_url=_env("PUBLIC_URL"),
+        currency=(_env("REPORT_CURRENCY", "USD") or "USD").upper(),
     )
 
 

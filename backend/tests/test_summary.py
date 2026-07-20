@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.github import csv_render
-from app.notify.summary import build_summary
+from app.notify.summary import build_summary, format_money
 
 
 def _usage_reports():
@@ -48,3 +48,18 @@ def test_summary_as_dict_is_json_safe():
 
     s = build_summary(_usage_reports(), source="demo")
     json.dumps(s.as_dict())  # must not raise
+
+
+def test_format_money_by_currency():
+    assert format_money(1234.56, "USD") == "$1,234.56"
+    assert format_money(1234.56, "EUR") == "€ 1.234,56"   # nbsp + euro grouping
+    assert format_money(1234.56, "GBP") == "£1,234.56"
+    assert format_money(1234.5, "CHF") == "1,234.50 CHF"        # unknown -> trailing ISO code
+    assert format_money(1234.56, "") == "$1,234.56"                 # empty -> USD default
+
+
+def test_summary_currency_is_normalised_and_applied():
+    s = build_summary(_usage_reports(), source="live", currency="eur")
+    assert s.currency == "EUR"                 # upper-cased
+    assert s.money(1234.56) == "€ 1.234,56"
+    assert s.as_dict()["currency"] == "EUR"

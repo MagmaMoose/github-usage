@@ -4,7 +4,7 @@ import { HighchartsReact } from 'highcharts-react-official';
 import { ActionList, ActionMenu, SegmentedControl } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
-import { humanizeColumn, formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
+import { humanizeColumn, formatDisplayValue, formatCompact, formatCurrency, currencySymbol, bucketKeyToTimestamp, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { buildColorMap } from '../../lib/chart-theme';
 import { getStoredValue, setStoredValue, STORAGE_KEYS } from '../../lib/local-storage';
 import type { MetricOption } from '../../lib/report-schema';
@@ -152,7 +152,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
           pointFormatter: function (this: Highcharts.Point) {
             const val = this.y ?? 0;
             const formatted = activeMetric.isCurrency
-              ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              ? formatCurrency(val)
               : formatCompact(val);
             return hasIcons
               ? `${getGroupIconSvg(group.key, groupByColumn, String(this.color))} ${displayName}: <b>${formatted}</b><br/>`
@@ -163,7 +163,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
     }
 
     const yAxisTitle = activeMetric.isCurrency
-      ? lineMode === 'cumulative' ? 'Cumulative Spend ($)' : 'Spend ($)'
+      ? lineMode === 'cumulative' ? `Cumulative Spend (${currencySymbol()})` : `Spend (${currencySymbol()})`
       : lineMode === 'cumulative' ? `Cumulative ${activeMetric.label}` : activeMetric.label;
 
     return {
@@ -172,7 +172,7 @@ export function TimeSeriesChart({ metricOptions }: { metricOptions?: MetricOptio
       yAxis: {
         title: { text: yAxisTitle },
         labels: activeMetric.isCurrency
-          ? { format: '${value}' }
+          ? { format: `${currencySymbol()}{value}` }
           : {
               formatter: function (this: Highcharts.AxisLabelsFormatterContextObject) {
                 return formatCompact(this.value as number);

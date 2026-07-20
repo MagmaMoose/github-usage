@@ -14,6 +14,34 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+# Known currency symbols. GitHub's billing API returns bare amounts with no
+# currency, so the display currency is a deployment choice (REPORT_CURRENCY);
+# the figures are shown as-is in that currency (no FX conversion). Unknown codes
+# fall back to a trailing ISO code (e.g. "1,234.56 CHF").
+_CURRENCY_SYMBOLS = {
+    "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥",
+    "CAD": "$", "AUD": "$", "NZD": "$",
+}
+
+# Currencies conventionally written with a dot as the thousands separator and a
+# comma as the decimal separator (e.g. "€ 1.234,56").
+_EURO_STYLE_GROUPING = {"EUR"}
+
+
+def format_money(amount: float, currency: str = "USD") -> str:
+    """Format an amount in `currency` for display. No conversion is done: the
+    number is rendered as-is with the currency's symbol and grouping."""
+    code = (currency or "USD").upper()
+    symbol = _CURRENCY_SYMBOLS.get(code)
+    grouped = f"{amount:,.2f}"
+    if code in _EURO_STYLE_GROUPING:
+        # Swap Anglo "1,234.56" -> European "1.234,56" in one pass. The gap is a
+        # non-breaking space (matches Intl.NumberFormat), e.g. "EUR 1.234,56".
+        grouped = grouped.translate(str.maketrans({",": ".", ".": ","}))
+        return f"{symbol} {grouped}"
+    if symbol:
+        return f"{symbol}{grouped}"
+    return f"{grouped} {code}"
 
 def _num(value: str | None) -> float:
     if not value:
@@ -62,7 +90,7 @@ class ReportSummary:
         return "current period"
 
     def money(self, amount: float) -> str:
-        return f"${amount:,.2f}"
+        return format_money(amount, self.currency)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -85,7 +113,8 @@ class ReportSummary:
 
 
 def build_summary(
-    reports: list[dict[str, Any]], *, source: str, title: str = "GitHub usage report"
+    reports: list[dict[str, Any]], *, source: str,
+    title: str = "GitHub usage report", currency: str = "USD",
 ) -> ReportSummary:
     now = datetime.now(UTC).replace(microsecond=0).isoformat()
     summary = ReportSummary(
@@ -94,6 +123,7 @@ def build_summary(
         title=title,
         num_reports=len(reports),
         report_names=[r.get("name", "?") for r in reports],
+        currency=(currency or "USD").upper(),
     )
 
     product_totals: dict[str, float] = {}

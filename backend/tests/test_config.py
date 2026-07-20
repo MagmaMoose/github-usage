@@ -16,6 +16,15 @@ def test_defaults_to_demo_without_creds():
     assert load_settings().mode == "demo"
 
 
+def test_currency_defaults_to_usd():
+    assert load_settings().currency == "USD"
+
+
+def test_currency_from_env_is_upper_cased(monkeypatch):
+    monkeypatch.setenv("REPORT_CURRENCY", "eur")
+    assert load_settings().currency == "EUR"
+
+
 def test_live_when_org_and_token(monkeypatch):
     monkeypatch.setenv("GITHUB_ORG", "acme")
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_x")
