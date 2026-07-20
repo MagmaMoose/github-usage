@@ -51,10 +51,12 @@ def test_summary_as_dict_is_json_safe():
 
 
 def test_format_money_by_currency():
+    # Babel/CLDR: the same rendering the frontend's Intl.NumberFormat produces
+    # (same per-currency locale map), so reports and the dashboard agree.
     assert format_money(1234.56, "USD") == "$1,234.56"
     assert format_money(1234.56, "EUR") == "€ 1.234,56"   # nbsp + euro grouping
     assert format_money(1234.56, "GBP") == "£1,234.56"
-    assert format_money(1234.5, "CHF") == "1,234.50 CHF"        # unknown -> trailing ISO code
+    assert format_money(1234.56, "JPY") == "￥1,235"             # yen: no minor unit
     assert format_money(1234.56, "") == "$1,234.56"                 # empty -> USD default
 
 

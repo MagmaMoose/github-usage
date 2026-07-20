@@ -14,34 +14,31 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-# Known currency symbols. GitHub's billing API returns bare amounts with no
-# currency, so the display currency is a deployment choice (REPORT_CURRENCY);
-# the figures are shown as-is in that currency (no FX conversion). Unknown codes
-# fall back to a trailing ISO code (e.g. "1,234.56 CHF").
-_CURRENCY_SYMBOLS = {
-    "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥",
-    "CAD": "$", "AUD": "$", "NZD": "$",
-}
+from babel.numbers import format_currency
 
-# Currencies conventionally written with a dot as the thousands separator and a
-# comma as the decimal separator (e.g. "€ 1.234,56").
-_EURO_STYLE_GROUPING = {"EUR"}
+# Per-currency locale, mirroring the frontend's LOCALE_BY_CURRENCY (src/lib/
+# formatters.ts) so the notifications (Babel/CLDR) and the dashboard
+# (Intl.NumberFormat) render an amount identically. Currencies not listed fall
+# back to en_US on both sides (e.g. "NZ$1,234.56", "CHF 1,234.56").
+_LOCALE_BY_CURRENCY = {
+    "USD": "en_US", "EUR": "nl_NL", "GBP": "en_GB",
+    "JPY": "ja_JP", "CAD": "en_CA", "AUD": "en_AU",
+}
 
 
 def format_money(amount: float, currency: str = "USD") -> str:
-    """Format an amount in `currency` for display. No conversion is done: the
-    number is rendered as-is with the currency's symbol and grouping."""
+    """Format an amount in `currency` for display. No FX conversion is done: the
+    figure is rendered as-is. Uses Babel/CLDR with the same per-currency locale
+    the frontend uses, so notifications and the dashboard agree symbol-for-symbol
+    (including the minor-unit digits, e.g. JPY has none)."""
     code = (currency or "USD").upper()
-    symbol = _CURRENCY_SYMBOLS.get(code)
-    grouped = f"{amount:,.2f}"
-    if code in _EURO_STYLE_GROUPING:
-        # Swap Anglo "1,234.56" -> European "1.234,56" in one pass. The gap is a
-        # non-breaking space (matches Intl.NumberFormat), e.g. "EUR 1.234,56".
-        grouped = grouped.translate(str.maketrans({",": ".", ".": ","}))
-        return f"{symbol} {grouped}"
-    if symbol:
-        return f"{symbol}{grouped}"
-    return f"{grouped} {code}"
+    locale = _LOCALE_BY_CURRENCY.get(code, "en_US")
+    try:
+        return format_currency(amount, code, locale=locale)
+    except Exception:
+        # Unknown/invalid ISO code: plain grouped number + code (matches the
+        # frontend's own Intl fallback shape).
+        return f"{amount:,.2f} {code}"
 
 def _num(value: str | None) -> float:
     if not value:
