@@ -4,7 +4,7 @@ import HighchartsSankey from 'highcharts/modules/sankey';
 import { HighchartsReact } from 'highcharts-react-official';
 import { useReport } from '../../context/useReport';
 import { buildColorMap, GITHUB_COLORS_RESOLVED } from '../../lib/chart-theme';
-import { formatCompact, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
+import { formatCompact, formatCurrency, formatDisplayValue, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import { REPORT_TYPES } from '../../lib/types';
 import type { AnyReportRow, TokenUsageRow } from '../../lib/types';
 import type { MetricOption } from '../../lib/report-schema';
@@ -244,7 +244,7 @@ export function SankeyChart({ hierarchy, metric }: { hierarchy?: string[]; metri
     const chartTitle = `${flowLabel}: ${titleParts.join(' \u2192 ')}`;
 
     const fmtVal = activeMetric.isCurrency
-      ? (v: number) => `$${v.toFixed(2)}`
+      ? (v: number) => formatCurrency(v)
       : (v: number) => formatCompact(v);
     const pct = (part: number, total: number) => total > 0 ? `${((part / total) * 100).toFixed(1)}%` : '0%';
 

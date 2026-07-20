@@ -29,6 +29,7 @@ data:
   {{- end }}
   CACHE_TTL_SECONDS: {{ .Values.config.cacheTtlSeconds | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  REPORT_CURRENCY: {{ .Values.config.currency | default "USD" | quote }}
   DB_PATH: "/var/lib/github-usage/app.db"
 
   # Schedules (empty values are simply omitted -> disabled).

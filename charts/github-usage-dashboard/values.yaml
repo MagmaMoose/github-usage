@@ -56,6 +56,10 @@ config:
   publicUrl: ""
   cacheTtlSeconds: 3600
   logLevel: "INFO"
+  # Display currency (ISO 4217) for monetary amounts, e.g. USD, EUR, GBP.
+  # GitHub's billing API returns bare amounts with no currency, so this is a
+  # pure display/formatting choice — no FX conversion is applied.
+  currency: "USD"
 
 # ----------------------------------------------------------------------------
 # Scheduled report delivery.

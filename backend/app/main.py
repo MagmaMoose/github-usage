@@ -103,6 +103,7 @@ def create_app() -> FastAPI:
                 "auth": _describe_auth(settings),
                 "api_base": settings.github.api_base,
             },
+            "currency": settings.currency,
             "channels": settings.notify.enabled_channels(),
             "database": store.describe(),
             # Live schedule summary (reflects dashboard edits, not just env).
@@ -125,6 +126,7 @@ def create_app() -> FastAPI:
             "source": env["source"],
             "fetched_at": env["fetched_at"],
             "age_seconds": env["age_seconds"],
+            "currency": settings.currency,
             "reports": [{"name": r["name"], "type": r["type"]} for r in env["reports"]],
         })
 

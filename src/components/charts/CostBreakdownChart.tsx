@@ -5,7 +5,7 @@ import { ActionList, ActionMenu } from '@primer/react';
 import { useReport } from '../../context/useReport';
 import { groupBy, sumBy, timeBucket as bucketRows } from '../../lib/aggregation';
 import { buildColorMap } from '../../lib/chart-theme';
-import { formatDisplayValue, formatCompact, bucketKeyToTimestamp, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
+import { formatDisplayValue, formatCompact, formatCurrency, currencySymbol, bucketKeyToTimestamp, getGroupIconSvg, columnHasIcons } from '../../lib/formatters';
 import type { MetricOption } from '../../lib/report-schema';
 import type { AnyReportRow, BillingRow } from '../../lib/types';
 import styles from './Charts.module.css';
@@ -68,7 +68,7 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
               const val = this.y ?? 0;
               const icon = getGroupIconSvg(groupInfo.group, stackField, String(this.color));
               const formatted = activeMetric.isCurrency
-                ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                ? formatCurrency(val)
                 : formatCompact(val);
               return `<tr><td>${icon} ${displayName}:&nbsp;</td><td style="text-align:right;"><b>${formatted}</b></td></tr>`;
             },
@@ -82,9 +82,9 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
       title: { text: undefined },
       xAxis: { type: 'datetime', crosshair: true },
       yAxis: {
-        title: { text: activeMetric.isCurrency ? 'Amount ($)' : activeMetric.label },
+        title: { text: activeMetric.isCurrency ? `Amount (${currencySymbol()})` : activeMetric.label },
         labels: activeMetric.isCurrency
-          ? { format: '${value}' }
+          ? { format: `${currencySymbol()}{value}` }
           : {
               formatter: function (this: Highcharts.AxisLabelsFormatterContextObject) {
                 return formatCompact(this.value as number);
@@ -95,10 +95,10 @@ export function CostBreakdownChart({ stackField = 'model', metricOptions }: Cost
         shared: false,
         headerFormat: '<table style="min-width: 120px;"><tr><th colspan="2" style="color: var(--fgColor-muted, #59636e); font-weight: 600; padding-bottom: 2px; font-size: 12px;">{point.key}</th></tr>',
         pointFormat: activeMetric.isCurrency
-          ? '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${point.y:.2f}</b></td></tr>'
+          ? `<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>${currencySymbol()}{point.y:.2f}</b></td></tr>`
           : '<tr><td><span style="color:{point.color}">●</span> {series.name}:&nbsp;</td><td style="text-align: right;"><b>{point.y:,.0f}</b></td></tr>',
         footerFormat: activeMetric.isCurrency
-          ? '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${point.total:.2f}</b></td></tr></table>'
+          ? `<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>${currencySymbol()}{point.total:.2f}</b></td></tr></table>`
           : '<tr style="border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);"><td><b>Total:&nbsp;</b></td><td style="text-align: right;"><b>{point.total:,.0f}</b></td></tr></table>',
       },
       plotOptions: { column: { stacking: 'normal' } },

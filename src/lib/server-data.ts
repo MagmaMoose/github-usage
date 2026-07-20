@@ -8,6 +8,8 @@
  * Nothing here ever throws to the caller.
  */
 
+import { setDisplayCurrency } from './formatters';
+
 export interface ServerReportMeta {
   name: string;
   type: string;
@@ -17,6 +19,8 @@ export interface ServerManifest {
   source: 'live' | 'demo';
   fetched_at: number;
   age_seconds: number;
+  /** Display currency (ISO 4217) for monetary amounts. Optional for back-compat. */
+  currency?: string;
   reports: ServerReportMeta[];
 }
 
@@ -28,6 +32,8 @@ export interface ServerStatus {
     auth: string;
     api_base: string;
   };
+  /** Display currency (ISO 4217) for monetary amounts. Optional for back-compat. */
+  currency?: string;
   channels: string[];
   schedules: {
     daily: string | null;
@@ -128,8 +134,10 @@ async function request<T>(
 }
 
 /** Probe the backend. `null` => the dashboard is running standalone. */
-export function fetchServerStatus(): Promise<ServerStatus | null> {
-  return getJSON<ServerStatus>('/status');
+export async function fetchServerStatus(): Promise<ServerStatus | null> {
+  const status = await getJSON<ServerStatus>('/status');
+  if (status?.currency) setDisplayCurrency(status.currency);
+  return status;
 }
 
 /**
@@ -142,6 +150,7 @@ export async function fetchServerReports(): Promise<
 > {
   const manifest = await getJSON<ServerManifest>('/reports');
   if (!manifest || !Array.isArray(manifest.reports)) return null;
+  if (manifest.currency) setDisplayCurrency(manifest.currency);
 
   const csvs = await Promise.all(
     manifest.reports.map(async (r) => {

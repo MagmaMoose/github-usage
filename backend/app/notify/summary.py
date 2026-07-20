@@ -14,6 +14,31 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from babel.numbers import format_currency
+
+# Per-currency locale, mirroring the frontend's LOCALE_BY_CURRENCY (src/lib/
+# formatters.ts) so the notifications (Babel/CLDR) and the dashboard
+# (Intl.NumberFormat) render an amount identically. Currencies not listed fall
+# back to en_US on both sides (e.g. "NZ$1,234.56", "CHF 1,234.56").
+_LOCALE_BY_CURRENCY = {
+    "USD": "en_US", "EUR": "nl_NL", "GBP": "en_GB",
+    "JPY": "ja_JP", "CAD": "en_CA", "AUD": "en_AU",
+}
+
+
+def format_money(amount: float, currency: str = "USD") -> str:
+    """Format an amount in `currency` for display. No FX conversion is done: the
+    figure is rendered as-is. Uses Babel/CLDR with the same per-currency locale
+    the frontend uses, so notifications and the dashboard agree symbol-for-symbol
+    (including the minor-unit digits, e.g. JPY has none)."""
+    code = (currency or "USD").upper()
+    locale = _LOCALE_BY_CURRENCY.get(code, "en_US")
+    try:
+        return format_currency(amount, code, locale=locale)
+    except Exception:
+        # Unknown/invalid ISO code: plain grouped number + code (matches the
+        # frontend's own Intl fallback shape).
+        return f"{amount:,.2f} {code}"
 
 def _num(value: str | None) -> float:
     if not value:
@@ -62,7 +87,7 @@ class ReportSummary:
         return "current period"
 
     def money(self, amount: float) -> str:
-        return f"${amount:,.2f}"
+        return format_money(amount, self.currency)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -85,7 +110,8 @@ class ReportSummary:
 
 
 def build_summary(
-    reports: list[dict[str, Any]], *, source: str, title: str = "GitHub usage report"
+    reports: list[dict[str, Any]], *, source: str,
+    title: str = "GitHub usage report", currency: str = "USD",
 ) -> ReportSummary:
     now = datetime.now(UTC).replace(microsecond=0).isoformat()
     summary = ReportSummary(
@@ -94,6 +120,7 @@ def build_summary(
         title=title,
         num_reports=len(reports),
         report_names=[r.get("name", "?") for r in reports],
+        currency=(currency or "USD").upper(),
     )
 
     product_totals: dict[str, float] = {}

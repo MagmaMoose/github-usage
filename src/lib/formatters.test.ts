@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   formatCurrency,
+  setDisplayCurrency,
+  getDisplayCurrency,
+  currencySymbol,
   formatCompact,
   formatNumber,
   formatDate,
@@ -32,6 +35,33 @@ describe('formatCurrency', () => {
 
   it('formats large amounts', () => {
     expect(formatCurrency(34214.32)).toBe('$34,214.32');
+  });
+});
+
+describe('display currency', () => {
+  // Restore the default so this suite never leaks into the others.
+  afterEach(() => setDisplayCurrency('USD'));
+
+  it('defaults to USD', () => {
+    expect(getDisplayCurrency()).toBe('USD');
+    expect(currencySymbol()).toBe('$');
+  });
+
+  it('formats EUR with the euro symbol and european grouping', () => {
+    setDisplayCurrency('EUR');
+    expect(getDisplayCurrency()).toBe('EUR');
+    expect(currencySymbol()).toBe('€');
+    const out = formatCurrency(1234.56); // nl-NL → "€ 1.234,56"
+    expect(out).toContain('€');
+    expect(out).toContain('1.234,56');
+  });
+
+  it('upper-cases the code and falls back to USD on empty', () => {
+    setDisplayCurrency('gbp');
+    expect(getDisplayCurrency()).toBe('GBP');
+    expect(currencySymbol()).toBe('£');
+    setDisplayCurrency('');
+    expect(getDisplayCurrency()).toBe('USD');
   });
 });
 
